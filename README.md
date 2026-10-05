@@ -42,12 +42,24 @@ Both give the browser roughly **1280×800 CSS px in landscape** and **800×1280 
 | `/login/verify` | Sign in, step 2: one-time code (SMS first, e-mail and voice fallback) | Built |
 | `/forgot-password` → `/forgot-password/verify` → `/reset-password` | Password reset | Built |
 | `/account-recovery` | Recovery when the mobile and e-mail are both unreachable | Built |
-| `/` | Dashboard | Built |
-| `/assets` | Assets | Placeholder |
-| `/my-tasks` | My Tasks | Placeholder |
-| `/testing-measurements` | Testing & Measurements | Placeholder |
-| `/maintenance-activities` | Maintenance Activities | Placeholder |
+| `/` | Dashboard: counters, today's tasks, asset categories, quick actions, notifications | Built |
+| `/my-tasks` | My Tasks: inspections and maintenance together, with Today / Upcoming / Overdue / Completed views | Built |
+| `/my-tasks/:id` | Task: Start, record readings / observations / evidence (inspection) or the INSTA CLEAN work (maintenance), submit | Built |
+| `/testing-measurements` | My Tasks, inspections only | Built |
+| `/maintenance-activities` | My Tasks, maintenance only | Built |
+| `/assets` | Assets (being built separately; reads `?category=` from the dashboard tiles and `?asset=` from a QR scan) | Placeholder |
 | `/reports` | Reports | Placeholder |
+
+Shared panels, opened from the dashboard, the top bar and the task screen: Scan Asset QR, Report an Issue (raises a support ticket, source "EVITA"), SOP / Manual, Safety First and Notifications.
+
+### How work moves
+
+EVITA writes to the same inspection and maintenance records OCC reads (`src/data/*-store.ts`, copied from occ-frontend with the field-side changes added):
+
+- **Inspection:** Approved → **Start** → In Progress → **Submit** → Completed, with a field estimate of the health score.
+- **Maintenance:** In Progress → **Submit for Approval** → Pending For Approval → OCC approves or sends it back → **Rework** → resubmit.
+
+Field changes are kept on the tablet across a refresh (`src/data/persist.ts`) until the API and offline sync exist.
 
 There is no Register screen. ELPREMAR accounts are created by OLIVINE in the OCC console (ELPREMAR onboarding), never requested from a tablet.
 
