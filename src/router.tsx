@@ -1,0 +1,47 @@
+import { createBrowserRouter } from "react-router"
+
+import { AppLayout } from "@/layouts/app-layout"
+import { navigation } from "@/config/navigation"
+import { PublicOnly, RequireAuth } from "@/components/auth/require-auth"
+import { LoginPage } from "@/pages/auth/login"
+import { VerifyOtpPage } from "@/pages/auth/verify-otp"
+import { ForgotPasswordPage } from "@/pages/auth/forgot-password"
+import { VerifyResetPage } from "@/pages/auth/verify-reset"
+import { ResetPasswordPage } from "@/pages/auth/reset-password"
+import { AccountRecoveryPage } from "@/pages/auth/account-recovery"
+import { DashboardPage } from "@/pages/dashboard"
+import { ComingSoonPage } from "@/pages/coming-soon"
+
+/** Sidebar sections with a real screen; the rest render a placeholder */
+const built = new Set(["/"])
+
+/*
+ * There is no Register screen: ELPREMAR accounts are created by OLIVINE in the
+ * OCC console (ELPREMAR onboarding), never requested from the tablet.
+ */
+export const router = createBrowserRouter([
+  { path: "/login", element: <PublicOnly><LoginPage /></PublicOnly> },
+  { path: "/login/verify", element: <PublicOnly><VerifyOtpPage /></PublicOnly> },
+  { path: "/forgot-password", element: <ForgotPasswordPage /> },
+  { path: "/forgot-password/verify", element: <VerifyResetPage /> },
+  { path: "/reset-password", element: <ResetPasswordPage /> },
+  { path: "/account-recovery", element: <AccountRecoveryPage /> },
+
+  // The app itself, behind sign-in
+  {
+    element: <RequireAuth />,
+    children: [
+      {
+        element: <AppLayout />,
+        children: [
+          { index: true, element: <DashboardPage /> },
+          // Remaining sidebar entries show a placeholder until their screens are built
+          ...navigation
+            .filter((item) => !built.has(item.path))
+            .map((item) => ({ path: item.path.slice(1), element: <ComingSoonPage title={item.title} /> })),
+          { path: "*", element: <ComingSoonPage title="Page not found" /> },
+        ],
+      },
+    ],
+  },
+])
