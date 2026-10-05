@@ -297,6 +297,161 @@ export const manufacturers = [
   "Other",
 ] as const
 
+/**
+ * The categories offered directly on the Asset Category Reference grid during
+ * onboarding — the kit a plant actually holds. The remaining categories are not
+ * hidden: "Other" opens the full master list above.
+ */
+export const commonAssetCategories = [
+  "Transformer",
+  "Distribution Transformer",
+  "HT Panel",
+  "LT Panel",
+  "MCC (Motor Control Center)",
+  "PCC (Power Control Center)",
+  "APFC Panel",
+  "Distribution Board (DB)",
+  "VCB (Vacuum Circuit Breaker)",
+  "ACB (Air Circuit Breaker)",
+  "VFD (Variable Frequency Drive)",
+  "UPS",
+  "Battery Bank",
+  "Control Panel",
+  "PLC Panel",
+  "Fire Alarm Panel",
+  "Busbar",
+  "Relay Panel",
+  "Network Switch",
+  "Other",
+] as const
+
+/**
+ * Three-letter code per category, used to build the unique Asset ID at the end
+ * of onboarding (TSL-MUM-11KV-TRF-001). Every category needs one, so an asset in
+ * any category can be given an ID; anything unlisted falls back to its initials.
+ */
+const assetCategoryCodes: Record<string, string> = {
+  Transformer: "TRF",
+  "Power Transformer": "PTR",
+  "Distribution Transformer": "DTR",
+  "Instrument Transformer (CT/PT)": "ITR",
+  "HT Panel": "HTP",
+  "LT Panel": "LTP",
+  "MCC (Motor Control Center)": "MCC",
+  "PCC (Power Control Center)": "PCC",
+  "APFC Panel": "APF",
+  "AMF Panel": "AMF",
+  "Distribution Board (DB)": "DB",
+  "Sub Distribution Board (SDB)": "SDB",
+  "Lighting Distribution Board (LDB)": "LDB",
+  Busbar: "BUS",
+  "VCB (Vacuum Circuit Breaker)": "VCB",
+  "ACB (Air Circuit Breaker)": "ACB",
+  "SF6 Circuit Breaker": "SF6",
+  MCCB: "MCB",
+  "VFD (Variable Frequency Drive)": "VFD",
+  "Soft Starter Panel": "SSP",
+  UPS: "UPS",
+  "Battery Bank": "BAT",
+  "Battery Charger": "BCH",
+  Inverter: "INV",
+  "Relay Panel": "RLY",
+  "Control Panel": "CTP",
+  "PLC Panel": "PLC",
+  "SCADA System": "SCD",
+  "RTU (Remote Terminal Unit)": "RTU",
+  "Fire Alarm Panel": "FAP",
+  "Solar Inverter": "SIN",
+  "Solar Combiner Box": "SCB",
+  "Solar Transformer": "STR",
+  "Network Switch": "NSW",
+  "Industrial Network Equipment": "INE",
+  Other: "OTH",
+}
+
+/** Asset ID segment for a category, e.g. "Transformer" -> "TRF" */
+export const assetCategoryCode = (category: string) => {
+  const known = assetCategoryCodes[category]
+  if (known) return known
+  // Initials of an unlisted category, ignoring anything in brackets
+  const initials = category
+    .replace(/\(.*?\)/g, "")
+    .split(/\s+/)
+    .map((w) => w[0] ?? "")
+    .join("")
+    .toUpperCase()
+    .slice(0, 3)
+  return initials || "AST"
+}
+
+/*
+ * The lists below come from the EVITA onboarding mockups rather than the
+ * parameter sheet - the sheet names the fields but not their options. Move any
+ * of them into the sheet's wording the moment the client rules on it.
+ */
+
+/** Where an asset physically sits inside a plant */
+export const assetLocationsInPlant = [
+  "Indoor Substation",
+  "Outdoor Yard",
+  "Control Room",
+  "Electrical Room",
+  "Production Floor",
+  "Utility Block",
+  "Cable Trench",
+  "Rooftop",
+  "Basement",
+] as const
+
+/** Condition of the asset at the moment it is onboarded */
+export const assetConditions = ["New", "Refurbished", "In Service", "Relocated"] as const
+
+export const phaseTypes = ["1 Phase", "3 Phase", "DC"] as const
+
+export const coolingTypes = ["ONAN", "ONAF", "OFAF", "ODAF", "AN (Air Natural)", "AF (Air Forced)", "Dry Type", "Not Applicable"] as const
+
+export const insulationClasses = ["Class A", "Class B", "Class E", "Class F", "Class H", "Class C", "Not Applicable"] as const
+
+export const tapChangerTypes = ["Yes (OLTC)", "Yes (OCTC)", "No", "Not Applicable"] as const
+
+export const oilTypes = ["Mineral Oil", "Silicone Oil", "Ester (Natural)", "Ester (Synthetic)", "Dry Type / None"] as const
+
+export const vectorGroups = ["Dyn11", "Dyn1", "Ynd11", "YNyn0", "Dd0", "Yy0", "Not Applicable"] as const
+
+/** Units offered beside a numeric rating */
+export const voltageUnits = ["V", "kV"] as const
+export const powerUnits = ["kVA", "MVA", "kW", "MW", "A"] as const
+export const frequencyUnits = ["Hz"] as const
+export const warrantyUnits = ["Months", "Years"] as const
+
+export const yesNo = ["Yes", "No"] as const
+
+/**
+ * Images captured at onboarding. The first three are mandatory: without a
+ * nameplate photo the ratings on the form cannot be checked against the asset.
+ */
+export const assetImageSlots = [
+  { key: "front", label: "Front View", required: true },
+  { key: "side", label: "Side View", required: true },
+  { key: "nameplate", label: "Nameplate", required: true },
+  { key: "panel", label: "Panel / Accessories", required: false },
+  { key: "area", label: "Overall Area", required: false },
+] as const
+
+export type AssetImageSlot = (typeof assetImageSlots)[number]["key"]
+
+/** Documents collected at onboarding, in the order the mockup lists them */
+export const assetDocumentTypes = [
+  { key: "nameplate", label: "Nameplate Photo (Close-up)", required: true },
+  { key: "datasheet", label: "Manufacturer Datasheet", required: false },
+  { key: "installation", label: "Installation Report (if available)", required: false },
+  { key: "sld", label: "Single Line Diagram (SLD)", required: false },
+  { key: "warranty", label: "Warranty Certificate", required: false },
+  { key: "other", label: "Other Documents", required: false },
+] as const
+
+export type AssetDocumentType = (typeof assetDocumentTypes)[number]["key"]
+
 /* ---------- Work ---------- */
 
 export const inspectionTypes = [

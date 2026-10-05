@@ -226,7 +226,8 @@ export function DashboardPage() {
               {categories.map((c) => (
                 <Link
                   key={c.name}
-                  to="/assets"
+                  // Opens the register already narrowed to that category
+                  to={`/assets?category=${encodeURIComponent(c.name)}`}
                   className="flex min-h-16 flex-col justify-center rounded-lg bg-muted/40 px-2 py-2 text-center ring-1 ring-foreground/10 transition-colors hover:bg-muted active:bg-muted"
                 >
                   <div className="line-clamp-2 text-xs leading-tight font-semibold" title={c.name}>{c.name}</div>
