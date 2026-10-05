@@ -42,7 +42,7 @@ export function StepDetails({
   const category = form.watch("category")
 
   return (
-    <div className="grid gap-3 xl:grid-cols-[minmax(0,1fr)_24rem]">
+    <div className="grid gap-3 xl:grid-cols-[minmax(0,1fr)_26rem]">
       <StepCard title="Step 1 of 4: Asset Details" description="Enter the basic information of the electrical asset.">
         <div className="grid gap-x-3 gap-y-2 sm:grid-cols-2">
           {/* Posting, not a choice: EVITA registers assets at the engineer's own site */}
