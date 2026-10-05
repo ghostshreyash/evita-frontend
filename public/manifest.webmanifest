@@ -1,0 +1,14 @@
+{
+  "name": "EVITA — Olivine Global Systems",
+  "short_name": "EVITA",
+  "description": "Field app for ELPREMAR engineers: inspections, testing and maintenance of electrical assets.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#0b1f44",
+  "theme_color": "#0b1f44",
+  "icons": [
+    { "src": "/brand/olivine-emblem.png", "sizes": "512x512", "type": "image/png", "purpose": "any" }
+  ]
+}

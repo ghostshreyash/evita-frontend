@@ -320,7 +320,54 @@
   body {
     @apply bg-background text-foreground;
     }
+  /*
+   * Root scale for 11-inch tablets.
+   *
+   * Both target devices (Lenovo ThinkTab X11, Samsung Galaxy Tab S9 FE) give
+   * Chrome a viewport of roughly 1280×800 CSS px in landscape and 800×1280 in
+   * portrait, viewed at arm's length. The OCC console shrinks its root to 13–14px
+   * for dense desktop dashboards; EVITA does the opposite and keeps the browser's
+   * 16px, so every rem-based size (text, padding, 44px+ touch targets) stays
+   * readable and hittable. Do not shrink this on small screens.
+   */
   html {
     @apply font-sans;
+    font-size: 16px;
+    /* Stop Chrome inflating text when the tablet rotates */
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
     }
+  body {
+    /* No grey flash on tap; the components draw their own pressed states */
+    -webkit-tap-highlight-color: transparent;
+    /* Taps fire immediately (no double-tap-to-zoom wait) */
+    touch-action: manipulation;
+    /* Pull-to-refresh would throw away a half-filled inspection form */
+    overscroll-behavior-y: contain;
+    }
+  /* Long-press on a button or link should not start a text selection */
+  button, a, [role="button"], [role="tab"] {
+    -webkit-user-select: none;
+    user-select: none;
+    -webkit-touch-callout: none;
+    }
+}
+
+/* Staggered entrance on the sign-in screens */
+@keyframes rise {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes sheen {
+  from { transform: translateX(0) skewX(-12deg); }
+  to { transform: translateX(450%) skewX(-12deg); }
+}
+@utility animate-rise {
+  animation: rise 420ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+@utility animate-sheen {
+  animation: sheen 700ms ease-out;
+}
+@media (prefers-reduced-motion: reduce) {
+  .animate-rise, .animate-sheen { animation: none; }
 }
