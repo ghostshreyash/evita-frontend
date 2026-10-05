@@ -18,6 +18,9 @@ const buttonVariants = cva(
         destructive:
           "bg-destructive/10 text-destructive hover:bg-destructive/20 focus-visible:border-destructive/40 focus-visible:ring-destructive/20 dark:bg-destructive/20 dark:hover:bg-destructive/30 dark:focus-visible:ring-destructive/40",
         link: "text-primary underline-offset-4 hover:underline",
+        // OLIVINE gold, used on the login screen
+        brand:
+          "bg-brand-gold text-brand-gold-foreground hover:bg-brand-gold/85 focus-visible:ring-brand-gold/40",
       },
       size: {
         default:

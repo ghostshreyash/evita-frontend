@@ -18,6 +18,18 @@ const badgeVariants = cva(
         ghost:
           "hover:bg-muted hover:text-muted-foreground dark:hover:bg-muted/50",
         link: "text-primary underline-offset-4 hover:underline",
+        // Status pills (soft tint), matching the mockups
+        success: "bg-success-soft text-success-soft-foreground",
+        warning: "bg-warning-soft text-warning-soft-foreground",
+        info: "bg-info-soft text-info-soft-foreground",
+        neutral: "bg-neutral-soft text-neutral-soft-foreground",
+        highlight: "bg-highlight-soft text-highlight-soft-foreground",
+        brand: "bg-brand-gold-soft text-brand-gold-soft-foreground",
+        // Asset health (URS 10.15)
+        healthy: "bg-healthy-soft text-healthy-soft-foreground",
+        attention: "bg-attention-soft text-attention-soft-foreground",
+        critical: "bg-critical-soft text-critical-soft-foreground",
+        offline: "bg-offline-soft text-offline-soft-foreground",
       },
     },
     defaultVariants: {
