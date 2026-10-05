@@ -2,10 +2,11 @@ import { useMemo, useState } from "react"
 import { Search } from "lucide-react"
 import { cn } from "cn"
 
-import { CategoryIcon } from "@/components/assets/category-icon"
+import { CategoryIcon } from "@/components/common/category-icon"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { assetCategories, commonAssetCategories } from "@/data/master-data"
+import { categoryLook, shortCategory } from "@/lib/category-icons"
 
 /**
  * The quick-pick grid beside step 1 of asset onboarding.
@@ -15,25 +16,6 @@ import { assetCategories, commonAssetCategories } from "@/data/master-data"
  * the parameter sheet, so an unusual asset is still registered under its proper
  * name rather than as "Other".
  */
-
-/**
- * Tile tints. Decorative only - they carry no status meaning, which is why they
- * reuse the soft status palette without implying one. Keyed to the category's
- * place in the master list rather than to its position on screen, so a category
- * is the same colour on the quick-pick grid and in the full list behind Other.
- */
-const tints = [
-  "bg-info-soft text-info",
-  "bg-critical-soft text-critical",
-  "bg-healthy-soft text-healthy",
-  "bg-attention-soft text-attention",
-  "bg-highlight-soft text-highlight",
-]
-
-const tintFor = (category: string) => {
-  const i = (assetCategories as readonly string[]).indexOf(category)
-  return tints[(i < 0 ? 0 : i) % tints.length]
-}
 
 export function CategoryReference({
   value,
@@ -101,20 +83,17 @@ function CategoryTile({
         selected ? "bg-info-soft ring-2 ring-primary" : "bg-card ring-foreground/10 hover:bg-muted active:bg-muted"
       )}
     >
-      <span className={cn("flex size-10 shrink-0 items-center justify-center rounded-md", tintFor(category))}>
+      <span className={cn("flex size-10 shrink-0 items-center justify-center rounded-md", categoryLook(category).tint)}>
         <CategoryIcon category={category} className="size-6" />
       </span>
       {/* w-full gives the label a box to wrap inside; without it the flex child
           sizes to its longest word and overflows the tile */}
       <span className="line-clamp-2 w-full text-xs leading-tight font-medium break-words hyphens-auto">
-        {short(category)}
+        {shortCategory(category)}
       </span>
     </button>
   )
 }
-
-/** Drops the expansion in brackets, which never fits in a tile */
-const short = (category: string) => category.replace(/\s*\(.*?\)\s*/g, "").trim() || category
 
 /** Every category from the parameter sheet, searchable */
 function AllCategoriesDialog({
@@ -181,7 +160,7 @@ function AllCategoriesDialog({
                     : "bg-card ring-foreground/10 hover:bg-muted active:bg-muted"
                 )}
               >
-                <span className={cn("flex size-10 shrink-0 items-center justify-center rounded-md", tintFor(category))}>
+                <span className={cn("flex size-10 shrink-0 items-center justify-center rounded-md", categoryLook(category).tint)}>
                   <CategoryIcon category={category} className="size-6" />
                 </span>
                 <span className="min-w-0 flex-1 leading-tight">{category}</span>

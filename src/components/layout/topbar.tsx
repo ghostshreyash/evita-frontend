@@ -7,6 +7,8 @@ import { Button } from "@/components/ui/button"
 import { SidebarTrigger } from "@/components/ui/sidebar"
 import { useAuth } from "@/lib/auth/context"
 import { useCurrentElpremar } from "@/lib/me"
+import { useNotifications } from "@/lib/notifications"
+import { openPanel } from "@/lib/ui-store"
 
 /** Minute precision is all the bar shows, so there is no need to wake every second */
 function useClock() {
@@ -28,6 +30,7 @@ export function Topbar() {
   const navigate = useNavigate()
   const { signOut } = useAuth()
   const me = useCurrentElpremar()
+  const { unread } = useNotifications()
 
   return (
     <header className="sticky top-0 z-20 flex h-16 shrink-0 items-center gap-3 border-b border-topbar-border bg-topbar px-3 text-topbar-foreground">
@@ -66,13 +69,16 @@ export function Topbar() {
 
       <button
         type="button"
-        aria-label="Notifications, 3 unread"
+        aria-label={unread ? `Notifications, ${unread} unread` : "Notifications"}
+        onClick={() => openPanel({ kind: "notifications" })}
         className="relative flex size-11 shrink-0 items-center justify-center rounded-full hover:bg-white/10"
       >
         <Bell className="size-6" />
-        <span className="absolute top-1 right-1 flex size-5 items-center justify-center rounded-full bg-critical text-[0.7rem] font-bold text-critical-foreground">
-          3
-        </span>
+        {unread ? (
+          <span className="absolute top-1 right-1 flex min-w-5 items-center justify-center rounded-full bg-critical px-1 text-[0.7rem] leading-5 font-bold text-critical-foreground">
+            {unread > 9 ? "9+" : unread}
+          </span>
+        ) : null}
       </button>
 
       <Button

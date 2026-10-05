@@ -23,6 +23,17 @@ const reasons: Record<string, string> = {
   reset: "Password updated. Sign in with your new password.",
 }
 
+/** Where "Remember me" keeps the last username, so a personal tablet opens with it filled in */
+const LAST_USERNAME = "evita.last-username"
+
+function rememberedUsername() {
+  try {
+    return localStorage.getItem(LAST_USERNAME)
+  } catch {
+    return null
+  }
+}
+
 /**
  * Sign in — step 1 of 2. The ELPREMAR signs in with their username; the
  * one-time code that follows is the same flow the OCC console uses.
@@ -39,13 +50,24 @@ export function LoginPage() {
 
   const form = useForm<PortalLoginValues>({
     resolver: zodResolver(portalLoginSchema),
-    defaultValues: { identifier: "", password: "", remember: false },
+    defaultValues: {
+      // Empty unless this tablet remembered the last engineer who signed in
+      identifier: rememberedUsername() ?? "",
+      password: "",
+      remember: rememberedUsername() !== null,
+    },
   })
 
   async function onSubmit(values: PortalLoginValues) {
     setError(null)
     try {
       setChallenge(await signIn(values.identifier, values.password, next))
+      try {
+        if (values.remember) localStorage.setItem(LAST_USERNAME, values.identifier.trim())
+        else localStorage.removeItem(LAST_USERNAME)
+      } catch {
+        // Storage blocked: the field simply starts with the default next time
+      }
       navigate("/login/verify", { state: { remember: values.remember } })
     } catch (e) {
       setError(e instanceof AuthError ? e.message : "Sign in failed. Please try again.")

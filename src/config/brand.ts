@@ -37,7 +37,7 @@ export const brand = {
     heading: "Welcome Back",
     description: "Login to access your assigned activities",
     identifierLabel: "Username",
-    identifierPlaceholder: "firstname.lastname",
+    identifierPlaceholder: "Enter your username",
     submitLabel: "Login",
     notice: {
       title: "This device is for authorized ELPREMAR personnel only.",

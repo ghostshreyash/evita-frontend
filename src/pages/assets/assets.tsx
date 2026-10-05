@@ -5,7 +5,7 @@ import { cn } from "cn"
 
 import { PageHeader } from "@/components/common/page-header"
 import { SortHead, TablePager } from "@/components/common/data-table"
-import { CategoryIcon } from "@/components/assets/category-icon"
+import { CategoryIcon } from "@/components/common/category-icon"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
