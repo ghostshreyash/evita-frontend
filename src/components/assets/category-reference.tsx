@@ -16,7 +16,12 @@ import { assetCategories, commonAssetCategories } from "@/data/master-data"
  * name rather than as "Other".
  */
 
-/** Tile tints, cycled by position so neighbouring tiles never share one */
+/**
+ * Tile tints. Decorative only - they carry no status meaning, which is why they
+ * reuse the soft status palette without implying one. Keyed to the category's
+ * place in the master list rather than to its position on screen, so a category
+ * is the same colour on the quick-pick grid and in the full list behind Other.
+ */
 const tints = [
   "bg-info-soft text-info",
   "bg-critical-soft text-critical",
@@ -24,6 +29,11 @@ const tints = [
   "bg-attention-soft text-attention",
   "bg-highlight-soft text-highlight",
 ]
+
+const tintFor = (category: string) => {
+  const i = (assetCategories as readonly string[]).indexOf(category)
+  return tints[(i < 0 ? 0 : i) % tints.length]
+}
 
 export function CategoryReference({
   value,
@@ -44,11 +54,10 @@ export function CategoryReference({
     <div className={cn("rounded-lg bg-card p-3 shadow-xs ring-1 ring-foreground/10", className)}>
       <h3 className="mb-2 text-base font-semibold text-brand-navy dark:text-foreground">Asset Category Reference</h3>
       <div className="grid grid-cols-3 gap-2 sm:grid-cols-4 md:grid-cols-5">
-        {commonAssetCategories.map((category, i) => (
+        {commonAssetCategories.map((category) => (
           <CategoryTile
             key={category}
             category={category}
-            tint={tints[i % tints.length]}
             selected={value === category || (category === "Other" && !!value && !commonAssetCategories.includes(value as never))}
             onClick={() => choose(category)}
           />
@@ -74,12 +83,10 @@ export function CategoryReference({
 
 function CategoryTile({
   category,
-  tint,
   selected,
   onClick,
 }: {
   category: string
-  tint: string
   selected: boolean
   onClick: () => void
 }) {
@@ -94,7 +101,7 @@ function CategoryTile({
         selected ? "bg-info-soft ring-2 ring-primary" : "bg-card ring-foreground/10 hover:bg-muted active:bg-muted"
       )}
     >
-      <span className={cn("flex size-9 shrink-0 items-center justify-center rounded-md", tint)}>
+      <span className={cn("flex size-9 shrink-0 items-center justify-center rounded-md", tintFor(category))}>
         <CategoryIcon category={category} className="size-5" />
       </span>
       <span className="line-clamp-2 text-xs leading-tight font-medium">{short(category)}</span>
@@ -151,24 +158,36 @@ function AllCategoriesDialog({
           />
         </div>
 
-        <ul className="-mx-1 max-h-[55vh] overflow-y-auto px-1">
+        {/*
+          The same tiles as the quick-pick grid, two to a row so the long names -
+          "Instrument Transformer (CT/PT)", "Lighting Distribution Board (LDB)" -
+          are written out in full rather than clipped as they are on the grid.
+        */}
+        <ul className="-mx-1 grid max-h-[55vh] gap-1.5 overflow-y-auto px-1 sm:grid-cols-2">
           {matches.map((category) => (
             <li key={category}>
               <button
                 type="button"
                 onClick={() => onSelect(category)}
+                aria-pressed={value === category}
                 className={cn(
-                  "flex min-h-11 w-full items-center gap-2.5 rounded-md px-2 py-1.5 text-left text-sm transition-colors hover:bg-muted",
-                  value === category && "bg-info-soft font-semibold text-primary"
+                  "flex min-h-14 w-full items-center gap-2.5 rounded-lg px-2 py-1.5 text-left text-sm ring-1 transition-colors",
+                  value === category
+                    ? "bg-info-soft font-semibold text-primary ring-2 ring-primary"
+                    : "bg-card ring-foreground/10 hover:bg-muted active:bg-muted"
                 )}
               >
-                <CategoryIcon category={category} className="size-5 shrink-0 text-primary" />
-                <span className="min-w-0 flex-1">{category}</span>
+                <span className={cn("flex size-9 shrink-0 items-center justify-center rounded-md", tintFor(category))}>
+                  <CategoryIcon category={category} className="size-5" />
+                </span>
+                <span className="min-w-0 flex-1 leading-tight">{category}</span>
               </button>
             </li>
           ))}
           {matches.length === 0 ? (
-            <li className="py-8 text-center text-sm text-muted-foreground">No category matches “{query}”.</li>
+            <li className="py-8 text-center text-sm text-muted-foreground sm:col-span-2">
+              No category matches “{query}”.
+            </li>
           ) : null}
         </ul>
       </DialogContent>
