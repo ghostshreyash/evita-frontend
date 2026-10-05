@@ -5,6 +5,7 @@ import { Leaf } from "lucide-react"
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar"
 import { AppSidebar } from "@/components/layout/app-sidebar"
 import { Topbar } from "@/components/layout/topbar"
+import { Panels } from "@/components/evita/panels"
 import { useMediaQuery } from "@/hooks/use-media"
 
 /**
@@ -45,6 +46,7 @@ export function AppLayout() {
           </span>
         </footer>
       </SidebarInset>
+      <Panels />
     </SidebarProvider>
   )
 }
