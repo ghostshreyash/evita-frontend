@@ -162,7 +162,7 @@ function AllCategoriesDialog({
                   value === category && "bg-info-soft font-semibold text-primary"
                 )}
               >
-                <CategoryIcon category={category} className="size-4 shrink-0 text-primary" />
+                <CategoryIcon category={category} className="size-5 shrink-0 text-primary" />
                 <span className="min-w-0 flex-1">{category}</span>
               </button>
             </li>

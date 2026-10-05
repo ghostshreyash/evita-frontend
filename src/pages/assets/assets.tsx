@@ -221,7 +221,7 @@ export function AssetsPage() {
                     </TableCell>
                     <TableCell className={cn(td, "max-w-44 whitespace-normal")}>
                       <span className="flex items-center gap-1.5">
-                        <CategoryIcon category={a.category} className="size-4 shrink-0 text-muted-foreground" />
+                        <CategoryIcon category={a.category} className="size-5 shrink-0 text-muted-foreground" />
                         {a.category}
                       </span>
                     </TableCell>
