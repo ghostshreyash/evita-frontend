@@ -10,10 +10,12 @@ import { VerifyResetPage } from "@/pages/auth/verify-reset"
 import { ResetPasswordPage } from "@/pages/auth/reset-password"
 import { AccountRecoveryPage } from "@/pages/auth/account-recovery"
 import { DashboardPage } from "@/pages/dashboard"
+import { MyTasksPage } from "@/pages/my-tasks"
+import { TaskPage } from "@/pages/task"
 import { ComingSoonPage } from "@/pages/coming-soon"
 
 /** Sidebar sections with a real screen; the rest render a placeholder */
-const built = new Set(["/"])
+const built = new Set(["/", "/my-tasks", "/testing-measurements", "/maintenance-activities"])
 
 /*
  * There is no Register screen: ELPREMAR accounts are created by OLIVINE in the
@@ -35,6 +37,11 @@ export const router = createBrowserRouter([
         element: <AppLayout />,
         children: [
           { index: true, element: <DashboardPage /> },
+          { path: "my-tasks", element: <MyTasksPage /> },
+          { path: "my-tasks/:id", element: <TaskPage /> },
+          // The two work queues are My Tasks narrowed to one kind of work
+          { path: "testing-measurements", element: <MyTasksPage key="inspection" kind="inspection" title="Testing & Measurements" /> },
+          { path: "maintenance-activities", element: <MyTasksPage key="maintenance" kind="maintenance" title="Maintenance Activities" /> },
           // Remaining sidebar entries show a placeholder until their screens are built
           ...navigation
             .filter((item) => !built.has(item.path))
