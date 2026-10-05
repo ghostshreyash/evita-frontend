@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react"
 import { Link, useNavigate, useSearchParams } from "react-router"
-import { ChevronRight, HardDrive, Plus, RotateCcw, Search, TriangleAlert } from "lucide-react"
+import { ChevronRight, HardDrive, Plus, Search, TriangleAlert, X } from "lucide-react"
 import { cn } from "cn"
 
 import { PageHeader } from "@/components/common/page-header"
@@ -28,7 +28,8 @@ const accessors: Accessors<AssetRecord, Column> = {
   area: (a) => a.area,
   // Ordered by how badly a failure would hurt, not alphabetically
   criticality: (a) => ["Low", "Medium", "High"].indexOf(a.criticality),
-  health: (a) => a.health,
+  // Unscored assets sort below every scored one rather than above At Risk
+  health: (a) => a.health ?? -1,
   onboarded: (a) => parseDmy(a.onboarded).getTime(),
 }
 
@@ -86,7 +87,7 @@ export function AssetsPage() {
         (category === ANY || a.category === category) &&
         (area === ANY || a.area === area) &&
         (criticality === ANY || a.criticality === criticality) &&
-        (band === ANY || healthBandFor(a.health).tone === band) &&
+        (band === ANY || (a.health !== null && healthBandFor(a.health).tone === band)) &&
         (status === ANY || a.status === status)
     )
     return sortRows(matched, sort, accessors)
@@ -182,8 +183,8 @@ export function AssetsPage() {
             ]}
           />
 
-          <Button variant="ghost" className={control} onClick={reset} disabled={!filtersOn && !sort}>
-            <RotateCcw className="size-4" /> Reset
+          <Button variant="outline" className={cn(control, "bg-card")} onClick={reset} disabled={!filtersOn && !sort}>
+            <X /> Clear
           </Button>
         </div>
 
@@ -207,7 +208,7 @@ export function AssetsPage() {
             </TableHeader>
             <TableBody>
               {shown.map((a) => {
-                const health = healthBandFor(a.health)
+                const health = a.health === null ? null : healthBandFor(a.health)
                 return (
                   <TableRow
                     key={a.id}
@@ -232,11 +233,15 @@ export function AssetsPage() {
                       </span>
                     </TableCell>
                     <TableCell className={td}>
-                      <span className="flex items-center gap-2">
-                        <span className={cn("size-2 shrink-0 rounded-full", healthStatus[health.tone].dot)} />
-                        <span className="font-semibold tabular-nums">{a.health}</span>
-                        <span className="text-xs text-muted-foreground">{health.label}</span>
-                      </span>
+                      {health ? (
+                        <span className="flex items-center gap-2">
+                          <span className={cn("size-2 shrink-0 rounded-full", healthStatus[health.tone].dot)} />
+                          <span className="font-semibold tabular-nums">{a.health}</span>
+                          <span className="text-xs text-muted-foreground">{health.label}</span>
+                        </span>
+                      ) : (
+                        <span className="text-xs text-muted-foreground">Not inspected</span>
+                      )}
                     </TableCell>
                     <TableCell className={td}>
                       <Badge variant={assetSyncMeta[a.status].badge} className="h-auto rounded px-2 py-1 text-xs">

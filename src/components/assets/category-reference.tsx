@@ -1,9 +1,10 @@
 import { useMemo, useState } from "react"
-import { Search } from "lucide-react"
+import { Check, Search } from "lucide-react"
 import { cn } from "cn"
 
 import { CategoryIcon } from "@/components/common/category-icon"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { assetCategories, commonAssetCategories } from "@/data/master-data"
 import { categoryLook, shortCategory } from "@/lib/category-icons"
@@ -108,16 +109,28 @@ function AllCategoriesDialog({
   onSelect: (category: string) => void
 }) {
   const [query, setQuery] = useState("")
+  /** Set once Other is tapped: the engineer is naming the category themselves */
+  const [custom, setCustom] = useState<string>()
   const matches = useMemo(() => {
     const q = query.trim().toLowerCase()
     return q ? assetCategories.filter((c) => c.toLowerCase().includes(q)) : assetCategories
   }, [query])
 
+  const naming = custom !== undefined
+  const typed = (custom ?? "").trim()
+
+  const confirm = () => {
+    if (typed) onSelect(typed)
+  }
+
   return (
     <Dialog
       open={open}
       onOpenChange={(next) => {
-        if (!next) setQuery("")
+        if (!next) {
+          setQuery("")
+          setCustom(undefined)
+        }
         onOpenChange(next)
       }}
     >
@@ -125,7 +138,8 @@ function AllCategoriesDialog({
         <DialogHeader>
           <DialogTitle>All asset categories</DialogTitle>
           <DialogDescription>
-            Every category the platform recognises. Pick the closest match — only use Other when none of them applies.
+            Every category the platform recognises. Pick the closest match — tap Other only when none of them applies,
+            and name the asset type yourself.
           </DialogDescription>
         </DialogHeader>
 
@@ -151,7 +165,7 @@ function AllCategoriesDialog({
             <li key={category}>
               <button
                 type="button"
-                onClick={() => onSelect(category)}
+                onClick={() => (category === "Other" ? setCustom("") : onSelect(category))}
                 aria-pressed={value === category}
                 className={cn(
                   "flex min-h-16 w-full items-center gap-2.5 rounded-lg px-2 py-2 text-left text-sm ring-1 transition-colors",
@@ -169,10 +183,52 @@ function AllCategoriesDialog({
           ))}
           {matches.length === 0 ? (
             <li className="py-8 text-center text-sm text-muted-foreground sm:col-span-2">
-              No category matches “{query}”.
+              <p>No category matches “{query}”.</p>
+              <Button type="button" variant="link" onClick={() => setCustom(query.trim())}>
+                Use “{query.trim()}” as the category
+              </Button>
             </li>
           ) : null}
         </ul>
+
+        {/*
+          Naming it by hand. The typed name is stored as the category itself
+          rather than as "Other" with a note, so the register can still group and
+          filter on it - and so the same wording turns up next time it is typed.
+        */}
+        {naming ? (
+          <div className="rounded-lg bg-info-soft p-3 ring-1 ring-primary/20">
+            <label htmlFor="custom-category" className="text-sm font-semibold">
+              Name the asset category
+            </label>
+            <p className="mt-0.5 mb-2 text-xs text-muted-foreground">
+              Use the name on the nameplate or the drawing — it is what every later inspection will be filed under.
+            </p>
+            <div className="flex flex-wrap gap-2">
+              <Input
+                id="custom-category"
+                autoFocus
+                value={custom ?? ""}
+                maxLength={60}
+                onChange={(e) => setCustom(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault()
+                    confirm()
+                  }
+                }}
+                placeholder="e.g. Earthing Transformer"
+                className="min-w-48 flex-1"
+              />
+              <Button type="button" variant="outline" onClick={() => setCustom(undefined)}>
+                Cancel
+              </Button>
+              <Button type="button" disabled={!typed} onClick={confirm}>
+                <Check /> Use this name
+              </Button>
+            </div>
+          </div>
+        ) : null}
       </DialogContent>
     </Dialog>
   )

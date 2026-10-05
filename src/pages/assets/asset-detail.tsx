@@ -1,6 +1,6 @@
 import { useMemo } from "react"
 import { Link, useNavigate, useParams } from "react-router"
-import { Activity, ArrowLeft, Building2, Cog, FileText, Images, QrCode, Settings, TriangleAlert } from "lucide-react"
+import { Activity, ArrowLeft, Building2, CircleDashed, Cog, FileText, Images, QrCode, Settings, TriangleAlert } from "lucide-react"
 import { cn } from "cn"
 
 import { PageHeader } from "@/components/common/page-header"
@@ -47,7 +47,9 @@ export function AssetDetailPage() {
 function AssetDetail({ asset, onBack }: { asset: AssetRecord; onBack: () => void }) {
   const profile = useMemo(() => profileOf(asset), [asset])
   const captures = capturesOf(asset.id)
-  const band = healthBandFor(asset.health)
+  // No inspection has happened yet on an asset still waiting to sync, so there
+  // is no score to show - better an absent panel than an invented number
+  const band = asset.health === null ? null : healthBandFor(asset.health)
 
   return (
     <div>
@@ -93,8 +95,15 @@ function AssetDetail({ asset, onBack }: { asset: AssetRecord; onBack: () => void
 
         {/* ---------- How it is doing ---------- */}
         <div className="space-y-3">
-          <DetailPanel icon={Activity} title="Health & Condition">
-            <HealthDial score={asset.health} label={band.label} tone={band.tone} />
+          <DetailPanel icon={Activity} title={band ? "Health & Condition" : "Condition"}>
+            {band ? (
+              <HealthDial score={asset.health!} label={band.label} tone={band.tone} />
+            ) : (
+              <p className="flex items-start gap-2 rounded-md bg-muted/60 p-2.5 text-sm text-muted-foreground">
+                <CircleDashed className="mt-0.5 size-4 shrink-0" />
+                Not inspected yet. A health score appears once the first inspection report is in.
+              </p>
+            )}
             <DetailList
               className="mt-3"
               rows={[

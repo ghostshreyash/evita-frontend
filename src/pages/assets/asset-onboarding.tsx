@@ -2,7 +2,7 @@ import { useMemo, useState } from "react"
 import { useNavigate } from "react-router"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
-import { ArrowLeft, ArrowRight, BookOpen, Check, Loader2 } from "lucide-react"
+import { ArrowLeft, ArrowRight, Check, Loader2 } from "lucide-react"
 import { toast } from "sonner"
 
 import { PageHeader } from "@/components/common/page-header"
@@ -151,11 +151,6 @@ export function AssetOnboardingPage() {
         title="Asset Onboarding"
         description="Register new electrical assets at the assigned location for preventive maintenance and reliability management."
         breadcrumbs={[{ label: "Assets", to: "/assets" }, { label: "Asset Onboarding" }]}
-        actions={
-          <Button variant="outline" onClick={() => toast.info("The onboarding guide is published with the field handbook.")}>
-            <BookOpen /> View Onboarding Guide
-          </Button>
-        }
       />
 
       <StepperBar steps={steps} current={current} furthest={furthest} onSelect={goTo} />

@@ -163,12 +163,8 @@ export function onboardAsset(values: AssetFormValues, site: { city: string }): A
     year: Number(values.year) || new Date(Date.parse(values.installed || "") || Date.now()).getFullYear(),
     installed,
     onboarded,
-    /*
-     * A brand-new asset has not been inspected, so it has no measured score. It
-     * starts at the top of the Healthy band and moves once a report comes in —
-     * better than a zero, which would read as At Risk on every KPI card.
-     */
-    health: 100,
+    // Never inspected, so there is no score to show yet - not a placeholder one
+    health: null,
     // Registered on the tablet; the next sync is what puts it on the server
     status: "pending_sync",
   }
@@ -184,9 +180,10 @@ export function onboardAsset(values: AssetFormValues, site: { city: string }): A
 /** Counts for the tiles above the register, recomputed as assets are added */
 export const kpisFor = (list: readonly AssetRecord[]) => ({
   total: list.length,
-  healthy: list.filter((a) => healthBandFor(a.health).tone === "healthy").length,
-  attention: list.filter((a) => healthBandFor(a.health).tone === "attention").length,
-  critical: list.filter((a) => healthBandFor(a.health).tone === "critical").length,
+  // Only scored assets land in a band; the unscored ones are the pending-sync tally
+  healthy: list.filter((a) => a.health !== null && healthBandFor(a.health).tone === "healthy").length,
+  attention: list.filter((a) => a.health !== null && healthBandFor(a.health).tone === "attention").length,
+  critical: list.filter((a) => a.health !== null && healthBandFor(a.health).tone === "critical").length,
   pendingSync: list.filter((a) => a.status === "pending_sync").length,
   categories: new Set(list.map((a) => a.category)).size,
 })

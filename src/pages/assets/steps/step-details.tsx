@@ -41,6 +41,16 @@ export function StepDetails({
   const departments = site.plant.departments.map((d) => d.name)
   const category = form.watch("category")
 
+  /*
+   * A category typed by hand behind Other is not on the master list, so it is
+   * added to the dropdown's options - otherwise the field the grid just filled
+   * in would render empty.
+   */
+  const categoryOptions =
+    category && !(assetCategories as readonly string[]).includes(category)
+      ? [...assetCategories, category]
+      : assetCategories
+
   return (
     <div className="grid gap-3 xl:grid-cols-[minmax(0,1fr)_26rem]">
       <StepCard title="Step 1 of 4: Asset Details" description="Enter the basic information of the electrical asset.">
@@ -58,7 +68,7 @@ export function StepDetails({
             name="category"
             label="Asset Category"
             required
-            options={assetCategories}
+            options={categoryOptions}
             placeholder="Select, or tap a category on the right"
           />
           <TextField control={control} name="tag" label="Asset Name / Tag ID" required placeholder="TRF-T1-11KV" />

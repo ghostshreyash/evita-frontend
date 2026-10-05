@@ -66,8 +66,12 @@ export type AssetRecord = {
   /** DD-MM-YYYY */
   installed: string
   onboarded: string
-  /** 0-100, scored from the last inspection */
-  health: number
+  /**
+    * 0-100, scored from the last inspection. Null until one has happened - an
+    * asset registered on the tablet and not yet synced has never been inspected,
+    * so it has no score rather than a placeholder one.
+    */
+  health: number | null
   status: AssetSyncStatus
 }
 
@@ -358,6 +362,7 @@ function buildRegister(elpremarId: string): AssetRecord[] {
     counters.set(prefix, n)
 
     const code = assetCategoryCode(category)
+    const synced = i % 9 !== 8
     const installed = dateOffset(-(400 + ((s + i * 53) % 3200)))
     // Manufactured in the year it was installed or the one before, never after
     const year = parseDmy(installed).getFullYear() - (s % 2)
@@ -378,10 +383,11 @@ function buildRegister(elpremarId: string): AssetRecord[] {
       year,
       installed,
       onboarded: dateOffset(-(5 + ((s + i * 29) % 420))),
-      // Spread across the three health bands by position, so none is ever empty
-      health: [88, 92, 74, 61, 55, 44, 96, 68, 38, 81][i % 10] + (s % 4),
       // Roughly one in nine is still waiting on the tablet to sync
-      status: i % 9 === 8 ? "pending_sync" : "onboarded",
+      status: synced ? "onboarded" : "pending_sync",
+      // Spread across the three health bands by position, so none is ever empty.
+      // An unsynced asset has not been inspected yet, so it carries no score.
+      health: synced ? [88, 92, 74, 61, 55, 44, 96, 68, 38, 81][i % 10] + (s % 4) : null,
     }
   })
 }
