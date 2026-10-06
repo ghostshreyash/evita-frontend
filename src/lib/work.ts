@@ -3,10 +3,10 @@ import { parse, startOfDay } from "date-fns"
 
 import { useInspectionDetails, useInspectionRows } from "@/data/inspection-store"
 import { assetCategories } from "@/data/master-data"
-import { useMaintenanceDetails, useMaintenanceRows } from "@/data/maintenance-store"
+import { useMaintenanceDetails, useMaintenanceRows, useStartedMaintenance } from "@/data/maintenance-store"
 import type { Priority } from "@/data/occ-tables"
 import { useCurrentElpremar } from "@/lib/me"
-import { inspectionStatus, maintenanceStatus, workStatus, type WorkStatus } from "@/lib/status"
+import type { WorkStatus } from "@/lib/status"
 
 /**
  * One job on the ELPREMAR's book, from either the inspection queue or the
@@ -14,6 +14,23 @@ import { inspectionStatus, maintenanceStatus, workStatus, type WorkStatus } from
  * because on site they are simply "my work".
  */
 export type JobKind = "inspection" | "maintenance"
+
+/**
+ * The five statuses an ELPREMAR sees, whichever book the job comes from:
+ * Open (assigned, not started), Overdue (not started and past its day),
+ * In Progress, Completed (their part is done) and Approved (signed off by OCC).
+ */
+export type FieldStatus = "open" | "overdue" | "in_progress" | "completed" | "approved"
+
+export const fieldStatuses: FieldStatus[] = ["open", "overdue", "in_progress", "completed", "approved"]
+
+export const fieldStatusLook: Record<FieldStatus, { label: string; badge: "info" | "critical" | "warning" | "success" | "highlight" }> = {
+  open: { label: "Open", badge: "info" },
+  overdue: { label: "Overdue", badge: "critical" },
+  in_progress: { label: "In Progress", badge: "warning" },
+  completed: { label: "Completed", badge: "success" },
+  approved: { label: "Approved", badge: "highlight" },
+}
 
 export type Job = {
   id: string
@@ -28,44 +45,51 @@ export type Job = {
   date: string
   slot: number
   priority: Priority
+  /** The status in OCC's book, kept for the record and the store calls */
   status: WorkStatus
+  /** The status as EVITA shows it */
+  field: FieldStatus
   area: string
   /** Inspection the maintenance traces back to */
   inspectionId?: string
 }
 
 /** What the ELPREMAR can do with a job right now */
-export type JobAction = "start" | "continue" | "rework" | "view"
+export type JobAction = "start" | "continue" | "view"
 
-/**
- * Inspections: Approved (pending) → Start → In Progress → Completed.
- * Maintenance: In Progress → Submit for Approval → Pending For Approval →
- * Approved / Rejected. A rejected job comes back to the field for rework.
- */
-export function actionFor(job: Pick<Job, "kind" | "status">): JobAction {
-  if (job.kind === "inspection") {
-    if (job.status === "pending") return "start"
-    if (job.status === "in_progress") return "continue"
-    return "view"
-  }
-  if (job.status === "in_progress") return "continue"
-  if (job.status === "rejected") return "rework"
+/** Open and Overdue → Start; In Progress → Continue; Completed and Approved → View */
+export function actionFor(job: Pick<Job, "field">): JobAction {
+  if (job.field === "open" || job.field === "overdue") return "start"
+  if (job.field === "in_progress") return "continue"
   return "view"
-}
-
-/** Still needs the ELPREMAR's hands, as opposed to waiting on OCC or finished */
-export const isOpenWork = (job: Pick<Job, "kind" | "status">) => actionFor(job) !== "view"
-
-/** Status wording for a job, in the vocabulary OCC uses for that book */
-export function statusLook(job: Pick<Job, "kind" | "status">) {
-  const override = job.kind === "inspection" ? inspectionStatus[job.status] : maintenanceStatus[job.status]
-  return override ?? workStatus[job.status]
 }
 
 export const parseDay = (d: string) => startOfDay(parse(d, "dd-MM-yyyy", new Date()))
 export const isToday = (d: string) => parseDay(d).getTime() === startOfDay(new Date()).getTime()
-/** Past its day and still needing work */
-export const isOverdue = (job: Job) => isOpenWork(job) && parseDay(job.date) < startOfDay(new Date())
+const isPast = (d: string) => parseDay(d) < startOfDay(new Date())
+export const isOverdue = (job: Pick<Job, "field">) => job.field === "overdue"
+
+/**
+ * OCC's book status → what the ELPREMAR sees.
+ *
+ * Inspection: Approved (pending) → Open, Start → In Progress → Completed.
+ * Maintenance: OCC books it straight into In Progress, so it reads Open until
+ * the engineer presses Start in EVITA. Submitted (Pending For Approval) and
+ * closed work read Completed; OCC's Approved reads Approved; work OCC sent back
+ * reads Open again, to be started and resubmitted.
+ */
+function fieldStatusOf(kind: JobKind, status: WorkStatus, date: string, startedHere: boolean): FieldStatus {
+  const notStarted = (): FieldStatus => (isPast(date) ? "overdue" : "open")
+  if (kind === "inspection") {
+    if (status === "pending") return notStarted()
+    if (status === "in_progress") return "in_progress"
+    return "completed"
+  }
+  if (status === "in_progress") return startedHere ? "in_progress" : notStarted()
+  if (status === "rejected") return notStarted()
+  if (status === "assigned") return "approved"
+  return "completed"
+}
 
 /** Sort key: the moment the job is booked for */
 export const when = (job: Pick<Job, "date" | "slot">) => parseDay(job.date).getTime() + job.slot * 3_600_000
@@ -77,6 +101,7 @@ export function useMyJobs(): Job[] {
   const inspectionDetails = useInspectionDetails()
   const maintenance = useMaintenanceRows()
   const maintenanceDetails = useMaintenanceDetails()
+  const started = useStartedMaintenance()
 
   return useMemo(() => {
     const jobs: Job[] = [
@@ -94,6 +119,7 @@ export function useMyJobs(): Job[] {
           slot: t.slot,
           priority: t.priority,
           status: t.status,
+          field: fieldStatusOf("inspection", t.status, t.due, false),
           area: inspectionDetails[t.id]?.area ?? "",
         })),
       ...maintenance
@@ -110,12 +136,13 @@ export function useMyJobs(): Job[] {
           slot: m.slot,
           priority: maintenanceDetails[m.id]?.priority ?? "Medium",
           status: m.status,
+          field: fieldStatusOf("maintenance", m.status, m.scheduled, started.has(m.id)),
           area: maintenanceDetails[m.id]?.area ?? "",
           inspectionId: m.inspectionId,
         })),
     ]
     return jobs.sort((a, b) => when(a) - when(b))
-  }, [me, inspections, inspectionDetails, maintenance, maintenanceDetails])
+  }, [me, inspections, inspectionDetails, maintenance, maintenanceDetails, started])
 }
 
 /** The day at a glance, as counted on the dashboard tiles */
@@ -123,10 +150,9 @@ export function summarise(jobs: Job[]) {
   const today = jobs.filter((j) => isToday(j.date))
   return {
     today: today.length,
-    toStart: today.filter((j) => actionFor(j) === "start" || actionFor(j) === "rework").length,
-    running: today.filter((j) => j.status === "in_progress").length,
-    // Approved maintenance is signed off but not closed out, so it does not count as finished
-    completed: jobs.filter((j) => j.status === "completed").length,
+    pending: today.filter((j) => j.field === "open").length,
+    running: today.filter((j) => j.field === "in_progress").length,
+    completed: jobs.filter((j) => j.field === "completed").length,
     overdue: jobs.filter(isOverdue).length,
     total: jobs.length,
   }

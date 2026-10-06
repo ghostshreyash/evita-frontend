@@ -103,20 +103,36 @@ export function reviewMaintenance(id: string, outcome: "approved" | "rejected", 
 
 /* ---------- Field-side (EVITA) ---------- */
 
+/**
+ * What the maintenance form saves. The clock (`timeLog`, start / end times) is
+ * written only by Start / Stop / Resume, so a draft can never roll it back.
+ */
+export type MaintenanceDraft = Pick<MaintenanceDetail, "products" | "evidence" | "firePrevention" | "pdMitigation"> & { notes: string }
+
+const withDraft = (detail: MaintenanceDetail, { notes, ...rest }: MaintenanceDraft): MaintenanceDetail => ({
+  ...detail,
+  ...rest,
+  execution: detail.execution && { ...detail.execution, notes },
+})
+
 /** Save what has been captured so far without submitting */
-export function saveMaintenanceDraft(id: string, patch: Partial<MaintenanceDetail>) {
-  details = { ...details, [id]: { ...details[id], ...patch } }
+export function saveMaintenanceDraft(id: string, draft: MaintenanceDraft) {
+  details = { ...details, [id]: withDraft(details[id], draft) }
   emit()
 }
 
 /** Work finished on site: stop the clock and hand it to OCC for approval */
-export function submitMaintenance(id: string, patch: Partial<MaintenanceDetail>) {
-  const detail = { ...details[id], ...patch }
+export function submitMaintenance(id: string, draft: MaintenanceDraft) {
+  const now = new Date().toISOString()
+  const detail = withDraft(details[id], draft)
+  const timeLog = (detail.timeLog ?? []).map((e, i, all) => (i === all.length - 1 && !e.end ? { ...e, end: now } : e))
+  const lastEnd = timeLog.at(-1)?.end
   details = {
     ...details,
     [id]: {
       ...detail,
-      execution: detail.execution && { ...detail.execution, endedAt: detail.execution.endedAt ?? stampNow() },
+      timeLog,
+      execution: detail.execution && { ...detail.execution, endedAt: lastEnd ? stampOf(lastEnd) : (detail.execution.endedAt ?? stampNow()) },
       // A resubmission replaces the earlier verdict
       review: undefined,
     },
@@ -125,10 +141,68 @@ export function submitMaintenance(id: string, patch: Partial<MaintenanceDetail>)
   emit()
 }
 
-/** Pick up work OCC sent back: it returns to the field with the reviewer's remarks kept for reference */
-export function reworkMaintenance(id: string) {
+/** `dd-MM-yyyy HH:mm` for an ISO time, the format OCC's records carry */
+const stampOf = (iso: string) => {
+  const d = new Date(iso)
+  const p = (n: number) => String(n).padStart(2, "0")
+  return `${p(d.getDate())}-${p(d.getMonth() + 1)}-${d.getFullYear()} ${p(d.getHours())}:${p(d.getMinutes())}`
+}
+
+/**
+ * Jobs the ELPREMAR has started from this tablet. OCC books maintenance
+ * straight into In Progress, so until the engineer presses Start on site the
+ * job reads as Open in EVITA.
+ */
+let started = new Set(loadSnapshot<string[]>("maintenance-started") ?? [])
+export const useStartedMaintenance = () => useSyncExternalStore(subscribe, () => started)
+
+/**
+ * Start (or restart) work on site. A fresh job opens an empty record with the
+ * first time-log entry; a job OCC sent back keeps what was recorded, returns
+ * to In Progress and gets a new entry.
+ */
+export function startMaintenance(id: string, by: string) {
   const detail = details[id]
-  details = { ...details, [id]: { ...detail, execution: detail.execution && { ...detail.execution, endedAt: undefined } } }
+  const now = new Date().toISOString()
+  const rework = rows.find((r) => r.id === id)?.status === "rejected"
+  const timeLog = rework ? [...(detail.timeLog ?? []), { start: now }] : [{ start: now }]
+
+  details = {
+    ...details,
+    [id]: rework
+      ? { ...detail, timeLog, execution: detail.execution && { ...detail.execution, endedAt: undefined } }
+      : {
+          ...detail,
+          timeLog,
+          execution: { performedBy: by, mode: detail.execution?.mode ?? "Online / In-Service", startedAt: stampOf(now), notes: "" },
+          products: [],
+          evidence: [],
+          firePrevention: undefined,
+          pdMitigation: undefined,
+          review: undefined,
+        },
+  }
   rows = rows.map((r) => (r.id === id ? { ...r, status: "in_progress" } : r))
+  started = new Set(started).add(id)
+  saveSnapshot("maintenance-started", [...started])
+  emit()
+}
+
+/** Pause or finish a stretch of work: close the open time-log entry */
+export function stopMaintenanceClock(id: string) {
+  const detail = details[id]
+  const now = new Date().toISOString()
+  const timeLog = (detail.timeLog ?? []).map((e, i, all) => (i === all.length - 1 && !e.end ? { ...e, end: now } : e))
+  details = { ...details, [id]: { ...detail, timeLog, execution: detail.execution && { ...detail.execution, endedAt: stampOf(now) } } }
+  emit()
+}
+
+/** Back to work after a pause: a new time-log entry starts */
+export function resumeMaintenanceClock(id: string) {
+  const detail = details[id]
+  details = {
+    ...details,
+    [id]: { ...detail, timeLog: [...(detail.timeLog ?? []), { start: new Date().toISOString() }], execution: detail.execution && { ...detail.execution, endedAt: undefined } },
+  }
   emit()
 }

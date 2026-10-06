@@ -54,7 +54,16 @@ export type MaintenanceDetail = {
   pdMitigation?: { method: string; remarks: string }
   evidence: EvidenceItem[]
   review?: MaintenanceReview
+  /**
+   * EVITA: every Start / Stop on site, with exact times (ISO strings), so the
+   * log shows each stretch of work rather than one start and one end. OCC
+   * reads `execution.startedAt` / `endedAt`, which EVITA keeps in step.
+   */
+  timeLog?: TimeEntry[]
 }
+
+/** One stretch of work on site: started, and stopped once the engineer pauses or finishes */
+export type TimeEntry = { start: string; end?: string }
 
 /** INSTA consumables an ELPREMAR can book against a job */
 export const products = [
@@ -203,7 +212,7 @@ export function maintenanceTimeline(row: MaintenanceRow, detail: MaintenanceDeta
 
   return [
     { step: "Task assigned", at: at(row.scheduled, Math.max(9, row.slot - 1)), note: `${detail.createdBy} → ${row.elpremar}` },
-    { step: "Maintenance started", at: execution?.startedAt, note: execution && `${execution.mode} · ${slotLabel(row.slot)}` },
+    { step: "Maintenance started", at: execution?.startedAt, note: execution && `Booked ${slotLabel(row.slot)} · ${execution.performedBy}` },
     { step: "Maintenance completed", at: execution?.endedAt, note: execution?.endedAt ? `Performed by ${execution.performedBy}` : undefined },
     { step: "Evidence uploaded", at: evidence.length ? evidence.at(-1)!.meta.includes(":") ? evidence.at(-1)!.meta : execution?.endedAt : undefined, note: evidence.length ? `${evidence.length} items` : undefined },
     { step: "Submitted for approval", at: submitted ? execution?.endedAt : undefined },
