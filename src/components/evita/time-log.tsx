@@ -53,40 +53,47 @@ export function TimeLog({
   return (
     <div className="space-y-4">
       {/* Big live clock, as on a stopwatch */}
-      <div className={cn("flex flex-wrap items-center justify-between gap-4 rounded-xl px-4 py-3 ring-1", running ? "bg-healthy-soft ring-healthy/25" : "bg-muted/60 ring-foreground/10")}>
+      <div className={cn("flex flex-wrap items-center justify-between gap-4 rounded-2xl px-5 py-4 ring-1", running ? "bg-healthy-soft/60 ring-healthy/25" : "bg-muted/50 ring-foreground/10")}>
         <div>
-          <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
+          <div className="flex items-center gap-2 text-xs font-bold tracking-widest text-muted-foreground uppercase">
             <span className={cn("size-2.5 rounded-full", running ? "animate-pulse bg-healthy" : "bg-neutral")} />
             {running ? "Work in progress" : entries.length ? "Paused" : "Not started"}
           </div>
-          <div className="mt-0.5 text-3xl font-bold text-brand-navy tabular-nums dark:text-foreground">{formatSpan(total)}</div>
-          <div className="text-xs text-muted-foreground">Total time on the job · {entries.length} entr{entries.length === 1 ? "y" : "ies"}</div>
+          <div className="mt-1 font-mono text-4xl font-bold tracking-tight text-brand-navy tabular-nums dark:text-foreground">{formatSpan(total)}</div>
+          <div className="mt-0.5 text-sm text-muted-foreground">Total time on the job · {entries.length} entr{entries.length === 1 ? "y" : "ies"}</div>
         </div>
         {readOnly ? null : running ? (
-          <Button size="lg" variant="outline" className="h-14 border-critical/40 bg-card px-6 text-base text-critical" onClick={onStop}>
-            <Pause className="fill-current" /> Stop
+          <Button size="lg" variant="outline" className="h-14 border-2 border-critical/50 bg-card px-6 text-base font-semibold text-critical hover:bg-critical-soft" onClick={onStop}>
+            <Pause className="fill-current" /> Stop Work Log
           </Button>
         ) : (
-          <Button size="lg" className="h-14 px-6 text-base" onClick={onResume}>
-            <Play className="fill-current" /> {entries.length ? "Resume" : "Start"}
+          <Button size="lg" className="h-14 px-6 text-base font-semibold shadow-lg shadow-primary/30" onClick={onResume}>
+            <Play className="fill-current" /> {entries.length ? "Resume Work Log" : "Start Work Log"}
           </Button>
         )}
       </div>
 
       {entries.length ? (
-        <ol className="overflow-hidden rounded-lg ring-1 ring-foreground/10">
-          <li className="grid grid-cols-[2.5rem_minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)] gap-2 bg-muted/60 px-3 py-2 text-xs font-semibold tracking-wide text-muted-foreground uppercase">
+        <ol className="overflow-hidden rounded-xl ring-1 ring-foreground/10">
+          <li className="grid grid-cols-[2.5rem_minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)_6rem] gap-2 bg-muted/60 px-4 py-2.5 text-xs font-semibold tracking-wide text-muted-foreground uppercase">
             <span>#</span>
             <span>Started</span>
             <span>Stopped</span>
             <span className="text-right">Duration</span>
+            <span className="text-right">Status</span>
           </li>
           {entries.map((e, i) => (
-            <li key={e.start} className="grid grid-cols-[2.5rem_minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)] items-center gap-2 border-t px-3 py-2.5 text-sm tabular-nums">
+            <li key={e.start} className="grid grid-cols-[2.5rem_minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)_6rem] items-center gap-2 border-t px-4 py-3 font-mono text-sm tabular-nums">
               <span className="text-muted-foreground">{i + 1}</span>
               <span>{at(e.start)}</span>
-              <span>{e.end ? at(e.end) : <span className="font-semibold text-healthy">Running…</span>}</span>
-              <span className="text-right font-medium">{formatSpan(span(e, now))}</span>
+              <span>{e.end ? at(e.end) : <span className="text-muted-foreground">—</span>}</span>
+              <span className="text-right font-semibold">{formatSpan(span(e, now))}</span>
+              <span className="text-right">
+                <span className={cn("inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 font-sans text-xs font-semibold", e.end ? "bg-muted text-muted-foreground" : "bg-healthy-soft text-healthy")}>
+                  <span className={cn("size-1.5 rounded-full bg-current", !e.end && "animate-pulse")} />
+                  {e.end ? "Recorded" : "Active"}
+                </span>
+              </span>
             </li>
           ))}
         </ol>

@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from "react"
 import { format } from "date-fns"
-import { Activity, Camera, Droplets, Flame, NotebookPen, Plus, Send, Timer, Trash2 } from "lucide-react"
+import { Activity, Camera, Check, Droplets, Flame, NotebookPen, Send, Timer } from "lucide-react"
 import { toast } from "sonner"
+import { cn } from "cn"
 
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
@@ -10,7 +11,7 @@ import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { CaptureTile } from "@/components/evita/photo-capture"
-import { Checklist, EvidenceStrip, FieldLabel, Segmented, StepCard } from "@/components/evita/field-kit"
+import { Checklist, CountPill, EvidenceStrip, FieldLabel, Segmented, StepCard } from "@/components/evita/field-kit"
 import { TimeLog } from "@/components/evita/time-log"
 import type { EvidenceItem } from "@/data/evidence"
 import { fireSystems, pdMethods, products, type InstaProduct, type MaintenanceDetail } from "@/data/maintenance-detail"
@@ -94,8 +95,8 @@ export function MaintenanceForm({ job, detail }: { job: Job; detail: Maintenance
   const remove = (id: string) => setEvidence((ev) => ev.filter((e) => e.id !== id))
 
   return (
-    <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_18rem]">
-      <div className="min-w-0 space-y-4">
+    <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_19rem]">
+      <div className="min-w-0 space-y-5">
         {/* ---------- 1. Real-time log ---------- */}
         <StepCard step={1} title="Real Time Maintenance Log" icon={Timer} done={timeLog.length > 0 && !running}>
           <TimeLog entries={timeLog} onStop={() => stopMaintenanceClock(job.id)} onResume={() => resumeMaintenanceClock(job.id)} />
@@ -107,39 +108,45 @@ export function MaintenanceForm({ job, detail }: { job: Job; detail: Maintenance
         </StepCard>
 
         {/* ---------- 3. Consumables ---------- */}
-        <StepCard step={3} title="Fluids & Consumables" icon={Droplets} done={usedProducts.length > 0 && cleaned.length === cleaningSteps.length}>
+        <StepCard step={3} title="Fluids & Consumables" icon={Droplets} done={usedProducts.length > 0 && cleaned.length === cleaningSteps.length} actions={<CountPill done={usedProducts.length > 0}>{usedProducts.length} Used</CountPill>}>
           <div className="space-y-3">
-            {items.map((p, i) => (
-              <div key={i} className="grid items-end gap-3 rounded-lg bg-muted/40 p-3 ring-1 ring-foreground/5 sm:grid-cols-[minmax(0,1fr)_8rem_auto]">
-                <div>
-                  <FieldLabel required>INSTA product</FieldLabel>
-                  <Select
-                    value={p.name}
-                    onValueChange={(v) => setItems((rows) => rows.map((r, j) => (j === i ? { ...r, name: v, unit: products.find((x) => x.name === v)?.unit ?? r.unit } : r)))}
-                  >
-                    <SelectTrigger className="w-full bg-card"><SelectValue placeholder="Choose product" /></SelectTrigger>
-                    <SelectContent>
-                      {products.map((x) => <SelectItem key={x.name} value={x.name}>{x.name}</SelectItem>)}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div>
-                  <FieldLabel required>Quantity ({p.unit || "—"})</FieldLabel>
-                  <Input
-                    inputMode="decimal"
-                    value={p.quantity ? String(p.quantity) : ""}
-                    onChange={(e) => setItems((rows) => rows.map((r, j) => (j === i ? { ...r, quantity: Number(e.target.value.replace(/[^\d.]/g, "")) || 0 } : r)))}
-                    className="bg-card tabular-nums"
-                  />
-                </div>
-                <Button variant="ghost" size="icon" className="text-critical" aria-label="Remove product" onClick={() => setItems((rows) => rows.filter((_, j) => j !== i))}>
-                  <Trash2 />
-                </Button>
-              </div>
-            ))}
-            <Button variant="outline" onClick={() => setItems((rows) => [...rows, { name: "", quantity: 0, unit: "" }])}>
-              <Plus /> Add Product
-            </Button>
+            {/* INSTA products as cards: tap to add, then enter the quantity used */}
+            <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+              {products.map((x) => {
+                const row = items.find((r) => r.name === x.name)
+                return (
+                  <div key={x.name} className={cn("flex flex-col gap-3 rounded-xl p-3 ring-1 transition-colors", row ? "bg-info-soft/50 ring-2 ring-primary" : "bg-card ring-foreground/10")}>
+                    <button
+                      type="button"
+                      aria-pressed={!!row}
+                      onClick={() => setItems((rows) => (row ? rows.filter((r) => r.name !== x.name) : [...rows, { name: x.name, quantity: 0, unit: x.unit }]))}
+                      className="flex min-h-12 items-center gap-3 text-left"
+                    >
+                      <span className={cn("flex size-11 shrink-0 items-center justify-center rounded-lg", row ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground")}>
+                        <Droplets className="size-5" />
+                      </span>
+                      <span className="min-w-0 flex-1 text-sm leading-tight font-semibold">{x.name}</span>
+                      <span className={cn("flex size-6 shrink-0 items-center justify-center rounded-md ring-2", row ? "bg-primary text-primary-foreground ring-primary" : "ring-foreground/20")}>
+                        {row ? <Check className="size-4" strokeWidth={3} /> : null}
+                      </span>
+                    </button>
+                    {row ? (
+                      <div className="flex items-center gap-2">
+                        <Input
+                          inputMode="decimal"
+                          aria-label={`Quantity of ${x.name}`}
+                          placeholder="Qty"
+                          value={row.quantity ? String(row.quantity) : ""}
+                          onChange={(e) => setItems((rows) => rows.map((r) => (r.name === x.name ? { ...r, quantity: Number(e.target.value.replace(/[^\d.]/g, "")) || 0 } : r)))}
+                          className="bg-card font-mono tabular-nums"
+                        />
+                        <span className="w-10 text-sm font-medium text-muted-foreground">{x.unit}</span>
+                      </div>
+                    ) : null}
+                  </div>
+                )
+              })}
+            </div>
             <div className="space-y-1 border-t pt-3">
               {cleaningSteps.map((step) => (
                 <Label key={step} className="flex min-h-11 cursor-pointer items-center gap-3 text-sm font-normal">
@@ -155,7 +162,7 @@ export function MaintenanceForm({ job, detail }: { job: Job; detail: Maintenance
         </StepCard>
 
         {/* ---------- 4. Evidence ---------- */}
-        <StepCard step={4} title="Maintenance Images" icon={Camera} done={after.length > 0}>
+        <StepCard step={4} title="Maintenance Images" icon={Camera} done={after.length > 0} actions={<CountPill done={after.length > 0}>{before.length + after.length + thermal.length} Captured</CountPill>}>
           <div className="space-y-4">
             <div>
               <FieldLabel>Before maintenance ({before.length})</FieldLabel>
@@ -242,12 +249,13 @@ export function MaintenanceForm({ job, detail }: { job: Job; detail: Maintenance
 
       {/* ---------- Submit for approval ---------- */}
       <aside className="space-y-4 lg:sticky lg:top-20 lg:self-start">
-        <section className="space-y-3 rounded-lg bg-card p-3 shadow-xs ring-1 ring-foreground/10">
-          <p className="text-sm text-muted-foreground">OCC reviews the evidence and approves the work, or sends it back with remarks. The asset's health report updates after approval.</p>
+        <section className="space-y-4 rounded-2xl bg-card p-4 shadow-xs ring-1 ring-foreground/10">
+          <h3 className="text-lg font-semibold text-brand-navy dark:text-foreground">Maintenance Summary</h3>
+          <p className="rounded-xl bg-muted/50 p-3 text-sm text-muted-foreground">OCC reviews the evidence and approves the work, or sends it back with remarks. The asset's health report updates after approval.</p>
           <Checklist items={checklist} />
           <Button
             size="lg"
-            className="w-full"
+            className="h-14 w-full text-base font-semibold shadow-lg shadow-primary/30"
             disabled={!ready}
             onClick={() => {
               submitMaintenance(job.id, patch)

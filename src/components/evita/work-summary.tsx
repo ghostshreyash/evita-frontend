@@ -2,8 +2,8 @@ import { Activity, Camera, Droplets, Eye, Flame, Gauge, Timer, Wrench } from "lu
 import { cn } from "cn"
 
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { DetailList, DetailPanel } from "@/components/common/detail-list"
-import { EvidenceStrip } from "@/components/evita/field-kit"
+import { DetailList } from "@/components/common/detail-list"
+import { EvidenceStrip, TaskPanel } from "@/components/evita/field-kit"
 import { TimeLog } from "@/components/evita/time-log"
 import type { InspectionDetail } from "@/data/inspection-detail"
 import type { MaintenanceDetail } from "@/data/maintenance-detail"
@@ -28,7 +28,7 @@ export function InspectionRecord({ detail }: { detail: InspectionDetail }) {
   const images = detail.evidence.filter((e) => e.kind !== "document")
   return (
     <div className="space-y-3">
-      <DetailPanel icon={Gauge} title="Test Results" contentClassName="px-1">
+      <TaskPanel icon={Gauge} title="Test Results" contentClassName="px-2 py-3">
         {detail.measurements.length ? (
           <div className="overflow-x-auto">
             <Table>
@@ -55,9 +55,9 @@ export function InspectionRecord({ detail }: { detail: InspectionDetail }) {
         ) : (
           <div className="px-2">{empty("No readings recorded.")}</div>
         )}
-      </DetailPanel>
+      </TaskPanel>
 
-      <DetailPanel icon={Eye} title={`Observations (${detail.observations.length})`}>
+      <TaskPanel icon={Eye} title={`Observations (${detail.observations.length})`}>
         {detail.observations.length ? (
           <ul className="divide-y">
             {detail.observations.map((o, i) => (
@@ -74,11 +74,11 @@ export function InspectionRecord({ detail }: { detail: InspectionDetail }) {
         ) : (
           empty("No abnormality observed.")
         )}
-      </DetailPanel>
+      </TaskPanel>
 
-      <DetailPanel icon={Camera} title={`Images Captured (${images.length})`}>
+      <TaskPanel icon={Camera} title={`Images Captured (${images.length})`}>
         {images.length ? <EvidenceStrip items={images} /> : empty("No images captured.")}
-      </DetailPanel>
+      </TaskPanel>
     </div>
   )
 }
@@ -90,7 +90,7 @@ export function MaintenanceRecord({ detail }: { detail: MaintenanceDetail }) {
   return (
     <div className="space-y-3">
       <div className="grid gap-3 lg:grid-cols-2">
-        <DetailPanel icon={Wrench} title="Work Performed">
+        <TaskPanel icon={Wrench} title="Work Performed">
           {execution ? (
             <DetailList
               rows={[
@@ -103,13 +103,13 @@ export function MaintenanceRecord({ detail }: { detail: MaintenanceDetail }) {
           ) : (
             empty("Not started.")
           )}
-        </DetailPanel>
+        </TaskPanel>
 
-        <DetailPanel icon={Droplets} title="INSTA Consumables">
+        <TaskPanel icon={Droplets} title="INSTA Consumables">
           {detail.products.length ? <DetailList rows={detail.products.map((p) => ({ label: p.name, value: `${p.quantity} ${p.unit}` }))} /> : empty("None booked.")}
-        </DetailPanel>
+        </TaskPanel>
 
-        <DetailPanel icon={Flame} title="Fire Prevention System">
+        <TaskPanel icon={Flame} title="Fire Prevention System">
           {detail.firePrevention ? (
             <DetailList
               rows={[
@@ -120,9 +120,9 @@ export function MaintenanceRecord({ detail }: { detail: MaintenanceDetail }) {
           ) : (
             empty("Not performed on this job.")
           )}
-        </DetailPanel>
+        </TaskPanel>
 
-        <DetailPanel icon={Activity} title="PD Mitigation">
+        <TaskPanel icon={Activity} title="PD Mitigation">
           {detail.pdMitigation ? (
             <DetailList
               rows={[
@@ -133,21 +133,21 @@ export function MaintenanceRecord({ detail }: { detail: MaintenanceDetail }) {
           ) : (
             empty("Not performed on this job.")
           )}
-        </DetailPanel>
+        </TaskPanel>
       </div>
 
       {detail.timeLog?.length ? (
-        <DetailPanel icon={Timer} title="Real Time Maintenance Log">
+        <TaskPanel icon={Timer} title="Real Time Maintenance Log">
           <TimeLog entries={detail.timeLog} readOnly />
-        </DetailPanel>
+        </TaskPanel>
       ) : null}
 
-      <DetailPanel icon={Camera} title={`Evidence (${detail.evidence.length})`}>
+      <TaskPanel icon={Camera} title={`Evidence (${detail.evidence.length})`}>
         {images.length ? <EvidenceStrip items={images} /> : documents.length ? null : empty("No evidence uploaded.")}
         {documents.length ? (
           <DetailList className={images.length ? "mt-3" : undefined} rows={documents.map((d) => ({ label: d.label, value: d.meta }))} />
         ) : null}
-      </DetailPanel>
+      </TaskPanel>
     </div>
   )
 }

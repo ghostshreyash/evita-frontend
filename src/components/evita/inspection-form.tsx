@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { CaptureTile } from "@/components/evita/photo-capture"
-import { Checklist, EvidenceStrip, FieldLabel, HealthRing, Segmented, StepCard } from "@/components/evita/field-kit"
+import { Checklist, CountPill, EvidenceStrip, FieldLabel, HealthRing, Segmented, StepCard } from "@/components/evita/field-kit"
 import type { EvidenceItem } from "@/data/evidence"
 import { completeInspection, saveInspectionDraft } from "@/data/inspection-store"
 import type { InspectionDetail, Measurement, Observation, Severity } from "@/data/inspection-detail"
@@ -144,8 +144,8 @@ export function InspectionForm({ job, detail }: { job: Job; detail: InspectionDe
   const template = templates[job.activity] ?? templates["Preventive Assessment"]
 
   return (
-    <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_18rem]">
-      <div className="min-w-0 space-y-4">
+    <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_19rem]">
+      <div className="min-w-0 space-y-5">
         {/* ---------- 1. Readings ---------- */}
         <StepCard
           step={1}
@@ -246,7 +246,7 @@ export function InspectionForm({ job, detail }: { job: Job; detail: InspectionDe
         </StepCard>
 
         {/* ---------- 3. Evidence ---------- */}
-        <StepCard step={3} title="Asset & Thermal Images" icon={Camera} done={photos.length > 0}>
+        <StepCard step={3} title="Asset & Thermal Images" icon={Camera} done={photos.length > 0} actions={<CountPill done={photos.length > 0}>{photos.length + thermals.length} Captured</CountPill>}>
           <div className="space-y-4">
             <div>
               <FieldLabel required>Asset images ({photos.length})</FieldLabel>
@@ -294,13 +294,13 @@ export function InspectionForm({ job, detail }: { job: Job; detail: InspectionDe
 
       {/* ---------- Result and submit ---------- */}
       <aside className="space-y-4 lg:sticky lg:top-20 lg:self-start">
-        <section className="rounded-lg bg-card p-3 shadow-xs ring-1 ring-foreground/10">
-          <h3 className="mb-3 text-base font-semibold text-brand-navy dark:text-foreground">Health Score (estimate)</h3>
-          <HealthRing score={preview.healthScore} caption="Updates as you record" />
-        </section>
-        <section className="space-y-3 rounded-lg bg-card p-3 shadow-xs ring-1 ring-foreground/10">
+        <section className="space-y-4 rounded-2xl bg-card p-4 shadow-xs ring-1 ring-foreground/10">
+          <h3 className="text-lg font-semibold text-brand-navy dark:text-foreground">Inspection Health Summary</h3>
+          <div className="rounded-xl bg-muted/50 p-3">
+            <HealthRing score={preview.healthScore} caption="Estimate · updates as you record" />
+          </div>
           <Checklist items={checklist} />
-          <Button size="lg" className="w-full" disabled={!ready} onClick={submit}>
+          <Button size="lg" className="h-14 w-full text-base font-semibold shadow-lg shadow-primary/30" disabled={!ready} onClick={submit}>
             <Send /> Submit
           </Button>
           <p className="text-center text-xs text-muted-foreground">{savedAt ? `Draft saved at ${savedAt}` : "Saved automatically as you work"}</p>
