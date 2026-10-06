@@ -8,13 +8,22 @@ import { cn } from "cn"
 import { DateRangeFilter, SortHead, TablePager } from "@/components/common/data-table"
 import { PageHeader } from "@/components/common/page-header"
 import { JobActionButton, JobStatusBadge } from "@/components/evita/job-action"
+import { CountTile, FilterSelect } from "@/components/common/list-controls"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { priorityTone, slotLabel } from "@/data/occ-tables"
 import { control, nextSort, sortRows, td, th, type Sort } from "@/lib/data-table"
-import { fieldStatuses, fieldStatusLook, isOverdue, isToday, parseDay, useMyJobs, when, type FieldStatus, type Job, type JobKind } from "@/lib/work"
+import { fieldStatuses, fieldStatusLook, isOverdue, isToday, parseDay, thisWeek, useMyJobs, when, type FieldStatus, type Job, type JobKind } from "@/lib/work"
+
+/** Tile tint per status, matching the status badges */
+const tileTone: Record<FieldStatus, string> = {
+  open: "bg-info-soft text-info",
+  overdue: "bg-critical-soft text-critical",
+  in_progress: "bg-attention-soft text-attention",
+  completed: "bg-healthy-soft text-healthy",
+  approved: "bg-highlight-soft text-highlight",
+}
 
 type SortKey = "id" | "asset" | "activity" | "due" | "priority" | "status"
 const priorityRank: Record<string, number> = { Low: 0, Medium: 1, High: 2, Critical: 3 }
@@ -51,6 +60,7 @@ function MyTasks({ kind, title = "My Tasks" }: { kind?: JobKind; title?: string 
   const initialStatus = params.get("status")
   const [status, setStatus] = useState<FieldStatus | "all">(fieldStatuses.includes(initialStatus as FieldStatus) ? (initialStatus as FieldStatus) : "all")
   const [range, setRange] = useState<DateRange | undefined>(() => {
+    if (params.get("date") === "week") return thisWeek()
     if (params.get("date") !== "today") return undefined
     const today = startOfDay(new Date())
     return { from: today, to: today }
@@ -60,6 +70,9 @@ function MyTasks({ kind, title = "My Tasks" }: { kind?: JobKind; title?: string 
   const [sort, setSort] = useState<Sort<SortKey>>(null)
   const [page, setPage] = useState(1)
   const [pageSize, setPageSize] = useState(10)
+
+  /** The jobs this page covers, before the status, date and search filters */
+  const scoped = useMemo(() => jobs.filter((j) => (kind ? j.kind === kind : type === "all" || j.kind === type)), [jobs, kind, type])
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase()
@@ -108,32 +121,42 @@ function MyTasks({ kind, title = "My Tasks" }: { kind?: JobKind; title?: string 
         breadcrumbs={[{ label: title }]}
       />
 
-      <section className="rounded-lg bg-card shadow-xs ring-1 ring-foreground/10">
-        <div className="flex flex-wrap items-center gap-2 px-3 py-3">
+      {/* ---------- Where the work stands; a tile applies that status filter ---------- */}
+      <div className="mb-3 grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-5">
+        {fieldStatuses.map((s) => (
+          <CountTile
+            key={s}
+            label={fieldStatusLook[s].label}
+            value={scoped.filter((j) => j.field === s).length}
+            tone={tileTone[s]}
+            active={status === s}
+            onClick={() => reset(() => setStatus(status === s ? "all" : s))}
+          />
+        ))}
+      </div>
+
+      <section className="rounded-lg bg-card p-3 shadow-xs ring-1 ring-foreground/10">
+        <div className="flex flex-wrap items-center gap-2">
           <div className="relative min-w-56 flex-1">
-            <Search className="absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
-            <Input value={query} onChange={(e) => reset(() => setQuery(e.target.value))} placeholder="Search task, asset, plant…" className="bg-card pl-10" />
+            <Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
+            <Input value={query} onChange={(e) => reset(() => setQuery(e.target.value))} placeholder="Search task, asset or plant" aria-label="Search tasks" className={cn(control, "pl-9")} />
           </div>
-          <Select value={status} onValueChange={(v) => reset(() => setStatus(v as typeof status))}>
-            <SelectTrigger className={cn(control, "w-44 bg-card")} aria-label="Status"><SelectValue /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Statuses</SelectItem>
-              {fieldStatuses.map((s) => (
-                <SelectItem key={s} value={s}>
-                  {fieldStatusLook[s].label} ({jobs.filter((j) => (kind ? j.kind === kind : true) && j.field === s).length})
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <FilterSelect
+            label="Status"
+            value={status}
+            onChange={(v) => reset(() => setStatus(v as typeof status))}
+            options={fieldStatuses.map((s) => ({ value: s, label: fieldStatusLook[s].label }))}
+          />
           {!kind ? (
-            <Select value={type} onValueChange={(v) => reset(() => setType(v as typeof type))}>
-              <SelectTrigger className={cn(control, "w-44 bg-card")} aria-label="Type of work"><SelectValue /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Work</SelectItem>
-                <SelectItem value="inspection">Inspections</SelectItem>
-                <SelectItem value="maintenance">Maintenance</SelectItem>
-              </SelectContent>
-            </Select>
+            <FilterSelect
+              label="Work"
+              value={type}
+              onChange={(v) => reset(() => setType(v as typeof type))}
+              options={[
+                { value: "inspection", label: "Inspections" },
+                { value: "maintenance", label: "Maintenance" },
+              ]}
+            />
           ) : null}
           <DateRangeFilter label="Due" range={range} onApply={(r) => reset(() => setRange(r))} />
           <Button
@@ -146,7 +169,7 @@ function MyTasks({ kind, title = "My Tasks" }: { kind?: JobKind; title?: string 
           </Button>
         </div>
 
-        <div className="overflow-x-auto px-2 pb-3">
+        <div className="mt-3 overflow-x-auto">
           <Table>
             <TableHeader>
               <TableRow className="bg-muted/60 hover:bg-muted/60">
