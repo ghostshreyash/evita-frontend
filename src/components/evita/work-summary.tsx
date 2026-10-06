@@ -1,35 +1,39 @@
+import { Activity, Camera, Droplets, Eye, Flame, Gauge, Timer, Wrench } from "lucide-react"
 import { cn } from "cn"
 
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { EvidenceStrip } from "@/components/evita/field-kit"
+import { DetailList } from "@/components/common/detail-list"
+import { EvidenceStrip, TaskPanel } from "@/components/evita/field-kit"
+import { TimeLog } from "@/components/evita/time-log"
 import type { InspectionDetail } from "@/data/inspection-detail"
 import type { MaintenanceDetail } from "@/data/maintenance-detail"
 import { td, th } from "@/lib/data-table"
 
-/** Read-only views of what was recorded, for work that is submitted, approved or closed */
-
-function Row({ label, children }: { label: string; children: React.ReactNode }) {
-  return (
-    <div className="flex items-baseline justify-between gap-4 border-b py-2 text-sm last:border-0">
-      <dt className="text-muted-foreground">{label}</dt>
-      <dd className="text-right font-medium">{children}</dd>
-    </div>
-  )
-}
+/**
+ * Read-only views of what was recorded, for work that is submitted, approved
+ * or closed — the same panels and label/value lists as the asset screens.
+ */
 
 const resultTone = { Pass: "text-healthy", Attention: "text-attention", Fail: "text-critical" } as const
-const severityTone = { Low: "bg-neutral-soft text-neutral-soft-foreground", Medium: "bg-attention-soft text-attention-soft-foreground", High: "bg-critical-soft text-critical-soft-foreground", Critical: "bg-critical text-critical-foreground" } as const
+const severityTone = {
+  Low: "bg-neutral-soft text-neutral-soft-foreground",
+  Medium: "bg-attention-soft text-attention-soft-foreground",
+  High: "bg-critical-soft text-critical-soft-foreground",
+  Critical: "bg-critical text-critical-foreground",
+} as const
+
+const empty = (text: string) => <p className="py-1 text-sm text-muted-foreground">{text}</p>
 
 export function InspectionRecord({ detail }: { detail: InspectionDetail }) {
+  const images = detail.evidence.filter((e) => e.kind !== "document")
   return (
-    <div className="space-y-4">
-      <section className="rounded-lg bg-card p-4 shadow-xs ring-1 ring-foreground/10">
-        <h3 className="mb-2 text-base font-semibold">Test Results</h3>
+    <div className="space-y-3">
+      <TaskPanel icon={Gauge} title="Test Results" contentClassName="px-2 py-3">
         {detail.measurements.length ? (
           <div className="overflow-x-auto">
             <Table>
               <TableHeader>
-                <TableRow className="bg-muted/60 hover:bg-muted/60">
+                <TableRow className="hover:bg-transparent">
                   <TableHead className={th}>Parameter</TableHead>
                   <TableHead className={th}>Measured</TableHead>
                   <TableHead className={cn(th, "max-md:hidden")}>Instrument</TableHead>
@@ -39,9 +43,9 @@ export function InspectionRecord({ detail }: { detail: InspectionDetail }) {
               <TableBody>
                 {detail.measurements.map((m, i) => (
                   <TableRow key={i}>
-                    <TableCell className={cn(td, "whitespace-normal")}>{m.parameter}</TableCell>
+                    <TableCell className={cn(td, "font-medium whitespace-normal")}>{m.parameter}</TableCell>
                     <TableCell className={cn(td, "tabular-nums")}>{m.value} {m.unit !== "—" && m.unit !== "Other" ? m.unit : ""}</TableCell>
-                    <TableCell className={cn(td, "max-md:hidden")}>{m.source}</TableCell>
+                    <TableCell className={cn(td, "text-muted-foreground max-md:hidden")}>{m.source}</TableCell>
                     <TableCell className={cn(td, "font-semibold", resultTone[m.status])}>{m.status}</TableCell>
                   </TableRow>
                 ))}
@@ -49,16 +53,15 @@ export function InspectionRecord({ detail }: { detail: InspectionDetail }) {
             </Table>
           </div>
         ) : (
-          <p className="text-sm text-muted-foreground">No readings recorded.</p>
+          <div className="px-2">{empty("No readings recorded.")}</div>
         )}
-      </section>
+      </TaskPanel>
 
-      <section className="rounded-lg bg-card p-4 shadow-xs ring-1 ring-foreground/10">
-        <h3 className="mb-2 text-base font-semibold">Observations</h3>
+      <TaskPanel icon={Eye} title={`Observations (${detail.observations.length})`}>
         {detail.observations.length ? (
-          <ul className="space-y-2">
+          <ul className="divide-y">
             {detail.observations.map((o, i) => (
-              <li key={i} className="rounded-md bg-muted/40 p-3">
+              <li key={i} className="py-2 first:pt-0 last:pb-0">
                 <div className="flex flex-wrap items-center gap-2">
                   <span className={cn("rounded px-2 py-0.5 text-xs font-semibold", severityTone[o.severity])}>{o.severity}</span>
                   <span className="text-sm font-medium">{o.type}</span>
@@ -69,85 +72,82 @@ export function InspectionRecord({ detail }: { detail: InspectionDetail }) {
             ))}
           </ul>
         ) : (
-          <p className="text-sm text-muted-foreground">No abnormality observed.</p>
+          empty("No abnormality observed.")
         )}
-      </section>
+      </TaskPanel>
 
-      <section className="rounded-lg bg-card p-4 shadow-xs ring-1 ring-foreground/10">
-        <h3 className="mb-3 text-base font-semibold">Images Captured ({detail.evidence.filter((e) => e.kind !== "document").length})</h3>
-        <EvidenceStrip items={detail.evidence.filter((e) => e.kind !== "document")} />
-      </section>
+      <TaskPanel icon={Camera} title={`Images Captured (${images.length})`}>
+        {images.length ? <EvidenceStrip items={images} /> : empty("No images captured.")}
+      </TaskPanel>
     </div>
   )
 }
 
 export function MaintenanceRecord({ detail }: { detail: MaintenanceDetail }) {
   const { execution } = detail
+  const images = detail.evidence.filter((e) => e.kind !== "document")
+  const documents = detail.evidence.filter((e) => e.kind === "document")
   return (
-    <div className="space-y-4">
-      <div className="grid gap-4 lg:grid-cols-2">
-        <section className="rounded-lg bg-card p-4 shadow-xs ring-1 ring-foreground/10">
-          <h3 className="mb-1 text-base font-semibold">Work Performed</h3>
+    <div className="space-y-3">
+      <div className="grid gap-3 lg:grid-cols-2">
+        <TaskPanel icon={Wrench} title="Work Performed">
           {execution ? (
-            <dl>
-              <Row label="Performed by">{execution.performedBy}</Row>
-              <Row label="Mode">{execution.mode}</Row>
-              <Row label="Started">{execution.startedAt}</Row>
-              <Row label="Stopped">{execution.endedAt ?? "—"}</Row>
-            </dl>
+            <DetailList
+              rows={[
+                { label: "Performed By", value: execution.performedBy, always: true },
+                { label: "Started", value: execution.startedAt, always: true },
+                { label: "Stopped", value: execution.endedAt, always: true },
+                { label: "Notes", value: execution.notes },
+              ]}
+            />
           ) : (
-            <p className="text-sm text-muted-foreground">Not started.</p>
+            empty("Not started.")
           )}
-          {execution?.notes ? <p className="mt-2 text-sm text-muted-foreground">{execution.notes}</p> : null}
-        </section>
+        </TaskPanel>
 
-        <section className="rounded-lg bg-card p-4 shadow-xs ring-1 ring-foreground/10">
-          <h3 className="mb-1 text-base font-semibold">INSTA Consumables</h3>
-          {detail.products.length ? (
-            <dl>
-              {detail.products.map((p) => <Row key={p.name} label={p.name}>{p.quantity} {p.unit}</Row>)}
-            </dl>
-          ) : (
-            <p className="text-sm text-muted-foreground">None booked.</p>
-          )}
-        </section>
+        <TaskPanel icon={Droplets} title="INSTA Consumables">
+          {detail.products.length ? <DetailList rows={detail.products.map((p) => ({ label: p.name, value: `${p.quantity} ${p.unit}` }))} /> : empty("None booked.")}
+        </TaskPanel>
 
-        <section className="rounded-lg bg-card p-4 shadow-xs ring-1 ring-foreground/10">
-          <h3 className="mb-1 text-base font-semibold">Fire Prevention System</h3>
+        <TaskPanel icon={Flame} title="Fire Prevention System">
           {detail.firePrevention ? (
-            <dl>
-              <Row label="System">{detail.firePrevention.system}</Row>
-              {detail.firePrevention.remarks ? <p className="pt-2 text-sm text-muted-foreground">{detail.firePrevention.remarks}</p> : null}
-            </dl>
+            <DetailList
+              rows={[
+                { label: "System", value: detail.firePrevention.system, always: true },
+                { label: "Remarks", value: detail.firePrevention.remarks },
+              ]}
+            />
           ) : (
-            <p className="text-sm text-muted-foreground">Not performed on this job.</p>
+            empty("Not performed on this job.")
           )}
-        </section>
+        </TaskPanel>
 
-        <section className="rounded-lg bg-card p-4 shadow-xs ring-1 ring-foreground/10">
-          <h3 className="mb-1 text-base font-semibold">PD Mitigation</h3>
+        <TaskPanel icon={Activity} title="PD Mitigation">
           {detail.pdMitigation ? (
-            <dl>
-              <Row label="Method">{detail.pdMitigation.method}</Row>
-              {detail.pdMitigation.remarks ? <p className="pt-2 text-sm text-muted-foreground">{detail.pdMitigation.remarks}</p> : null}
-            </dl>
+            <DetailList
+              rows={[
+                { label: "Method", value: detail.pdMitigation.method, always: true },
+                { label: "Remarks", value: detail.pdMitigation.remarks },
+              ]}
+            />
           ) : (
-            <p className="text-sm text-muted-foreground">Not performed on this job.</p>
+            empty("Not performed on this job.")
           )}
-        </section>
+        </TaskPanel>
       </div>
 
-      <section className="rounded-lg bg-card p-4 shadow-xs ring-1 ring-foreground/10">
-        <h3 className="mb-3 text-base font-semibold">Evidence ({detail.evidence.length})</h3>
-        {detail.evidence.length ? <EvidenceStrip items={detail.evidence.filter((e) => e.kind !== "document")} /> : <p className="text-sm text-muted-foreground">No evidence uploaded.</p>}
-        {detail.evidence.some((e) => e.kind === "document") ? (
-          <ul className="mt-3 space-y-1 text-sm">
-            {detail.evidence.filter((e) => e.kind === "document").map((d) => (
-              <li key={d.id} className="flex justify-between gap-3"><span className="font-medium">{d.label}</span><span className="text-muted-foreground">{d.meta}</span></li>
-            ))}
-          </ul>
+      {detail.timeLog?.length ? (
+        <TaskPanel icon={Timer} title="Real Time Maintenance Log">
+          <TimeLog entries={detail.timeLog} readOnly />
+        </TaskPanel>
+      ) : null}
+
+      <TaskPanel icon={Camera} title={`Evidence (${detail.evidence.length})`}>
+        {images.length ? <EvidenceStrip items={images} /> : documents.length ? null : empty("No evidence uploaded.")}
+        {documents.length ? (
+          <DetailList className={images.length ? "mt-3" : undefined} rows={documents.map((d) => ({ label: d.label, value: d.meta }))} />
         ) : null}
-      </section>
+      </TaskPanel>
     </div>
   )
 }

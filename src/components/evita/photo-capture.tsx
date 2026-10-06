@@ -33,11 +33,13 @@ export function CaptureTile({
         type="button"
         onClick={() => input.current?.click()}
         className={cn(
-          "flex min-h-28 w-40 shrink-0 flex-col items-center justify-center gap-1.5 rounded-lg border-2 border-dashed border-primary/40 bg-info-soft/40 px-3 text-center text-primary transition-colors hover:bg-info-soft active:bg-info-soft",
+          "flex min-h-40 w-44 shrink-0 flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed border-primary/50 bg-card px-3 text-center text-primary transition-colors hover:bg-info-soft/50 active:bg-info-soft",
           className
         )}
       >
-        <Icon className="size-7" />
+        <span className="flex size-12 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-md shadow-primary/30">
+          <Icon className="size-6" />
+        </span>
         <span className="text-sm leading-tight font-semibold">{label}</span>
         <span className="text-xs text-muted-foreground">{kind === "thermal" ? "Choose TIC image" : "Tap to capture"}</span>
       </button>
