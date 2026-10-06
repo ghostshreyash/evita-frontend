@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react"
-import { format, parse } from "date-fns"
-import { Activity, Camera, Droplets, Flame, Plus, Send, Square, Timer, Trash2, Wrench } from "lucide-react"
+import { format } from "date-fns"
+import { Activity, Camera, Droplets, Flame, NotebookPen, Plus, Send, Timer, Trash2 } from "lucide-react"
 import { toast } from "sonner"
 
 import { Button } from "@/components/ui/button"
@@ -11,36 +11,23 @@ import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { CaptureTile } from "@/components/evita/photo-capture"
 import { Checklist, EvidenceStrip, FieldLabel, Segmented, StepCard } from "@/components/evita/field-kit"
+import { TimeLog } from "@/components/evita/time-log"
 import type { EvidenceItem } from "@/data/evidence"
-import { fireSystems, pdMethods, products, type Execution, type InstaProduct, type MaintenanceDetail } from "@/data/maintenance-detail"
-import { saveMaintenanceDraft, submitMaintenance } from "@/data/maintenance-store"
-import { stampNow } from "@/data/persist"
-import { useCurrentElpremar } from "@/lib/me"
+import { fireSystems, pdMethods, products, type InstaProduct, type MaintenanceDetail } from "@/data/maintenance-detail"
+import { resumeMaintenanceClock, saveMaintenanceDraft, stopMaintenanceClock, submitMaintenance, type MaintenanceDraft } from "@/data/maintenance-store"
 import type { Job } from "@/lib/work"
 
-const modes: Execution["mode"][] = ["Online / In-Service", "Offline / Out-of-Service"]
 const cleaningSteps = ["Surface cleaning completed", "Internal cleaning (as applicable)", "Post-cleaning drying completed"]
 
-/** "dd-MM-yyyy HH:mm" → minutes between two stamps, as "2 h 30 min" */
-function duration(from?: string, to?: string) {
-  if (!from) return "—"
-  const a = parse(from, "dd-MM-yyyy HH:mm", new Date()).getTime()
-  const b = to ? parse(to, "dd-MM-yyyy HH:mm", new Date()).getTime() : Date.now()
-  const mins = Math.max(0, Math.round((b - a) / 60000))
-  return `${Math.floor(mins / 60)} h ${mins % 60} min`
-}
-
 /**
- * Perform Maintenance for one job, as on EVITA mockup p.29: how the work is
- * done, the real-time log, the INSTA consumables used, evidence, the fire
- * prevention and PD mitigation add-ons, then Submit for Approval to OCC.
- * Everything saves as it is entered.
+ * Perform Maintenance for one job, as on EVITA mockup p.29: the real-time log,
+ * the INSTA consumables used, evidence, the fire prevention and PD mitigation
+ * add-ons, then Submit for Approval to OCC. Everything saves as it is entered;
+ * the clock is written straight to the record by Start / Stop / Resume.
  */
 export function MaintenanceForm({ job, detail }: { job: Job; detail: MaintenanceDetail }) {
-  const [mode, setMode] = useState<Execution["mode"]>(detail.execution?.mode ?? "Online / In-Service")
   // The cleaning checklist is stored at the end of the notes; split it back out when reopening
   const [notes, setNotes] = useState((detail.execution?.notes ?? "").replace(/\s*Checklist: .*$/, ""))
-  const [endedAt, setEndedAt] = useState(detail.execution?.endedAt)
   const [items, setItems] = useState<InstaProduct[]>(detail.products)
   const [cleaned, setCleaned] = useState<string[]>(() => cleaningSteps.filter((step) => detail.execution?.notes.includes(step)))
   const [evidence, setEvidence] = useState<EvidenceItem[]>(detail.evidence)
@@ -57,19 +44,12 @@ export function MaintenanceForm({ job, detail }: { job: Job; detail: Maintenance
     remarks: detail.pdMitigation?.remarks ?? "",
   })
   const [savedAt, setSavedAt] = useState<string | null>(null)
-  const me = useCurrentElpremar()
-  // A job reworked from an older record may have no start; the clock starts when it is opened
-  const [startedAt] = useState(() => detail.execution?.startedAt ?? stampNow())
+  const timeLog = detail.timeLog ?? []
+  const running = timeLog.length > 0 && !timeLog.at(-1)!.end
 
-  const patch = useMemo<Partial<MaintenanceDetail>>(
+  const patch = useMemo<MaintenanceDraft>(
     () => ({
-      execution: {
-        performedBy: detail.execution?.performedBy ?? me.name,
-        startedAt,
-        endedAt,
-        mode,
-        notes: [notes, cleaned.length ? `Checklist: ${cleaned.join("; ")}.` : ""].filter(Boolean).join(" "),
-      },
+      notes: [notes, cleaned.length ? `Checklist: ${cleaned.join("; ")}.` : ""].filter(Boolean).join(" "),
       products: items.filter((p) => p.name && p.quantity > 0),
       evidence,
       firePrevention: fire.done === "Yes" && fire.system ? { system: fire.system, remarks: fire.remarks } : undefined,
@@ -78,7 +58,7 @@ export function MaintenanceForm({ job, detail }: { job: Job; detail: Maintenance
           ? { method: pd.method, remarks: [pd.before && pd.after ? `PD ${pd.before} dB before, ${pd.after} dB after.` : "", pd.remarks].filter(Boolean).join(" ") }
           : undefined,
     }),
-    [detail.execution?.performedBy, me.name, startedAt, endedAt, mode, notes, cleaned, items, evidence, fire, pd]
+    [notes, cleaned, items, evidence, fire, pd]
   )
 
   const first = useRef(true)
@@ -100,12 +80,12 @@ export function MaintenanceForm({ job, detail }: { job: Job; detail: Maintenance
   const usedProducts = items.filter((p) => p.name && p.quantity > 0)
 
   const checklist = [
+    { label: "Work time logged", done: timeLog.length > 0 },
     { label: "INSTA consumables booked", done: usedProducts.length > 0 },
     { label: "Cleaning checklist complete", done: cleaned.length === cleaningSteps.length },
     { label: "After-maintenance photos uploaded", done: after.length > 0 },
     { label: "Fire prevention answered", done: !!fire.done && (fire.done === "No" || !!fire.system) },
     { label: "PD mitigation answered", done: !!pd.done && (pd.done === "No" || !!pd.method) },
-    { label: "Work stopped and time logged", done: !!endedAt },
   ]
   const ready = checklist.every((c) => c.done)
 
@@ -116,45 +96,14 @@ export function MaintenanceForm({ job, detail }: { job: Job; detail: Maintenance
   return (
     <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_18rem]">
       <div className="min-w-0 space-y-4">
-        {/* ---------- 1. Details ---------- */}
-        <StepCard step={1} title="Maintenance Details" icon={Wrench} done={!!mode}>
-          <div className="space-y-4">
-            <div>
-              <FieldLabel required>Maintenance mode</FieldLabel>
-              <Segmented label="Maintenance mode" value={mode} options={modes} onChange={setMode} />
-            </div>
-            <div>
-              <FieldLabel>Work notes</FieldLabel>
-              <Textarea value={notes} rows={3} onChange={(e) => setNotes(e.target.value)} placeholder="What was done, e.g. Busbar chamber de-dusted, terminations re-torqued." />
-            </div>
-          </div>
+        {/* ---------- 1. Real-time log ---------- */}
+        <StepCard step={1} title="Real Time Maintenance Log" icon={Timer} done={timeLog.length > 0 && !running}>
+          <TimeLog entries={timeLog} onStop={() => stopMaintenanceClock(job.id)} onResume={() => resumeMaintenanceClock(job.id)} />
         </StepCard>
 
-        {/* ---------- 2. Real-time log ---------- */}
-        <StepCard step={2} title="Real Time Maintenance Log" icon={Timer} done={!!endedAt}>
-          <div className="grid items-end gap-4 sm:grid-cols-3">
-            <div>
-              <FieldLabel>Start time</FieldLabel>
-              <div className="flex h-11 items-center rounded-md bg-muted px-3 text-sm tabular-nums">{startedAt ?? "—"}</div>
-            </div>
-            <div>
-              <FieldLabel>Stop time</FieldLabel>
-              <div className="flex h-11 items-center rounded-md bg-muted px-3 text-sm tabular-nums">{endedAt ?? "Running…"}</div>
-            </div>
-            <div>
-              <FieldLabel>Total duration</FieldLabel>
-              <div className="flex h-11 items-center rounded-md bg-info-soft px-3 text-sm font-semibold text-info-soft-foreground tabular-nums">{duration(startedAt, endedAt)}</div>
-            </div>
-          </div>
-          <div className="mt-4">
-            {endedAt ? (
-              <Button variant="outline" onClick={() => setEndedAt(undefined)}>Resume work</Button>
-            ) : (
-              <Button variant="outline" className="border-critical/40 text-critical" onClick={() => setEndedAt(stampNow())}>
-                <Square className="fill-current" /> Stop
-              </Button>
-            )}
-          </div>
+        {/* ---------- 2. Notes ---------- */}
+        <StepCard step={2} title="Work Notes" icon={NotebookPen} done={!!notes.trim()}>
+          <Textarea value={notes} rows={3} onChange={(e) => setNotes(e.target.value)} placeholder="What was done, e.g. Busbar chamber de-dusted, terminations re-torqued." />
         </StepCard>
 
         {/* ---------- 3. Consumables ---------- */}

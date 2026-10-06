@@ -2,6 +2,7 @@ import { cn } from "cn"
 
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { EvidenceStrip } from "@/components/evita/field-kit"
+import { TimeLog } from "@/components/evita/time-log"
 import type { InspectionDetail } from "@/data/inspection-detail"
 import type { MaintenanceDetail } from "@/data/maintenance-detail"
 import { td, th } from "@/lib/data-table"
@@ -91,7 +92,6 @@ export function MaintenanceRecord({ detail }: { detail: MaintenanceDetail }) {
           {execution ? (
             <dl>
               <Row label="Performed by">{execution.performedBy}</Row>
-              <Row label="Mode">{execution.mode}</Row>
               <Row label="Started">{execution.startedAt}</Row>
               <Row label="Stopped">{execution.endedAt ?? "—"}</Row>
             </dl>
@@ -136,6 +136,13 @@ export function MaintenanceRecord({ detail }: { detail: MaintenanceDetail }) {
           )}
         </section>
       </div>
+
+      {detail.timeLog?.length ? (
+        <section className="rounded-lg bg-card p-4 shadow-xs ring-1 ring-foreground/10">
+          <h3 className="mb-3 text-base font-semibold">Real Time Maintenance Log</h3>
+          <TimeLog entries={detail.timeLog} readOnly />
+        </section>
+      ) : null}
 
       <section className="rounded-lg bg-card p-4 shadow-xs ring-1 ring-foreground/10">
         <h3 className="mb-3 text-base font-semibold">Evidence ({detail.evidence.length})</h3>
