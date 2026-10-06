@@ -1,5 +1,4 @@
 import { NavLink, useLocation } from "react-router"
-import { Leaf } from "lucide-react"
 import { cn } from "cn"
 
 import {
@@ -21,6 +20,7 @@ import { navigation, type NavItem } from "@/config/navigation"
 import { useOnline } from "@/hooks/use-media"
 import { useAuth } from "@/lib/auth/context"
 import { useCurrentElpremar } from "@/lib/me"
+import { actionFor, useMyJobs } from "@/lib/work"
 
 const under = (current: string, path: string) =>
   path === "/" ? current === "/" : current === path || current.startsWith(`${path}/`)
@@ -30,33 +30,25 @@ function isActivePath(current: string, item: NavItem) {
   return [item.path, ...(item.covers ?? [])].some((path) => under(current, path))
 }
 
-/** Who is signed in, as at the top of the EVITA sidebar in the mockup */
+/** Who is signed in, in a card under the logo as in the EVITA tablet design */
 function Profile() {
   const { user } = useAuth()
   const me = useCurrentElpremar()
   const online = useOnline()
 
   return (
-    <div className="flex items-center gap-3 border-b border-sidebar-border px-3 py-3 group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:px-0">
+    <div className="mx-3 mt-3 flex items-center gap-3 rounded-xl bg-white/5 p-3 ring-1 ring-white/10 group-data-[collapsible=icon]:mx-0 group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:bg-transparent group-data-[collapsible=icon]:p-1 group-data-[collapsible=icon]:ring-0">
       <div className="relative shrink-0">
-        <Avatar className="size-12 ring-2 ring-white/80">
-          <AvatarFallback className="bg-brand-gold-soft text-base font-semibold text-brand-navy">
-            {user?.initials ?? "EL"}
-          </AvatarFallback>
+        <Avatar className="size-12">
+          <AvatarFallback className="bg-primary text-base font-bold text-primary-foreground">{user?.initials ?? "EL"}</AvatarFallback>
         </Avatar>
         {/* In the icon rail the dot alone carries the connection state */}
-        <span
-          className={cn(
-            "absolute right-0 bottom-0 size-3.5 rounded-full ring-2 ring-sidebar",
-            online ? "bg-healthy" : "bg-offline"
-          )}
-        />
+        <span className={cn("absolute right-0 bottom-0 size-3.5 rounded-full ring-2 ring-sidebar", online ? "bg-healthy" : "bg-offline")} />
       </div>
       <div className="min-w-0 leading-tight group-data-[collapsible=icon]:hidden">
         <div className="truncate text-base font-semibold text-white">{me.name}</div>
-        <div className="text-sm">ELPREMAR</div>
-        <div className="text-sm">{me.id}</div>
-        <div className="mt-0.5 flex items-center gap-1.5 text-sm">
+        <div className="mt-0.5 truncate text-sm text-sidebar-foreground">ELPREMAR · {me.id}</div>
+        <div className="mt-1 flex items-center gap-1.5 text-xs font-medium">
           <span className={cn("size-2 rounded-full", online ? "bg-healthy" : "bg-offline")} />
           <span className={online ? "text-healthy" : "text-sidebar-muted-foreground"}>{online ? "Online" : "Offline"}</span>
         </div>
@@ -68,6 +60,8 @@ function Profile() {
 export function AppSidebar() {
   const { pathname } = useLocation()
   const { isMobile, setOpenMobile } = useSidebar()
+  // Work still needing the engineer's hands, shown against My Tasks
+  const openWork = useMyJobs().filter((j) => actionFor(j) !== "view").length
 
   return (
     <Sidebar collapsible="icon">
@@ -78,44 +72,43 @@ export function AppSidebar() {
 
       <Profile />
 
-      <SidebarContent className="py-2">
+      <SidebarContent className="py-3">
         <SidebarGroup>
           <SidebarGroupContent>
             <SidebarMenu className="gap-1.5">
-              {navigation.map((item) => (
-                <SidebarMenuItem key={item.path}>
-                  <SidebarMenuButton
-                    asChild
-                    isActive={isActivePath(pathname, item)}
-                    tooltip={item.title}
-                    className="text-[0.9375rem] data-active:bg-sidebar-primary data-active:text-sidebar-primary-foreground [&_svg]:size-5"
-                  >
-                    {/* On a phone-width sheet, choosing a section closes the sheet */}
-                    <NavLink to={item.path} onClick={() => isMobile && setOpenMobile(false)}>
-                      <item.icon />
-                      <span>{item.title}</span>
-                    </NavLink>
-                  </SidebarMenuButton>
-                  {item.badge ? (
-                    <SidebarMenuBadge className="top-3.5 rounded-full bg-critical text-critical-foreground">
-                      {item.badge}
-                    </SidebarMenuBadge>
-                  ) : null}
-                </SidebarMenuItem>
-              ))}
+              {navigation.map((item) => {
+                const badge = item.path === "/my-tasks" ? openWork : item.badge
+                return (
+                  <SidebarMenuItem key={item.path}>
+                    <SidebarMenuButton
+                      asChild
+                      isActive={isActivePath(pathname, item)}
+                      tooltip={item.title}
+                      className="h-12 rounded-xl px-4 text-[0.9375rem] data-active:bg-sidebar-primary data-active:font-semibold data-active:text-sidebar-primary-foreground data-active:shadow-lg data-active:shadow-primary/30 [&_svg]:size-5"
+                    >
+                      {/* On a phone-width sheet, choosing a section closes the sheet */}
+                      <NavLink to={item.path} onClick={() => isMobile && setOpenMobile(false)}>
+                        <item.icon />
+                        <span>{item.title}</span>
+                      </NavLink>
+                    </SidebarMenuButton>
+                    {badge ? (
+                      <SidebarMenuBadge className="top-3.5 right-3 min-w-6 rounded-full bg-primary px-1.5 text-xs font-bold text-primary-foreground ring-2 ring-sidebar">
+                        {badge}
+                      </SidebarMenuBadge>
+                    ) : null}
+                  </SidebarMenuItem>
+                )
+              })}
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
       </SidebarContent>
 
-      {/* Mountain artwork from the mockups; dropped on short screens so the menu never scrolls */}
-      <SidebarFooter className="relative overflow-hidden p-0 group-data-[collapsible=icon]:hidden [@media(max-height:720px)]:hidden">
-        <img src="/brand/sidebar-mountains.jpg" alt="" className="h-36 w-full object-cover" />
-        <div className="absolute inset-0 bg-gradient-to-b from-sidebar via-transparent to-sidebar/80" />
-        <div className="absolute inset-x-0 bottom-3 flex flex-col items-center gap-1 text-center text-sm text-white">
-          <Leaf className="size-6 fill-healthy text-healthy" />
-          <span>Reliable Assets. Safer Operations.</span>
-          <span>A Greener Tomorrow.</span>
+      <SidebarFooter className="border-t border-sidebar-border px-4 py-3 group-data-[collapsible=icon]:hidden">
+        <div className="flex items-center justify-between text-xs text-sidebar-muted-foreground">
+          <span>EVITA PWA Client</span>
+          <span className="font-mono">v1.0.0</span>
         </div>
       </SidebarFooter>
     </Sidebar>

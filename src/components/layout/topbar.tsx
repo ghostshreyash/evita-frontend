@@ -1,10 +1,12 @@
 import { useEffect, useState } from "react"
 import { useNavigate } from "react-router"
 import { format } from "date-fns"
-import { Bell, Leaf, LogOut, MapPin } from "lucide-react"
+import { Bell, Clock, CloudCheck, CloudOff, Factory, LogOut } from "lucide-react"
+import { cn } from "cn"
 
 import { Button } from "@/components/ui/button"
 import { SidebarTrigger } from "@/components/ui/sidebar"
+import { useOnline } from "@/hooks/use-media"
 import { useAuth } from "@/lib/auth/context"
 import { useCurrentElpremar } from "@/lib/me"
 import { useNotifications } from "@/lib/notifications"
@@ -20,51 +22,56 @@ function useClock() {
   return now
 }
 
+/** Bordered chip the top bar groups its read-outs in */
+const chip = "flex h-11 shrink-0 items-center gap-2 rounded-lg px-3 text-sm ring-1"
+
 /**
- * EVITA's top bar, as in the mockup: the wordmark, where the engineer is posted,
- * the date and time, notifications and an explicit Logout button (no menu to
- * open first on a touch screen).
+ * EVITA's top bar, as in the tablet design: the wordmark with its FIELD tag,
+ * the posting, the 24-hour clock and the connection state as chips, then
+ * notifications and an explicit Logout button (no menu to open first on a
+ * touch screen).
  */
 export function Topbar() {
   const now = useClock()
   const navigate = useNavigate()
   const { signOut } = useAuth()
   const me = useCurrentElpremar()
+  const online = useOnline()
   const { unread } = useNotifications()
 
   return (
-    <header className="sticky top-0 z-20 flex h-16 shrink-0 items-center gap-3 border-b border-topbar-border bg-topbar px-3 text-topbar-foreground">
+    <header className="sticky top-0 z-20 flex h-16 shrink-0 items-center gap-2.5 border-b border-topbar-border bg-topbar px-3 text-topbar-foreground">
       <SidebarTrigger className="size-11 text-topbar-foreground hover:bg-white/10 hover:text-topbar-foreground" />
 
-      <div className="min-w-0">
-        <div className="bg-gradient-to-r from-white via-white to-[#7cc35a] bg-clip-text text-2xl leading-none font-black tracking-[-0.04em] text-transparent">
+      <div className="flex min-w-0 items-center gap-2">
+        <span className="text-2xl leading-none font-black tracking-[-0.03em]">
           EVITA<sup className="ml-0.5 align-super text-[0.6rem] font-bold text-white/80">™</sup>
-        </div>
-        <p className="mt-0.5 truncate text-xs text-topbar-muted-foreground max-lg:hidden">
-          Enterprise Electrical Maintenance &amp; Reliability Management System
-        </p>
+        </span>
+        <span className="rounded bg-primary px-1.5 py-0.5 text-[0.7rem] font-bold tracking-wide text-primary-foreground">FIELD</span>
       </div>
 
-      {/* Only on wide screens: on the tablets this space belongs to the posting and clock */}
-      <div className="ml-auto hidden items-center gap-2 text-sm leading-tight text-topbar-muted-foreground italic 2xl:flex">
-        <Leaf className="size-5 shrink-0 text-healthy" />
-        <span>
-          People. Technology. Reliability.
-          <br />A Greener Future.
+      <div className={cn(chip, "ml-auto min-w-0 bg-white/5 ring-white/15")}>
+        <Factory className="size-4 shrink-0 text-topbar-muted-foreground" />
+        <span className="max-w-56 truncate font-medium">
+          {me.enterprise} / {me.plant}
         </span>
       </div>
 
-      <div className="ml-auto flex min-w-0 items-center gap-2 border-topbar-border text-sm leading-tight 2xl:ml-0 2xl:border-l 2xl:pl-4">
-        <MapPin className="size-5 shrink-0 text-topbar-foreground" />
-        <div className="min-w-0 max-w-44">
-          <div className="truncate font-semibold">{me.enterprise}</div>
-          <div className="truncate text-topbar-muted-foreground">{me.plant}</div>
-        </div>
+      <div className={cn(chip, "bg-white/5 font-mono ring-white/15 max-sm:hidden")}>
+        <Clock className="size-4 text-topbar-muted-foreground" />
+        {format(now, "HH:mm")} • {format(now, "dd MMM")}
       </div>
 
-      <div className="shrink-0 border-l border-topbar-border pl-3 text-sm leading-tight whitespace-nowrap max-sm:hidden">
-        <div className="text-topbar-muted-foreground">{format(now, "EEE, d MMM yyyy")}</div>
-        <div className="font-semibold">{format(now, "hh:mm a")}</div>
+      {/* Connection state, so the engineer knows whether records are reaching the server */}
+      <div
+        className={cn(
+          chip,
+          "font-medium max-md:px-2.5",
+          online ? "bg-healthy/15 text-[#7ee2a0] ring-healthy/35" : "bg-attention/15 text-brand-gold ring-attention/40"
+        )}
+      >
+        {online ? <CloudCheck className="size-4" /> : <CloudOff className="size-4" />}
+        <span className="max-md:hidden">{online ? "All synced" : "Offline · saved on tablet"}</span>
       </div>
 
       <button
@@ -83,7 +90,7 @@ export function Topbar() {
 
       <Button
         variant="ghost"
-        className="shrink-0 border-l border-topbar-border pl-3 text-base text-topbar-foreground hover:bg-white/10 hover:text-topbar-foreground"
+        className="shrink-0 bg-white/5 text-base text-topbar-foreground ring-1 ring-white/15 hover:bg-white/10 hover:text-topbar-foreground"
         onClick={() => {
           // TODO: warn before signing out while records are still waiting to sync
           signOut()
