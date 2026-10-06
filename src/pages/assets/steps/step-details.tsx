@@ -40,6 +40,14 @@ export function StepDetails({
   const { control, setValue } = form
   const departments = site.plant.departments.map((d) => d.name)
   const category = form.watch("category")
+  const department = form.watch("department")
+
+  /*
+   * Sub-departments belong to the chosen department, so the list is narrowed to
+   * that department's own. Optional, because a retail enterprise has no such
+   * tree - see ELPREMAR-ENTERPRISE-CHANGES item 10.
+   */
+  const subDepartments = site.plant.departments.find((d) => d.name === department)?.subDepartments.map((sd) => sd.name) ?? []
 
   /*
    * A category typed by hand behind Other is not on the master list, so it is
@@ -60,7 +68,23 @@ export function StepDetails({
           <TextField control={control} name="plant" label="Plant" required readOnly />
 
           <SelectField control={control} name="area" label="Location / Area" required options={areas} />
-          <SelectField control={control} name="department" label="Department" required options={departments} />
+          <SelectField
+            control={control}
+            name="department"
+            label="Department"
+            required
+            options={departments}
+            // The sub-department belonged to the old department; it cannot survive the change
+            onValueChange={() => setValue("subDepartment", "", { shouldDirty: true })}
+          />
+          <SelectField
+            control={control}
+            name="subDepartment"
+            label="Sub-Department"
+            options={subDepartments}
+            disabled={subDepartments.length === 0}
+            placeholder={department ? (subDepartments.length ? "Select" : "None under this department") : "Choose a department first"}
+          />
 
           {/* The grid on the right fills this in too — it is the faster way on a tablet */}
           <SelectField

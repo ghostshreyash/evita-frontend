@@ -224,7 +224,10 @@ export function assetProfileFor(a: AssetRecord): AssetProfile {
   const oily = a.category.includes("Transformer")
   const site = enterpriseRecords.find((e) => e.name === a.enterprise)
   const plant = site ? profileFor(site).plants.find((p) => p.name === a.plant) : undefined
-  const subDepartment = plant?.departments.find((d) => d.name === a.department)?.subDepartments[s % 2]?.name ?? "Power Distribution"
+  // Drawn from the plant's own tree, so a profile can never name a sub-department
+  // that does not exist under its department; blank when the department has none
+  const subDepts = plant?.departments.find((d) => d.name === a.department)?.subDepartments ?? []
+  const subDepartment = subDepts.length ? subDepts[s % subDepts.length].name : ""
   const commissioned = parseDmy(a.installed)
 
   return {

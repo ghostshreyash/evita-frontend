@@ -32,6 +32,8 @@ export const assetSchema = z.object({
   plant: required("Plant"),
   area: required("Location / Area"),
   department: required("Department"),
+  /* Optional: retail enterprises are not organised into sub-departments */
+  subDepartment: z.string().optional(),
   category: required("Asset Category"),
   tag: required("Asset Name / Tag ID").max(40, "Keep the tag under 40 characters"),
   description: z.string().trim().max(200, "Keep the description under 200 characters").optional(),
@@ -81,7 +83,7 @@ export type AssetFormValues = z.infer<typeof assetSchema>
 /** Which fields each step owns, so a step validates only what it asked for */
 export const stepFields: (keyof AssetFormValues)[][] = [
   [
-    "enterprise", "plant", "area", "department", "category", "tag",
+    "enterprise", "plant", "area", "department", "subDepartment", "category", "tag",
     "description", "manufacturer", "model", "serial", "year", "installed", "criticality",
   ],
   [

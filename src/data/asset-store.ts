@@ -77,7 +77,7 @@ export function profileFrom(
       plant: values.plant,
       area: values.area,
       department: values.department,
-      subDepartment: "",
+      subDepartment: values.subDepartment ?? "",
       category: values.category,
       tag: values.tag,
       description: values.description ?? "",

@@ -53,6 +53,7 @@ export function AssetOnboardingPage() {
       enterprise: site.enterprise,
       plant: site.plant.name,
       department: site.department,
+      subDepartment: "",
       area: "",
       category: "",
       tag: "",
