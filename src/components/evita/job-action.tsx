@@ -10,8 +10,9 @@ import { actionFor, fieldStatusLook, type Job } from "@/lib/work"
 
 /**
  * The one button a job needs right now: Start (Open or Overdue), Continue
- * (In Progress) or View (Completed or Approved). Starting changes the job's
- * status in the shared book before opening it.
+ * (In Progress) or View (Completed or Approved). All three look the same, so a
+ * table of tasks reads evenly. Starting changes the job's status in the shared
+ * book before opening it.
  */
 export function JobActionButton({ job, className }: { job: Job; className?: string }) {
   const navigate = useNavigate()
@@ -25,24 +26,20 @@ export function JobActionButton({ job, className }: { job: Job; className?: stri
     navigate(`/my-tasks/${job.id}`)
   }
 
-  if (action === "start")
-    return (
-      <Button variant="outline" className={cn("w-32 bg-card", job.field === "overdue" && "border-critical/40 text-critical", className)} onClick={run}>
-        <Play /> Start
-      </Button>
-    )
-  if (action === "continue")
-    return (
-      <Button className={cn("w-32", className)} onClick={run}>
-        Continue <ArrowRight />
-      </Button>
-    )
+  // One look for every action — the label and icon say what it does; the status badge carries the urgency
+  const { icon: Icon, label } = actions[action]
   return (
-    <Button variant="ghost" className={cn("w-32 text-primary", className)} onClick={run}>
-      <Eye /> View
+    <Button variant="outline" className={cn("w-32 bg-card text-primary", className)} onClick={run}>
+      <Icon /> {label}
     </Button>
   )
 }
+
+const actions = {
+  start: { icon: Play, label: "Start" },
+  continue: { icon: ArrowRight, label: "Continue" },
+  view: { icon: Eye, label: "View" },
+} as const
 
 export function JobStatusBadge({ job, className }: { job: Pick<Job, "field">; className?: string }) {
   const look = fieldStatusLook[job.field]
