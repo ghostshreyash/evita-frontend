@@ -1,5 +1,5 @@
 import { useMemo } from "react"
-import { parse, startOfDay } from "date-fns"
+import { endOfWeek, parse, startOfDay, startOfWeek } from "date-fns"
 
 import { useInspectionDetails, useInspectionRows } from "@/data/inspection-store"
 import { assetCategories } from "@/data/master-data"
@@ -66,6 +66,13 @@ export function actionFor(job: Pick<Job, "field">): JobAction {
 
 export const parseDay = (d: string) => startOfDay(parse(d, "dd-MM-yyyy", new Date()))
 export const isToday = (d: string) => parseDay(d).getTime() === startOfDay(new Date()).getTime()
+/** The working week runs Monday to Sunday */
+export const thisWeek = () => ({ from: startOfWeek(new Date(), { weekStartsOn: 1 }), to: startOfDay(endOfWeek(new Date(), { weekStartsOn: 1 })) })
+export const isThisWeek = (d: string) => {
+  const { from, to } = thisWeek()
+  const day = parseDay(d)
+  return day >= from && day <= to
+}
 const isPast = (d: string) => parseDay(d) < startOfDay(new Date())
 export const isOverdue = (job: Pick<Job, "field">) => job.field === "overdue"
 

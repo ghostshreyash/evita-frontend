@@ -22,6 +22,7 @@ import { SectionCard } from "@/components/common/section-card"
 import { JobActionButton, JobStatusBadge } from "@/components/evita/job-action"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { elpremarProfileFor } from "@/data/elpremar-data"
 import { assetCategories } from "@/data/master-data"
 import { priorityTone, slotLabel } from "@/data/occ-tables"
 import { td, th } from "@/lib/data-table"
@@ -30,7 +31,7 @@ import { categoryLook, shortCategory } from "@/lib/category-icons"
 import { useCurrentElpremar } from "@/lib/me"
 import { markRead, noticeTime, useNotifications } from "@/lib/notifications"
 import { openPanel } from "@/lib/ui-store"
-import { actionFor, categoryFor, isToday, summarise, useMyJobs } from "@/lib/work"
+import { actionFor, categoryFor, isThisWeek, isToday, parseDay, summarise, useMyJobs } from "@/lib/work"
 
 const startTime = (slot: number) => slotLabel(slot).split(" - ")[0]
 
@@ -84,6 +85,20 @@ const counterTones = {
   highlight: { card: "bg-highlight-soft/70 ring-highlight/15", icon: "bg-highlight text-highlight-foreground", note: "text-highlight-soft-foreground" },
 }
 
+/** Label / value rows for the My Details and Assignment Info tabs */
+function InfoRows({ rows, className }: { rows: [string, string][]; className?: string }) {
+  return (
+    <dl className={cn("space-y-2 text-sm", className)}>
+      {rows.map(([label, value]) => (
+        <div key={label} className="flex items-baseline justify-between gap-3 border-b pb-2 last:border-0 last:pb-0">
+          <dt className="text-muted-foreground">{label}</dt>
+          <dd className="text-right font-medium">{value}</dd>
+        </div>
+      ))}
+    </dl>
+  )
+}
+
 const quickActionClass =
   "flex min-h-16 w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-left ring-1 ring-foreground/10 transition-colors hover:bg-muted active:bg-muted"
 
@@ -100,11 +115,13 @@ const quickActionClass =
 export function DashboardPage() {
   const navigate = useNavigate()
   const me = useCurrentElpremar()
+  const profile = useMemo(() => elpremarProfileFor(me), [me])
   const jobs = useMyJobs()
   const { notices } = useNotifications()
 
   const counts = summarise(jobs)
-  const today = useMemo(() => jobs.filter((j) => isToday(j.date)), [jobs])
+  // The week at a glance (Monday to Sunday), soonest first — the table the homepage leads with
+  const week = useMemo(() => jobs.filter((j) => isThisWeek(j.date)), [jobs])
   // The job to resume for "Log Test Results": one already running, else the next to start
   const nextInspection = useMemo(
     () =>
@@ -155,7 +172,7 @@ export function DashboardPage() {
                 <MapPin className="size-3.5" /> {me.plant}, {me.enterprise}
               </span>
               <span className="flex items-center gap-1.5 rounded-full bg-white/12 px-3 py-1.5 ring-1 ring-white/20">
-                <ClipboardList className="size-3.5" /> {counts.today} task{counts.today === 1 ? "" : "s"} today
+                <ClipboardList className="size-3.5" /> {week.length} task{week.length === 1 ? "" : "s"} this week
               </span>
             </div>
           </div>
@@ -176,12 +193,12 @@ export function DashboardPage() {
             <Counter to="/my-tasks" icon={ClipboardList} label="Total Assigned" value={counts.total} tone="highlight" />
           </div>
 
-          {/* ---------- Today's work ---------- */}
-          <SectionCard title="Today's Assigned Tasks" viewAllTo="/my-tasks?date=today" contentClassName="px-2" hoverable={false}>
+          {/* ---------- This week's work ---------- */}
+          <SectionCard title="This Week's Tasks" viewAllTo="/my-tasks?date=week" contentClassName="px-2" hoverable={false}>
             <Table>
               <TableHeader>
                 <TableRow className="bg-muted/60 hover:bg-muted/60">
-                  <TableHead className={th}>Time</TableHead>
+                  <TableHead className={th}>Day / Time</TableHead>
                   <TableHead className={th}>Asset / Location</TableHead>
                   <TableHead className={th}>Activity</TableHead>
                   <TableHead className={cn(th, "max-md:hidden")}>Priority</TableHead>
@@ -190,9 +207,12 @@ export function DashboardPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {today.map((t) => (
+                {week.map((t) => (
                   <TableRow key={t.id} onClick={() => navigate(`/my-tasks/${t.id}`)} className="cursor-pointer">
-                    <TableCell className={cn(td, "whitespace-nowrap tabular-nums")}>{startTime(t.slot)}</TableCell>
+                    <TableCell className={cn(td, "whitespace-nowrap tabular-nums")}>
+                      <span className={cn("block font-medium", isToday(t.date) && "text-primary")}>{isToday(t.date) ? "Today" : format(parseDay(t.date), "EEE d MMM")}</span>
+                      <span className="block text-xs text-muted-foreground">{startTime(t.slot)}</span>
+                    </TableCell>
                     <TableCell className={cn(td, "whitespace-normal")}>
                       {(() => {
                         const look = categoryLook(categoryFor(t.asset))
@@ -217,10 +237,10 @@ export function DashboardPage() {
                     <TableCell className={cn(td, "py-1.5 text-center")}><JobActionButton job={t} /></TableCell>
                   </TableRow>
                 ))}
-                {today.length === 0 ? (
+                {week.length === 0 ? (
                   <TableRow>
                     <TableCell colSpan={6} className="py-10 text-center text-sm text-muted-foreground">
-                      Nothing booked for today.{" "}
+                      Nothing booked this week.{" "}
                       <Link to="/my-tasks?status=open" className="font-medium text-primary underline-offset-4 hover:underline">See open work</Link>
                     </TableCell>
                   </TableRow>
@@ -278,10 +298,17 @@ export function DashboardPage() {
                   <div className="min-w-0 text-sm">
                     <div className="text-base font-semibold">{me.name}</div>
                     <div className="text-muted-foreground">ELPREMAR | {me.id}</div>
-                    <div className="text-muted-foreground">{me.department} Department</div>
-                    <div className="text-muted-foreground">{me.plant}, {me.enterprise}</div>
                   </div>
                 </div>
+                <InfoRows
+                  className="mt-3 border-t pt-2.5"
+                  rows={[
+                    ["Role", me.designation],
+                    ["Joined", me.joined],
+                    // The ELPREMAR's own location (their address from onboarding), not the site they are posted to
+                    ["Location", `${profile.basic.city}, ${profile.basic.state}`],
+                  ]}
+                />
                 <div className="mt-3 space-y-1 border-t pt-2 text-sm">
                   <a href="tel:+919876543210" className="-mx-1 flex min-h-11 items-center gap-2 rounded px-1 hover:bg-muted">
                     <Phone className="size-4 text-primary" /> +91 98765 43210
@@ -295,20 +322,14 @@ export function DashboardPage() {
 
             <TabsContent value="assignment">
               <SectionCard title="" hoverable={false} className="mt-2">
-                <dl className="space-y-2.5 text-sm">
-                  {[
-                    ["Role", me.designation],
-                    ["Posting", me.plant],
-                    ["Enterprise", me.enterprise],
-                    ["Certified Until", me.certifiedUntil],
-                    ["Joined", me.joined],
-                  ].map(([label, value]) => (
-                    <div key={label} className="flex items-baseline justify-between gap-3 border-b pb-2 last:border-0 last:pb-0">
-                      <dt className="text-muted-foreground">{label}</dt>
-                      <dd className="text-right font-medium">{value}</dd>
-                    </div>
-                  ))}
-                </dl>
+                <InfoRows
+                  rows={[
+                    // Where they are assigned: the enterprise, its plant and the department they sit in
+                    ["Enterprise", profile.posting.enterprise],
+                    ["Location", `${profile.posting.plant}, ${profile.posting.city}`],
+                    ["Department", profile.posting.department],
+                  ]}
+                />
               </SectionCard>
             </TabsContent>
           </Tabs>
