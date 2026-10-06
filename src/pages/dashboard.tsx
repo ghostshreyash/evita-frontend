@@ -15,7 +15,6 @@ import {
   MapPin,
   ShieldCheck,
   TriangleAlert,
-  Wrench,
 } from "lucide-react"
 import { cn } from "cn"
 
@@ -46,7 +45,8 @@ function Counter({
   icon: typeof ClipboardList
   label: string
   value: number
-  note: string
+  /** Line under the number; only Today's Tasks carries one */
+  note?: string
   tone: keyof typeof counterTones
   to: string
 }) {
@@ -70,7 +70,7 @@ function Counter({
         </span>
         <span className="text-3xl leading-none font-bold text-brand-navy tabular-nums dark:text-foreground">{value}</span>
       </div>
-      <div className={cn("mt-2 text-xs leading-tight font-medium", t.note)}>{note}</div>
+      {note ? <div className={cn("mt-2 text-xs leading-tight font-medium", t.note)}>{note}</div> : null}
     </Link>
   )
 }
@@ -169,14 +169,14 @@ export function DashboardPage() {
         <div className="min-w-0 space-y-4">
           {/* ---------- The day at a glance ---------- */}
           <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-            <Counter to="/my-tasks?view=today" icon={ClipboardList} label="Today's Tasks" value={counts.today} note={`${counts.toStart} To Start · ${counts.running} In Progress`} tone="info" />
-            <Counter to="/my-tasks?view=completed" icon={CircleCheckBig} label="Completed" value={counts.completed} note="Closed out" tone="healthy" />
-            <Counter to="/my-tasks?view=overdue" icon={Hourglass} label="Overdue" value={counts.overdue} note={counts.overdue ? "Needs attention" : "Good Job!"} tone="attention" />
-            <Counter to="/my-tasks?view=all" icon={ClipboardList} label="Total Assigned" value={counts.total} note="On your book of work" tone="highlight" />
+            <Counter to="/my-tasks?date=today" icon={ClipboardList} label="Today's Tasks" value={counts.today} note={`${counts.pending} Pending · ${counts.running} In Progress`} tone="info" />
+            <Counter to="/my-tasks?status=completed" icon={CircleCheckBig} label="Completed" value={counts.completed} tone="healthy" />
+            <Counter to="/my-tasks?status=overdue" icon={Hourglass} label="Overdue" value={counts.overdue} tone="attention" />
+            <Counter to="/my-tasks" icon={ClipboardList} label="Total Assigned" value={counts.total} tone="highlight" />
           </div>
 
           {/* ---------- Today's work ---------- */}
-          <SectionCard title="Today's Assigned Tasks" viewAllTo="/my-tasks?view=today" contentClassName="px-2" hoverable={false}>
+          <SectionCard title="Today's Assigned Tasks" viewAllTo="/my-tasks?date=today" contentClassName="px-2" hoverable={false}>
             <Table>
               <TableHeader>
                 <TableRow className="bg-muted/60 hover:bg-muted/60">
@@ -208,12 +208,7 @@ export function DashboardPage() {
                         )
                       })()}
                     </TableCell>
-                    <TableCell className={cn(td, "max-w-40 whitespace-normal")}>
-                      <span className="flex items-start gap-1.5">
-                        {t.kind === "inspection" ? <ClipboardList className="mt-0.5 size-4 shrink-0 text-info" /> : <Wrench className="mt-0.5 size-4 shrink-0 text-highlight" />}
-                        {t.activity}
-                      </span>
-                    </TableCell>
+                    <TableCell className={cn(td, "max-w-40 whitespace-normal")}>{t.activity}</TableCell>
                     <TableCell className={cn(td, "max-md:hidden")}>
                       <span className={cn("rounded px-2 py-1 text-xs font-semibold", priorityTone[t.priority])}>{t.priority}</span>
                     </TableCell>
@@ -225,7 +220,7 @@ export function DashboardPage() {
                   <TableRow>
                     <TableCell colSpan={6} className="py-10 text-center text-sm text-muted-foreground">
                       Nothing booked for today.{" "}
-                      <Link to="/my-tasks?view=upcoming" className="font-medium text-primary underline-offset-4 hover:underline">See upcoming work</Link>
+                      <Link to="/my-tasks?status=open" className="font-medium text-primary underline-offset-4 hover:underline">See open work</Link>
                     </TableCell>
                   </TableRow>
                 ) : null}
@@ -301,7 +296,7 @@ export function DashboardPage() {
               <SectionCard title="" hoverable={false} className="mt-2">
                 <dl className="space-y-2.5 text-sm">
                   {[
-                    ["Role", me.roles.join(", ")],
+                    ["Role", me.designation],
                     ["Posting", me.plant],
                     ["Enterprise", me.enterprise],
                     ["Certified Until", me.certifiedUntil],
