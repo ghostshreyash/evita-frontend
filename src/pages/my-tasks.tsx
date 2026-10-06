@@ -2,19 +2,21 @@ import { useMemo, useState } from "react"
 import { useNavigate, useSearchParams } from "react-router"
 import type { DateRange } from "react-day-picker"
 import { format, isAfter, isBefore, startOfDay } from "date-fns"
-import { Search, X } from "lucide-react"
+import { Clock, MapPin, Search, X } from "lucide-react"
 import { cn } from "cn"
 
 import { DateRangeFilter, SortHead, TablePager } from "@/components/common/data-table"
 import { PageHeader } from "@/components/common/page-header"
 import { JobActionButton, JobStatusBadge } from "@/components/evita/job-action"
 import { CountTile, FilterSelect } from "@/components/common/list-controls"
+import { CategoryIcon } from "@/components/common/category-icon"
+import { categoryLook, shortCategory } from "@/lib/category-icons"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { priorityTone, slotLabel } from "@/data/occ-tables"
 import { control, nextSort, sortRows, td, th, type Sort } from "@/lib/data-table"
-import { fieldStatuses, fieldStatusLook, isOverdue, isToday, parseDay, thisWeek, useMyJobs, when, type FieldStatus, type Job, type JobKind } from "@/lib/work"
+import { categoryFor, fieldStatuses, fieldStatusLook, isOverdue, isToday, parseDay, thisWeek, useMyJobs, when, type FieldStatus, type Job, type JobKind } from "@/lib/work"
 
 /** Tile tint per status, matching the status badges */
 const tileTone: Record<FieldStatus, string> = {
@@ -135,7 +137,7 @@ function MyTasks({ kind, title = "My Tasks" }: { kind?: JobKind; title?: string 
         ))}
       </div>
 
-      <section className="rounded-lg bg-card p-3 shadow-xs ring-1 ring-foreground/10">
+      <section className="rounded-2xl bg-card p-4 shadow-xs ring-1 ring-foreground/10">
         <div className="flex flex-wrap items-center gap-2">
           <div className="relative min-w-56 flex-1">
             <Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
@@ -184,19 +186,33 @@ function MyTasks({ kind, title = "My Tasks" }: { kind?: JobKind; title?: string 
             </TableHeader>
             <TableBody>
               {shown.map((j) => (
-                <TableRow key={j.id} onClick={() => navigate(`/my-tasks/${j.id}`)} className="cursor-pointer">
-                  <TableCell className={cn(td, "font-medium whitespace-nowrap tabular-nums max-lg:hidden")}>{j.id}</TableCell>
+                <TableRow key={j.id} onClick={() => navigate(`/my-tasks/${j.id}`)} className={cn("h-20 cursor-pointer", isOverdue(j) && "bg-critical-soft/40 hover:bg-critical-soft/60")}>
+                  <TableCell className={cn(td, "font-mono font-bold whitespace-nowrap max-lg:hidden")}>{j.id}</TableCell>
                   <TableCell className={cn(td, "whitespace-normal")}>
-                    <span className="font-medium">{j.asset}</span>
-                    <span className="block text-xs text-muted-foreground">{j.plant}, {j.enterprise}</span>
+                    <span className="block font-semibold text-brand-navy dark:text-foreground">{j.asset}</span>
+                    <span className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1">
+                      <span className={cn("inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-xs font-semibold", categoryLook(categoryFor(j.asset)).tint)}>
+                        <CategoryIcon category={categoryFor(j.asset)} className="size-3.5" />
+                        {shortCategory(categoryFor(j.asset))}
+                      </span>
+                      <span className="flex items-center gap-1 text-xs text-muted-foreground">
+                        <MapPin className="size-3" /> {j.plant}, {j.enterprise}
+                      </span>
+                    </span>
                   </TableCell>
                   <TableCell className={cn(td, "max-w-44 whitespace-normal")}>{j.activity}</TableCell>
-                  <TableCell className={cn(td, "whitespace-nowrap tabular-nums", isOverdue(j) && "font-semibold text-critical")}>
-                    {isToday(j.date) ? "Today" : format(parseDay(j.date), "d MMM yyyy")}
-                    <span className={cn("block text-xs", isOverdue(j) ? "text-critical" : "text-muted-foreground")}>{slotLabel(j.slot)}</span>
+                  <TableCell className={cn(td, "whitespace-nowrap", isOverdue(j) && "font-semibold text-critical")}>
+                    <span className="flex items-center gap-1.5">
+                      <Clock className="size-4 shrink-0" />
+                      {isToday(j.date) ? "Today" : format(parseDay(j.date), "d MMM yyyy")}
+                    </span>
+                    <span className={cn("block pl-5.5 font-mono text-xs", isOverdue(j) ? "text-critical" : "text-muted-foreground")}>
+                      {slotLabel(j.slot)}
+                      {isOverdue(j) ? " · Overdue" : ""}
+                    </span>
                   </TableCell>
                   <TableCell className={cn(td, "max-md:hidden")}>
-                    <span className={cn("rounded px-2 py-1 text-xs font-semibold", priorityTone[j.priority])}>{j.priority}</span>
+                    <span className={cn("rounded-md px-2 py-1 text-xs font-bold tracking-wide uppercase", priorityTone[j.priority])}>{j.priority}</span>
                   </TableCell>
                   <TableCell className={td}><JobStatusBadge job={j} /></TableCell>
                   <TableCell className={cn(td, "py-1.5 text-center")}><JobActionButton job={j} /></TableCell>
