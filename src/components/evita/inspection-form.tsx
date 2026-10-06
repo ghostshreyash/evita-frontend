@@ -144,7 +144,7 @@ export function InspectionForm({ job, detail }: { job: Job; detail: InspectionDe
   const template = templates[job.activity] ?? templates["Preventive Assessment"]
 
   return (
-    <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_18rem]">
+    <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_18rem]">
       <div className="min-w-0 space-y-4">
         {/* ---------- 1. Readings ---------- */}
         <StepCard
@@ -293,7 +293,7 @@ export function InspectionForm({ job, detail }: { job: Job; detail: InspectionDe
       </div>
 
       {/* ---------- Result and submit ---------- */}
-      <aside className="space-y-4 xl:sticky xl:top-20 xl:self-start">
+      <aside className="space-y-4 lg:sticky lg:top-20 lg:self-start">
         <section className="rounded-lg bg-card p-4 shadow-xs ring-1 ring-foreground/10">
           <h3 className="mb-3 text-base font-semibold">Health Score (estimate)</h3>
           <HealthRing score={preview.healthScore} caption="Updates as you record" />

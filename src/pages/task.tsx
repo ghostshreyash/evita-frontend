@@ -279,7 +279,7 @@ export function TaskPage() {
       ) : job.kind === "maintenance" && maintenance && job.field === "in_progress" ? (
         <MaintenanceForm key={job.id} job={job} detail={maintenance} />
       ) : (
-        <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_18rem]">
+        <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_18rem]">
           <div className="min-w-0 space-y-4">
             <OutcomeBanner job={job} />
             {inspection ? <InspectionRecord detail={inspection} /> : maintenance ? <MaintenanceRecord detail={maintenance} /> : null}

@@ -94,7 +94,7 @@ export function MaintenanceForm({ job, detail }: { job: Job; detail: Maintenance
   const remove = (id: string) => setEvidence((ev) => ev.filter((e) => e.id !== id))
 
   return (
-    <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_18rem]">
+    <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_18rem]">
       <div className="min-w-0 space-y-4">
         {/* ---------- 1. Real-time log ---------- */}
         <StepCard step={1} title="Real Time Maintenance Log" icon={Timer} done={timeLog.length > 0 && !running}>
@@ -241,7 +241,7 @@ export function MaintenanceForm({ job, detail }: { job: Job; detail: Maintenance
       </div>
 
       {/* ---------- Submit for approval ---------- */}
-      <aside className="space-y-4 xl:sticky xl:top-20 xl:self-start">
+      <aside className="space-y-4 lg:sticky lg:top-20 lg:self-start">
         <section className="space-y-4 rounded-lg bg-card p-4 shadow-xs ring-1 ring-foreground/10">
           <h3 className="text-base font-semibold">Submit for Approval</h3>
           <p className="text-sm text-muted-foreground">OCC reviews the evidence and approves the work, or sends it back with remarks. The asset's health report updates after approval.</p>

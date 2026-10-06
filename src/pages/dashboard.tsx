@@ -166,7 +166,7 @@ export function DashboardPage() {
         </div>
       </section>
 
-      <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_18rem]">
+      <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_18rem]">
         <div className="min-w-0 space-y-4">
           {/* ---------- The day at a glance ---------- */}
           <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
@@ -259,7 +259,7 @@ export function DashboardPage() {
         </div>
 
         {/* ---------- Who they are, and the shortcuts they use ---------- */}
-        <div className="grid content-start gap-4 md:grid-cols-2 xl:grid-cols-1">
+        <div className="grid content-start gap-4 md:grid-cols-2 lg:grid-cols-1">
           <Tabs defaultValue="details">
             <TabsList className="w-full">
               <TabsTrigger value="details" className="flex-1">My Details</TabsTrigger>
@@ -330,7 +330,7 @@ export function DashboardPage() {
             </button>
 
             <SectionCard title="Quick Actions" hoverable={false}>
-              <div className="grid grid-cols-2 gap-2 xl:grid-cols-1">
+              <div className="grid grid-cols-2 gap-2 lg:grid-cols-1">
                 {quickActions.map((a) => (
                   <button key={a.label} type="button" onClick={a.run} className={quickActionClass}>
                     <span className={cn("flex size-11 shrink-0 items-center justify-center rounded-lg", a.tone)}>
@@ -350,7 +350,7 @@ export function DashboardPage() {
           <SectionCard
             title="Recent Notifications"
             hoverable={false}
-            className="md:col-span-2 xl:col-span-1"
+            className="md:col-span-2 lg:col-span-1"
             actions={
               <button type="button" onClick={() => openPanel({ kind: "notifications" })} className="-my-2 flex min-h-11 items-center gap-1 px-1 text-sm font-medium text-primary hover:underline">
                 View All <ChevronRight className="size-4" />

@@ -11,13 +11,14 @@ import { useMediaQuery } from "@/hooks/use-media"
 /**
  * App shell for the tablet.
  *
- * Landscape (≥1024px wide, ~1280×800 on both target tablets) opens with the full
- * sidebar; portrait (~800px wide) opens with the icon rail so the screen keeps
- * its width. The engineer can still toggle either way, and rotating the tablet
- * goes back to the default for the new orientation.
+ * The full sidebar opens by default only from 1200px wide (Lenovo ThinkTab X11
+ * landscape, ~1280px). Narrower screens open with the icon rail so the content
+ * keeps its width: Galaxy Tab S9 FE landscape (1111px) and both tablets in
+ * portrait (~712–800px). The engineer can still toggle either way, and crossing
+ * the breakpoint (rotating the tablet) goes back to the default.
  */
 export function AppLayout() {
-  const landscape = useMediaQuery("(min-width: 1024px)")
+  const landscape = useMediaQuery("(min-width: 1200px)")
   // A manual toggle only holds for the orientation it was made in
   const [choice, setChoice] = useState<{ landscape: boolean; open: boolean } | null>(null)
   const open = choice?.landscape === landscape ? choice.open : landscape
