@@ -42,6 +42,7 @@ import { findInspection, useInspectionDetails } from "@/data/inspection-store"
 import { maintenanceTimeline } from "@/data/maintenance-detail"
 import { findMaintenance, useMaintenanceDetails } from "@/data/maintenance-store"
 import { priorityTone, slotLabel } from "@/data/occ-tables"
+import { CategoryIcon } from "@/components/common/category-icon"
 import { categoryLook } from "@/lib/category-icons"
 import { useCurrentElpremar } from "@/lib/me"
 import { startJob } from "@/lib/start-job"
@@ -106,7 +107,7 @@ function Tracker({ job }: { job: Job }) {
 
 /* ---------- Facts ---------- */
 
-function Fact({ icon: Icon, tone, label, children }: { icon: LucideIcon; tone: string; label: string; children: React.ReactNode }) {
+function Fact({ icon: Icon, tone, label, children }: { icon: React.ComponentType<{ className?: string }>; tone: string; label: string; children: React.ReactNode }) {
   return (
     <div className="flex min-w-0 items-start gap-3 rounded-lg bg-card p-3 ring-1 ring-foreground/10">
       <span className={cn("flex size-10 shrink-0 items-center justify-center rounded-lg", tone)}>
@@ -180,11 +181,11 @@ export function TaskPage() {
         )}
       >
         {/* Oversized category glyph as a watermark */}
-        <look.icon aria-hidden className="pointer-events-none absolute -right-6 -bottom-10 size-56 text-white/8" strokeWidth={1.2} />
+        <CategoryIcon category={category} className="pointer-events-none absolute -right-6 -bottom-10 size-56 text-white/8" />
         <div className="relative space-y-5 p-5">
           <div className="flex flex-wrap items-start gap-4">
             <span className="flex size-16 shrink-0 items-center justify-center rounded-2xl bg-white shadow-md">
-              <look.icon className={cn("size-9", look.tone)} strokeWidth={1.8} />
+              <CategoryIcon category={category} className={cn("size-9", look.tone)} />
             </span>
             <div className="min-w-0 flex-1">
               <nav className="flex flex-wrap items-center gap-1 text-sm text-white/70">
@@ -228,7 +229,7 @@ export function TaskPage() {
 
       {/* ---------- What OCC assigned ---------- */}
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-        <Fact icon={look.icon} tone="bg-muted text-foreground" label="Asset Category">
+        <Fact icon={(props) => <CategoryIcon category={category} {...props} />} tone={look.tint} label="Asset Category">
           <span className={look.tone}>{category}</span>
           {detail ? <span className="block text-xs font-normal text-muted-foreground">{detail.assetCriticality} criticality</span> : null}
         </Fact>

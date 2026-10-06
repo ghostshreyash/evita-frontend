@@ -25,6 +25,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { assetCategories } from "@/data/master-data"
 import { priorityTone, slotLabel } from "@/data/occ-tables"
 import { td, th } from "@/lib/data-table"
+import { CategoryIcon } from "@/components/common/category-icon"
 import { categoryLook, shortCategory } from "@/lib/category-icons"
 import { useCurrentElpremar } from "@/lib/me"
 import { markRead, noticeTime, useNotifications } from "@/lib/notifications"
@@ -198,7 +199,7 @@ export function DashboardPage() {
                         return (
                           <span className="flex items-center gap-2.5">
                             <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-muted/70">
-                              <look.icon className={cn("size-5", look.tone)} strokeWidth={2.2} />
+                              <CategoryIcon category={categoryFor(t.asset)} className={cn("size-5", look.tone)} />
                             </span>
                             <span className="min-w-0">
                               <span className="block font-medium">{t.asset}</span>
@@ -246,7 +247,7 @@ export function DashboardPage() {
                       title={c.name}
                       className="group/cat flex min-h-28 flex-col items-center justify-center gap-1.5 rounded-xl bg-card px-2 py-3 text-center shadow-xs ring-1 ring-foreground/10 transition-[transform,box-shadow] duration-200 hover:shadow-md motion-safe:hover:-translate-y-0.5 active:translate-y-0"
                     >
-                      <look.icon className={cn("size-9 transition-transform motion-safe:group-hover/cat:scale-110", look.tone)} strokeWidth={1.8} />
+                      <CategoryIcon category={c.name} className={cn("size-9 transition-transform motion-safe:group-hover/cat:scale-110", look.tone)} />
                       <span className="line-clamp-2 text-xs leading-tight font-semibold">{shortCategory(c.name)}</span>
                       <span className="text-xs text-muted-foreground tabular-nums">{c.count} Assets</span>
                     </Link>

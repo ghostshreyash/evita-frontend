@@ -1,91 +1,81 @@
-import {
-  Activity,
-  Atom,
-  BatteryCharging,
-  BatteryFull,
-  Columns3,
-  Combine,
-  Cog,
-  Cpu,
-  Fan,
-  Gauge,
-  Grid3x3,
-  LayoutPanelTop,
-  Lightbulb,
-  MonitorCog,
-  MonitorDot,
-  Network,
-  PanelsTopLeft,
-  PlugZap,
-  Power,
-  RadioTower,
-  Repeat,
-  Router,
-  Rows3,
-  Settings,
-  Shield,
-  Siren,
-  SlidersHorizontal,
-  Split,
-  Sun,
-  Sunrise,
-  ToggleLeft,
-  ToggleRight,
-  UtilityPole,
-  Wind,
-  Workflow,
-  Zap,
-  type LucideIcon,
-} from "lucide-react"
-
 /**
- * One glyph and one colour per asset category, so a category reads the same on
- * the dashboard tiles, in task rows and on the task screen. Every category in
- * the master list gets its own icon — no two share one — coloured from the
- * theme tokens in the spirit of the EVITA dashboard mockup.
+ * One colour per asset category, so a category reads the same on the dashboard
+ * tiles, in task rows, on the task screen and across the Assets module.
+ *
+ * The glyph itself lives in components/common/category-icon.tsx — there is one
+ * drawing per category and this file does not duplicate it. What is held here is
+ * the colour, hand-assigned rather than cycled, plus the short name a tile uses.
+ *
+ * `tone` colours the glyph on a plain background. `tint` is the soft chip the
+ * Assets screens sit it on; it is derived from the same tone, so a category
+ * cannot end up blue in one place and green in another.
  */
-type Look = { icon: LucideIcon; tone: string }
+type Tone =
+  | "text-info"
+  | "text-primary"
+  | "text-highlight"
+  | "text-critical"
+  | "text-healthy"
+  | "text-attention"
+  | "text-neutral-soft-foreground"
 
-const looks: Record<string, Look> = {
-  Transformer: { icon: Zap, tone: "text-info" },
-  "Power Transformer": { icon: UtilityPole, tone: "text-primary" },
-  "Distribution Transformer": { icon: Split, tone: "text-info" },
-  "Instrument Transformer (CT/PT)": { icon: Gauge, tone: "text-highlight" },
-  "HT Panel": { icon: PanelsTopLeft, tone: "text-critical" },
-  "LT Panel": { icon: LayoutPanelTop, tone: "text-primary" },
-  "MCC (Motor Control Center)": { icon: Cog, tone: "text-critical" },
-  "PCC (Power Control Center)": { icon: Power, tone: "text-healthy" },
-  "APFC Panel": { icon: Activity, tone: "text-attention" },
-  "AMF Panel": { icon: ToggleRight, tone: "text-attention" },
-  "Distribution Board (DB)": { icon: Grid3x3, tone: "text-healthy" },
-  "Sub Distribution Board (SDB)": { icon: Columns3, tone: "text-healthy" },
-  "Lighting Distribution Board (LDB)": { icon: Lightbulb, tone: "text-attention" },
-  Busbar: { icon: Rows3, tone: "text-primary" },
-  "VCB (Vacuum Circuit Breaker)": { icon: ToggleLeft, tone: "text-critical" },
-  "ACB (Air Circuit Breaker)": { icon: Wind, tone: "text-info" },
-  "SF6 Circuit Breaker": { icon: Atom, tone: "text-highlight" },
-  MCCB: { icon: Shield, tone: "text-info" },
-  "VFD (Variable Frequency Drive)": { icon: Fan, tone: "text-healthy" },
-  "Soft Starter Panel": { icon: SlidersHorizontal, tone: "text-attention" },
-  UPS: { icon: BatteryCharging, tone: "text-healthy" },
-  "Battery Bank": { icon: BatteryFull, tone: "text-healthy" },
-  "Battery Charger": { icon: PlugZap, tone: "text-attention" },
-  Inverter: { icon: Repeat, tone: "text-info" },
-  "Relay Panel": { icon: Workflow, tone: "text-highlight" },
-  "Control Panel": { icon: MonitorCog, tone: "text-primary" },
-  "PLC Panel": { icon: Cpu, tone: "text-info" },
-  "SCADA System": { icon: MonitorDot, tone: "text-highlight" },
-  "RTU (Remote Terminal Unit)": { icon: RadioTower, tone: "text-highlight" },
-  "Fire Alarm Panel": { icon: Siren, tone: "text-critical" },
-  "Solar Inverter": { icon: Sun, tone: "text-attention" },
-  "Solar Combiner Box": { icon: Combine, tone: "text-attention" },
-  "Solar Transformer": { icon: Sunrise, tone: "text-attention" },
-  "Network Switch": { icon: Network, tone: "text-info" },
-  "Industrial Network Equipment": { icon: Router, tone: "text-primary" },
-  Other: { icon: Settings, tone: "text-neutral-soft-foreground" },
+/** The soft chip that goes with each tone */
+const tints: Record<Tone, string> = {
+  "text-info": "bg-info-soft text-info",
+  // No primary-soft token exists; info-soft is the light ground the navy sits on
+  "text-primary": "bg-info-soft text-primary",
+  "text-highlight": "bg-highlight-soft text-highlight",
+  "text-critical": "bg-critical-soft text-critical",
+  "text-healthy": "bg-healthy-soft text-healthy",
+  "text-attention": "bg-attention-soft text-attention",
+  "text-neutral-soft-foreground": "bg-neutral-soft text-neutral-soft-foreground",
 }
 
-export const categoryLook = (category: string): Look => looks[category] ?? looks.Other
+const tones: Record<string, Tone> = {
+  Transformer: "text-info",
+  "Power Transformer": "text-primary",
+  "Distribution Transformer": "text-info",
+  "Instrument Transformer (CT/PT)": "text-highlight",
+  "HT Panel": "text-critical",
+  "LT Panel": "text-primary",
+  "MCC (Motor Control Center)": "text-critical",
+  "PCC (Power Control Center)": "text-healthy",
+  "APFC Panel": "text-attention",
+  "AMF Panel": "text-attention",
+  "Distribution Board (DB)": "text-healthy",
+  "Sub Distribution Board (SDB)": "text-healthy",
+  "Lighting Distribution Board (LDB)": "text-attention",
+  Busbar: "text-primary",
+  "VCB (Vacuum Circuit Breaker)": "text-critical",
+  "ACB (Air Circuit Breaker)": "text-info",
+  "SF6 Circuit Breaker": "text-highlight",
+  MCCB: "text-info",
+  "VFD (Variable Frequency Drive)": "text-healthy",
+  "Soft Starter Panel": "text-attention",
+  UPS: "text-healthy",
+  "Battery Bank": "text-healthy",
+  "Battery Charger": "text-attention",
+  Inverter: "text-info",
+  "Relay Panel": "text-highlight",
+  "Control Panel": "text-primary",
+  "PLC Panel": "text-info",
+  "SCADA System": "text-highlight",
+  "RTU (Remote Terminal Unit)": "text-highlight",
+  "Fire Alarm Panel": "text-critical",
+  "Solar Inverter": "text-attention",
+  "Solar Combiner Box": "text-attention",
+  "Solar Transformer": "text-attention",
+  "Network Switch": "text-info",
+  "Industrial Network Equipment": "text-primary",
+  Other: "text-neutral-soft-foreground",
+}
+
+export type CategoryLook = { tone: Tone; tint: string }
+
+export const categoryLook = (category: string): CategoryLook => {
+  const tone = tones[category] ?? tones.Other
+  return { tone, tint: tints[tone] }
+}
 
 /** Short name for a tile: "MCC (Motor Control Center)" → "MCC" */
 export const shortCategory = (category: string) => category.replace(/\s*\((?!CT\/PT).*?\)/, "")
