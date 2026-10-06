@@ -294,15 +294,14 @@ export function InspectionForm({ job, detail }: { job: Job; detail: InspectionDe
 
       {/* ---------- Result and submit ---------- */}
       <aside className="space-y-4 lg:sticky lg:top-20 lg:self-start">
-        <section className="rounded-lg bg-card p-4 shadow-xs ring-1 ring-foreground/10">
-          <h3 className="mb-3 text-base font-semibold">Health Score (estimate)</h3>
+        <section className="rounded-lg bg-card p-3 shadow-xs ring-1 ring-foreground/10">
+          <h3 className="mb-3 text-base font-semibold text-brand-navy dark:text-foreground">Health Score (estimate)</h3>
           <HealthRing score={preview.healthScore} caption="Updates as you record" />
         </section>
-        <section className="space-y-4 rounded-lg bg-card p-4 shadow-xs ring-1 ring-foreground/10">
-          <h3 className="text-base font-semibold">Before you submit</h3>
+        <section className="space-y-3 rounded-lg bg-card p-3 shadow-xs ring-1 ring-foreground/10">
           <Checklist items={checklist} />
           <Button size="lg" className="w-full" disabled={!ready} onClick={submit}>
-            <Send /> Submit Testing & Measurements
+            <Send /> Submit
           </Button>
           <p className="text-center text-xs text-muted-foreground">{savedAt ? `Draft saved at ${savedAt}` : "Saved automatically as you work"}</p>
         </section>

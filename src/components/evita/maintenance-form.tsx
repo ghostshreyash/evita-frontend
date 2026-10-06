@@ -242,8 +242,7 @@ export function MaintenanceForm({ job, detail }: { job: Job; detail: Maintenance
 
       {/* ---------- Submit for approval ---------- */}
       <aside className="space-y-4 lg:sticky lg:top-20 lg:self-start">
-        <section className="space-y-4 rounded-lg bg-card p-4 shadow-xs ring-1 ring-foreground/10">
-          <h3 className="text-base font-semibold">Submit for Approval</h3>
+        <section className="space-y-3 rounded-lg bg-card p-3 shadow-xs ring-1 ring-foreground/10">
           <p className="text-sm text-muted-foreground">OCC reviews the evidence and approves the work, or sends it back with remarks. The asset's health report updates after approval.</p>
           <Checklist items={checklist} />
           <Button

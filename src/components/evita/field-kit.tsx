@@ -1,6 +1,7 @@
-import { CircleCheck, CircleDashed, Thermometer, X } from "lucide-react"
+import { CircleCheck, Thermometer, X } from "lucide-react"
 import { cn } from "cn"
 
+import { CheckList } from "@/components/common/detail-list"
 import type { EvidenceItem } from "@/data/evidence"
 import { bandLook } from "@/lib/health"
 
@@ -59,7 +60,10 @@ export function FieldLabel({ children, required }: { children: React.ReactNode; 
   )
 }
 
-/** A white card with a numbered heading, like the steps on the EVITA mockups */
+/**
+ * One section of a task form, drawn like the asset screens' panels: an icon,
+ * a navy heading with its step number, and a small tick once it is filled in.
+ */
 export function StepCard({
   step,
   title,
@@ -79,19 +83,16 @@ export function StepCard({
 }) {
   return (
     <section className={cn("rounded-lg bg-card shadow-xs ring-1 ring-foreground/10", className)}>
-      <header className="flex min-h-14 flex-wrap items-center gap-2.5 border-b px-4 py-2.5">
-        {step !== undefined ? (
-          <span className={cn("flex size-7 shrink-0 items-center justify-center rounded-full text-sm font-bold", done ? "bg-healthy text-healthy-foreground" : "bg-primary/10 text-primary")}>
-            {done ? <CircleCheck className="size-4" /> : step}
-          </span>
-        ) : null}
-        <h3 className="flex flex-1 items-center gap-2 text-base font-semibold">
-          <Icon className="size-5 text-primary" />
+      <header className="flex min-h-11 flex-wrap items-center gap-2 px-3 pt-2.5 pb-1.5">
+        <h3 className="flex flex-1 items-center gap-2 text-base font-semibold text-brand-navy dark:text-foreground">
+          <Icon className="size-5 shrink-0 text-primary" />
+          {step !== undefined ? <span className="tabular-nums">{step}.</span> : null}
           {title}
+          {done ? <CircleCheck className="size-4 text-healthy" aria-label="Done" /> : null}
         </h3>
         {actions}
       </header>
-      <div className="p-4">{children}</div>
+      <div className="px-3 pb-3">{children}</div>
     </section>
   )
 }
@@ -136,17 +137,8 @@ export function EvidenceStrip({
 }
 
 /** Submission checklist: every line must be ticked before the task can be submitted */
-export function Checklist({ items }: { items: { label: string; done: boolean }[] }) {
-  return (
-    <ul className="space-y-2">
-      {items.map((i) => (
-        <li key={i.label} className={cn("flex items-start gap-2 text-sm", !i.done && "text-muted-foreground")}>
-          {i.done ? <CircleCheck className="mt-0.5 size-4 shrink-0 text-healthy" /> : <CircleDashed className="mt-0.5 size-4 shrink-0" />}
-          {i.label}
-        </li>
-      ))}
-    </ul>
-  )
+export function Checklist({ items, title = "Submission Checklist" }: { items: { label: string; done: boolean }[]; title?: string }) {
+  return <CheckList title={title} items={items} />
 }
 
 /** Health score ring with its band, as on the EVITA asset screens */
