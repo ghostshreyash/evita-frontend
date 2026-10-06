@@ -2,38 +2,78 @@ import { useMemo } from "react"
 import { Link, useNavigate } from "react-router"
 import { format } from "date-fns"
 import {
+  ArrowRight,
+  BadgeCheck,
   BookOpen,
+  Building2,
+  CalendarDays,
   ChevronRight,
   CircleCheckBig,
   ClipboardList,
+  Factory,
   FileText,
   Hourglass,
+  Layers,
   Mail,
+  MapPin,
+  Network,
   Phone,
   QrCode,
-  HardHat,
-  MapPin,
   ShieldCheck,
   TriangleAlert,
+  type LucideIcon,
 } from "lucide-react"
 import { cn } from "cn"
 
-import { SectionCard } from "@/components/common/section-card"
+import { CategoryIcon } from "@/components/common/category-icon"
 import { JobActionButton, JobStatusBadge } from "@/components/evita/job-action"
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { useAssetRows } from "@/data/asset-store"
 import { elpremarProfileFor } from "@/data/elpremar-data"
 import { assetCategories } from "@/data/master-data"
-import { priorityTone, slotLabel } from "@/data/occ-tables"
-import { td, th } from "@/lib/data-table"
-import { CategoryIcon } from "@/components/common/category-icon"
+import { slotLabel } from "@/data/occ-tables"
 import { categoryLook, shortCategory } from "@/lib/category-icons"
 import { useCurrentElpremar } from "@/lib/me"
 import { markRead, noticeTime, useNotifications } from "@/lib/notifications"
 import { openPanel } from "@/lib/ui-store"
-import { actionFor, categoryFor, isThisWeek, isToday, parseDay, summarise, useMyJobs } from "@/lib/work"
+import { actionFor, categoryFor, isOverdue, isThisWeek, isToday, parseDay, summarise, useMyJobs, type Job } from "@/lib/work"
 
 const startTime = (slot: number) => slotLabel(slot).split(" - ")[0]
+
+/** White panel with an icon tile, a navy title and an optional subtitle, as the tablet design draws its cards */
+function Panel({
+  icon: Icon,
+  title,
+  subtitle,
+  action,
+  className,
+  children,
+}: {
+  icon?: LucideIcon
+  title: string
+  subtitle?: string
+  action?: React.ReactNode
+  className?: string
+  children: React.ReactNode
+}) {
+  return (
+    <section className={cn("rounded-2xl bg-card shadow-xs ring-1 ring-foreground/10", className)}>
+      <header className="flex min-h-16 items-center gap-3 border-b px-5 py-3">
+        {Icon ? (
+          <span className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-info-soft text-primary">
+            <Icon className="size-5" />
+          </span>
+        ) : null}
+        <div className="min-w-0 flex-1">
+          <h3 className="truncate text-lg font-semibold text-brand-navy dark:text-foreground">{title}</h3>
+          {subtitle ? <p className="truncate text-sm text-primary">{subtitle}</p> : null}
+        </div>
+        {action}
+      </header>
+      {children}
+    </section>
+  )
+}
 
 /** One of the four counters; each opens My Tasks on the matching view */
 function Counter({
@@ -44,73 +84,86 @@ function Counter({
   tone,
   to,
 }: {
-  icon: typeof ClipboardList
+  icon: LucideIcon
   label: string
   value: number
   /** Line under the number; only Today's Tasks carries one */
   note?: string
-  tone: keyof typeof counterTones
+  tone: string
   to: string
 }) {
-  const t = counterTones[tone]
-  // Label on its own line: beside the icon it truncates in the ~160px tile a tablet gives it
   return (
     <Link
       to={to}
-      className={cn(
-        "group/stat rounded-xl px-3 py-3 ring-1 transition-[transform,box-shadow] duration-200 hover:shadow-md motion-safe:hover:-translate-y-0.5 active:translate-y-0",
-        t.card
-      )}
+      className="group/stat flex min-h-32 flex-col rounded-2xl bg-card p-4 shadow-xs ring-1 ring-foreground/10 transition-[transform,box-shadow] duration-200 hover:shadow-md motion-safe:hover:-translate-y-0.5 active:translate-y-0"
     >
-      <div className="flex items-center justify-between gap-1 text-sm font-medium text-muted-foreground">
-        {label}
-        <ChevronRight className="size-4 shrink-0 opacity-60" />
-      </div>
-      <div className="mt-1.5 flex items-center gap-3">
-        <span className={cn("flex size-12 shrink-0 items-center justify-center rounded-full shadow-sm transition-transform motion-safe:group-hover/stat:scale-105", t.icon)}>
-          <Icon className="size-6" strokeWidth={2.2} />
+      <div className="flex items-start justify-between gap-2">
+        <span className="text-xs font-semibold tracking-[0.08em] text-muted-foreground uppercase">{label}</span>
+        <span className={cn("flex size-12 shrink-0 items-center justify-center rounded-xl", tone)}>
+          <Icon className="size-6" />
         </span>
-        <span className="text-3xl leading-none font-bold text-brand-navy tabular-nums dark:text-foreground">{value}</span>
       </div>
-      {note ? <div className={cn("mt-2 text-xs leading-tight font-medium", t.note)}>{note}</div> : null}
+      <span className="-mt-3 text-4xl leading-none font-bold text-brand-navy tabular-nums dark:text-foreground">{value}</span>
+      {note ? <span className="mt-auto pt-2 text-sm text-primary">{note}</span> : null}
     </Link>
   )
 }
 
-/** Tile tint, icon disc and note colour per counter, from the theme tokens */
-const counterTones = {
-  info: { card: "bg-info-soft/70 ring-info/15", icon: "bg-info text-info-foreground", note: "text-info-soft-foreground" },
-  healthy: { card: "bg-healthy-soft ring-healthy/15", icon: "bg-healthy text-healthy-foreground", note: "text-healthy-soft-foreground" },
-  attention: { card: "bg-attention-soft ring-attention/20", icon: "bg-attention text-attention-foreground", note: "text-attention-soft-foreground" },
-  highlight: { card: "bg-highlight-soft/70 ring-highlight/15", icon: "bg-highlight text-highlight-foreground", note: "text-highlight-soft-foreground" },
+/** One task as a row card: time chip, asset with its category tag, activity, status and the one action */
+function TaskRow({ job, onOpen }: { job: Job; onOpen: () => void }) {
+  const category = categoryFor(job.asset)
+  const look = categoryLook(category)
+  const overdue = isOverdue(job)
+  return (
+    <li>
+      <div
+        role="button"
+        tabIndex={0}
+        onClick={onOpen}
+        onKeyDown={(e) => e.key === "Enter" && onOpen()}
+        className="flex cursor-pointer items-center gap-4 px-5 py-4 transition-colors hover:bg-muted/40 active:bg-muted/60"
+      >
+        <span className={cn("shrink-0 rounded-lg px-2.5 py-1.5 text-center font-mono text-sm leading-tight font-semibold", overdue ? "bg-critical-soft text-critical" : "bg-muted text-foreground")}>
+          {isToday(job.date) ? "Today" : format(parseDay(job.date), "EEE d")}
+          <span className="block text-xs font-medium">{startTime(job.slot)}</span>
+        </span>
+        <div className="min-w-0 flex-1">
+          <div className="truncate text-base font-semibold text-brand-navy dark:text-foreground">{job.asset}</div>
+          <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm">
+            <span className={cn("inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-xs font-semibold ring-1 ring-current/20", look.tint)}>
+              <CategoryIcon category={category} className="size-3.5" />
+              {shortCategory(category)}
+            </span>
+            <span className="truncate text-primary">• {job.plant}</span>
+          </div>
+          <div className="mt-1 truncate text-sm text-foreground/80">{job.activity}</div>
+        </div>
+        <JobStatusBadge job={job} className="max-md:hidden" />
+        <JobActionButton job={job} className="h-12 border-2 border-primary/70 text-base" />
+      </div>
+    </li>
+  )
 }
 
-/** Label / value rows for the My Details and Assignment Info tabs */
-function InfoRows({ rows, className }: { rows: [string, string][]; className?: string }) {
+/** Icon + label on the left, value on the right — the profile tabs' rows */
+function InfoRows({ rows }: { rows: { icon: LucideIcon; label: string; value: React.ReactNode }[] }) {
   return (
-    <dl className={cn("space-y-2 text-sm", className)}>
-      {rows.map(([label, value]) => (
-        <div key={label} className="flex items-baseline justify-between gap-3 border-b pb-2 last:border-0 last:pb-0">
+    <dl className="divide-y">
+      {rows.map(({ icon: Icon, label, value }) => (
+        <div key={label} className="flex min-h-12 items-center gap-3 py-2 text-sm">
+          <Icon className="size-4 shrink-0 text-muted-foreground" />
           <dt className="text-muted-foreground">{label}</dt>
-          <dd className="text-right font-medium">{value}</dd>
+          <dd className="ml-auto min-w-0 truncate text-right font-semibold">{value}</dd>
         </div>
       ))}
     </dl>
   )
 }
 
-const quickActionClass =
-  "flex min-h-16 w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-left ring-1 ring-foreground/10 transition-colors hover:bg-muted active:bg-muted"
-
 /**
- * The ELPREMAR's own screen: the work in front of them today, the assets at
- * their site, and who they are. Nothing from the command centre appears here —
- * no enterprise rollups, no approvals, no other engineer's book.
- *
- * Every item leads somewhere real, as on the OCC dashboard: the counters and
- * View All open My Tasks on the matching view, Start / Continue open the task,
- * the category tiles open the asset register, and the quick actions open the
- * scanner, Report an Issue and the SOP library.
+ * The ELPREMAR's own screen: the work in front of them this week, the assets
+ * at their site, and who they are. Laid out after the EVITA tablet design; the
+ * data and every link are the same as before.
  */
 export function DashboardPage() {
   const navigate = useNavigate()
@@ -120,7 +173,7 @@ export function DashboardPage() {
   const { notices } = useNotifications()
 
   const counts = summarise(jobs)
-  // The week at a glance (Monday to Sunday), soonest first — the table the homepage leads with
+  // The week at a glance (Monday to Sunday), soonest first — the list the homepage leads with
   const week = useMemo(() => jobs.filter((j) => isThisWeek(j.date)), [jobs])
   // The job to resume for "Log Test Results": one already running, else the next to start
   const nextInspection = useMemo(
@@ -131,253 +184,195 @@ export function DashboardPage() {
   )
 
   /**
-   * Assets at the posting per category. Seeded mock counts until the Assets
-   * module supplies the real register (GET /assets?plant=…).
+   * Assets at the location per category, counted from the same register the
+   * My Assets page lists, so a tile's count is the number of rows its link opens.
+   * Only categories that have assets are shown, as in that page's filter.
    */
-  const categories = useMemo(() => {
-    const seed = [...me.id].reduce((n, c) => (n * 31 + c.charCodeAt(0)) >>> 0, 7)
-    return assetCategories.map((name, i) => ({ name, count: 6 + ((seed + i * 13) % 24) }))
-  }, [me])
-  const totalAssets = categories.reduce((n, c) => n + c.count, 0)
+  const register = useAssetRows()
+  const categories = useMemo(
+    () =>
+      assetCategories
+        .map((name) => ({ name, count: register.filter((a) => a.category === name).length }))
+        .filter((c) => c.count > 0),
+    [register]
+  )
+  const totalAssets = register.length
   const email = `${me.name.toLowerCase().replace(/\s+/g, ".")}@olivineglobal.com`
 
   const quickActions = [
-    { icon: QrCode, label: "Scan Asset QR", detail: "View Asset Details", tone: "bg-info-soft text-info", run: () => openPanel({ kind: "scan" }) },
+    { icon: QrCode, label: "Scan Asset QR", tone: "bg-info-soft text-info", run: () => openPanel({ kind: "scan" }) },
     {
       icon: FileText,
       label: "Log Test Results",
-      detail: nextInspection ? `${nextInspection.activity} · ${nextInspection.asset}` : "Record Measurements",
-      tone: "bg-info-soft text-info",
+      tone: "bg-healthy-soft text-healthy",
       run: () => navigate(nextInspection ? `/my-tasks/${nextInspection.id}` : "/testing-measurements"),
     },
-    { icon: TriangleAlert, label: "Report an Issue", detail: "Raise a Ticket", tone: "bg-critical-soft text-critical", run: () => openPanel({ kind: "issue" }) },
-    { icon: BookOpen, label: "View SOP / Manual", detail: "Safety & Procedures", tone: "bg-highlight-soft text-highlight", run: () => openPanel({ kind: "sop", activity: nextInspection?.activity }) },
+    { icon: TriangleAlert, label: "Report an Issue", tone: "bg-attention-soft text-attention", run: () => openPanel({ kind: "issue" }) },
+    { icon: BookOpen, label: "View SOP / Manual", tone: "bg-highlight-soft text-highlight", run: () => openPanel({ kind: "sop", activity: nextInspection?.activity }) },
   ]
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-5">
       {/* ---------- Welcome ---------- */}
-      <section className="relative overflow-hidden rounded-xl bg-brand-navy text-brand-navy-foreground shadow-sm">
-        {/* Field photograph on the right, fading into the navy so the text stays readable */}
-        <img src="/brand/evita-login.jpg" alt="" className="absolute inset-y-0 right-0 h-full w-3/5 object-cover object-[center_30%] md:w-1/2" />
-        <div className="absolute inset-0 bg-gradient-to-r from-brand-navy via-brand-navy/90 via-45% to-brand-navy/20" />
-        <div className="relative flex flex-wrap items-center justify-between gap-4 px-5 py-5">
-          <div className="min-w-0">
-            <h2 className="text-2xl font-bold">Welcome, {me.name}!</h2>
-            <p className="mt-1 max-w-lg text-sm text-white/80">
-              Here are your assigned activities for today. Let&apos;s keep our assets reliable and safe.
-            </p>
-            <div className="mt-3 flex flex-wrap gap-2 text-xs">
-              <span className="flex items-center gap-1.5 rounded-full bg-white/12 px-3 py-1.5 ring-1 ring-white/20">
-                <MapPin className="size-3.5" /> {me.plant}, {me.enterprise}
+      <section className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-brand-navy via-brand-navy to-primary text-brand-navy-foreground shadow-sm">
+        <div className="relative flex items-center gap-5 p-5">
+          <div className="min-w-0 flex-1">
+            <h2 className="text-3xl font-bold tracking-tight">Welcome, {me.name}!</h2>
+            <div className="mt-4 flex flex-wrap gap-2 text-sm">
+              <span className="flex items-center gap-1.5 rounded-full bg-white/10 px-3.5 py-1.5 ring-1 ring-white/25">
+                <MapPin className="size-4" /> {me.plant}, {me.enterprise}
               </span>
-              <span className="flex items-center gap-1.5 rounded-full bg-white/12 px-3 py-1.5 ring-1 ring-white/20">
-                <ClipboardList className="size-3.5" /> {week.length} task{week.length === 1 ? "" : "s"} this week
+              <span className="flex items-center gap-1.5 rounded-full bg-primary px-3.5 py-1.5 font-medium ring-1 ring-white/25">
+                <ClipboardList className="size-4" /> {week.length} task{week.length === 1 ? "" : "s"} this week
               </span>
             </div>
           </div>
-          <div className="rounded-lg bg-brand-navy/55 px-4 py-3 text-right ring-1 ring-white/15 backdrop-blur-[2px] max-md:hidden">
-            <p className="text-base italic">“Every inspection prevents tomorrow&apos;s failure.”</p>
-            <p className="mt-1 text-sm font-semibold text-brand-gold">Safe People · Reliable Assets · A Stronger Tomorrow</p>
+          {/* Field photograph framed on the right */}
+          <div className="relative h-32 w-72 shrink-0 overflow-hidden rounded-xl ring-1 ring-white/20 max-md:hidden">
+            <img src="/brand/evita-login.jpg" alt="" className="size-full object-cover object-[center_30%]" />
+            <div className="absolute inset-0 bg-gradient-to-r from-brand-navy/70 to-transparent" />
           </div>
         </div>
       </section>
 
-      <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_18rem]">
-        <div className="min-w-0 space-y-4">
+      <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_19rem]">
+        <div className="min-w-0 space-y-5">
           {/* ---------- The day at a glance ---------- */}
-          <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-            <Counter to="/my-tasks?date=today" icon={ClipboardList} label="Today's Tasks" value={counts.today} note={`${counts.pending} Pending · ${counts.running} In Progress`} tone="info" />
-            <Counter to="/my-tasks?status=completed" icon={CircleCheckBig} label="Completed" value={counts.completed} tone="healthy" />
-            <Counter to="/my-tasks?status=overdue" icon={Hourglass} label="Overdue" value={counts.overdue} tone="attention" />
-            <Counter to="/my-tasks" icon={ClipboardList} label="Total Assigned" value={counts.total} tone="highlight" />
+          <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+            <Counter to="/my-tasks?date=today" icon={ClipboardList} label="Today's Tasks" value={counts.today} note={`${counts.pending} Pending • ${counts.running} In Progress`} tone="bg-info-soft text-info" />
+            <Counter to="/my-tasks?status=completed" icon={CircleCheckBig} label="Completed" value={counts.completed} tone="bg-healthy-soft text-healthy" />
+            <Counter to="/my-tasks?status=overdue" icon={Hourglass} label="Overdue" value={counts.overdue} tone="bg-critical-soft text-critical" />
+            <Counter to="/my-tasks" icon={Layers} label="Total Assigned" value={counts.total} tone="bg-highlight-soft text-highlight" />
           </div>
 
           {/* ---------- This week's work ---------- */}
-          <SectionCard title="This Week's Tasks" viewAllTo="/my-tasks?date=week" contentClassName="px-2" hoverable={false}>
-            <Table>
-              <TableHeader>
-                <TableRow className="bg-muted/60 hover:bg-muted/60">
-                  <TableHead className={th}>Day / Time</TableHead>
-                  <TableHead className={th}>Asset / Location</TableHead>
-                  <TableHead className={th}>Activity</TableHead>
-                  <TableHead className={cn(th, "max-md:hidden")}>Priority</TableHead>
-                  <TableHead className={th}>Status</TableHead>
-                  <TableHead className={cn(th, "text-center")}>Action</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {week.map((t) => (
-                  <TableRow key={t.id} onClick={() => navigate(`/my-tasks/${t.id}`)} className="cursor-pointer">
-                    <TableCell className={cn(td, "whitespace-nowrap tabular-nums")}>
-                      <span className={cn("block font-medium", isToday(t.date) && "text-primary")}>{isToday(t.date) ? "Today" : format(parseDay(t.date), "EEE d MMM")}</span>
-                      <span className="block text-xs text-muted-foreground">{startTime(t.slot)}</span>
-                    </TableCell>
-                    <TableCell className={cn(td, "whitespace-normal")}>
-                      {(() => {
-                        const look = categoryLook(categoryFor(t.asset))
-                        return (
-                          <span className="flex items-center gap-2.5">
-                            <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-muted/70">
-                              <CategoryIcon category={categoryFor(t.asset)} className={cn("size-5", look.tone)} />
-                            </span>
-                            <span className="min-w-0">
-                              <span className="block font-medium">{t.asset}</span>
-                              <span className="block text-xs text-muted-foreground">{t.plant}</span>
-                            </span>
-                          </span>
-                        )
-                      })()}
-                    </TableCell>
-                    <TableCell className={cn(td, "max-w-40 whitespace-normal")}>{t.activity}</TableCell>
-                    <TableCell className={cn(td, "max-md:hidden")}>
-                      <span className={cn("rounded px-2 py-1 text-xs font-semibold", priorityTone[t.priority])}>{t.priority}</span>
-                    </TableCell>
-                    <TableCell className={td}><JobStatusBadge job={t} /></TableCell>
-                    <TableCell className={cn(td, "py-1.5 text-center")}><JobActionButton job={t} /></TableCell>
-                  </TableRow>
-                ))}
-                {week.length === 0 ? (
-                  <TableRow>
-                    <TableCell colSpan={6} className="py-10 text-center text-sm text-muted-foreground">
-                      Nothing booked this week.{" "}
-                      <Link to="/my-tasks?status=open" className="font-medium text-primary underline-offset-4 hover:underline">See open work</Link>
-                    </TableCell>
-                  </TableRow>
-                ) : null}
-              </TableBody>
-            </Table>
-          </SectionCard>
+          <Panel
+            icon={ClipboardList}
+            title="This Week's Tasks"
+            subtitle="Monday to Sunday, soonest first"
+            action={
+              <Link to="/my-tasks?date=week" className="flex min-h-11 shrink-0 items-center gap-1 px-1 text-sm font-semibold text-primary hover:underline">
+                View All ({week.length}) <ArrowRight className="size-4" />
+              </Link>
+            }
+          >
+            {week.length ? (
+              <ul className="divide-y">
+                {week.map((t) => <TaskRow key={t.id} job={t} onOpen={() => navigate(`/my-tasks/${t.id}`)} />)}
+              </ul>
+            ) : (
+              <p className="px-5 py-10 text-center text-sm text-muted-foreground">
+                Nothing booked this week.{" "}
+                <Link to="/my-tasks?status=open" className="font-medium text-primary underline-offset-4 hover:underline">See open work</Link>
+              </p>
+            )}
+          </Panel>
 
           {/* ---------- What is on site ---------- */}
-          <SectionCard
+          <Panel
             title="Asset Categories at Your Location"
-            viewAllTo="/assets"
-            hoverable={false}
-            actions={<span className="text-sm text-muted-foreground">Total Assets: {totalAssets}</span>}
+            subtitle="Select a category to see its assets"
+            action={<span className="shrink-0 rounded-md bg-muted px-2.5 py-1 text-sm font-medium text-muted-foreground">{totalAssets} Total Registered</span>}
           >
-            <div className="grid grid-cols-3 gap-2 sm:grid-cols-4 lg:grid-cols-6">
-              {categories.map((c) => (
-                (() => {
-                  const look = categoryLook(c.name)
-                  return (
-                    <Link
-                      key={c.name}
-                      to={`/assets?category=${encodeURIComponent(c.name)}`}
-                      title={c.name}
-                      className="group/cat flex min-h-28 flex-col items-center justify-center gap-1.5 rounded-xl bg-card px-2 py-3 text-center shadow-xs ring-1 ring-foreground/10 transition-[transform,box-shadow] duration-200 hover:shadow-md motion-safe:hover:-translate-y-0.5 active:translate-y-0"
-                    >
-                      <CategoryIcon category={c.name} className={cn("size-9 transition-transform motion-safe:group-hover/cat:scale-110", look.tone)} />
-                      <span className="line-clamp-2 text-xs leading-tight font-semibold">{shortCategory(c.name)}</span>
-                      <span className="text-xs text-muted-foreground tabular-nums">{c.count} Assets</span>
-                    </Link>
-                  )
-                })()
-              ))}
+            <div className="grid grid-cols-3 gap-3 p-5 sm:grid-cols-4 lg:grid-cols-6">
+              {categories.map((c) => {
+                const look = categoryLook(c.name)
+                return (
+                  <Link
+                    key={c.name}
+                    to={`/assets?category=${encodeURIComponent(c.name)}`}
+                    title={c.name}
+                    className="group/cat flex min-h-32 flex-col items-center justify-center gap-2 rounded-xl bg-card px-2 py-3 text-center ring-1 ring-foreground/10 transition-[transform,box-shadow] duration-200 hover:shadow-md motion-safe:hover:-translate-y-0.5 active:translate-y-0"
+                  >
+                    <span className={cn("flex size-11 items-center justify-center rounded-lg transition-transform motion-safe:group-hover/cat:scale-110", look.tint)}>
+                      <CategoryIcon category={c.name} className="size-6" />
+                    </span>
+                    <span className="line-clamp-2 text-sm leading-tight font-semibold">{shortCategory(c.name)}</span>
+                    <span className="text-xs text-muted-foreground tabular-nums">{c.count} Assets</span>
+                  </Link>
+                )
+              })}
             </div>
-          </SectionCard>
+          </Panel>
         </div>
 
         {/* ---------- Who they are, and the shortcuts they use ---------- */}
-        <div className="grid content-start gap-4 md:grid-cols-2 lg:grid-cols-1">
-          <Tabs defaultValue="details">
-            <TabsList className="w-full">
-              <TabsTrigger value="details" className="flex-1">My Details</TabsTrigger>
-              <TabsTrigger value="assignment" className="flex-1">Assignment Info</TabsTrigger>
-            </TabsList>
-
-            <TabsContent value="details">
-              <SectionCard title="" hoverable={false} className="mt-2">
-                <div className="flex items-start gap-3">
-                  <div className="relative shrink-0">
-                    <div className="flex size-16 items-center justify-center rounded-full bg-gradient-to-br from-brand-gold-soft to-attention-soft text-brand-gold ring-2 ring-brand-gold/40">
-                      <HardHat className="size-8" strokeWidth={2} />
-                    </div>
-                    <span className="absolute right-0 bottom-0 size-4 rounded-full bg-healthy ring-2 ring-card" title="On duty" />
-                  </div>
-                  <div className="min-w-0 text-sm">
-                    <div className="text-base font-semibold">{me.name}</div>
-                    <div className="text-muted-foreground">ELPREMAR | {me.id}</div>
-                  </div>
-                </div>
+        <div className="grid content-start gap-5 md:grid-cols-2 lg:grid-cols-1">
+          <section className="rounded-2xl bg-card p-4 shadow-xs ring-1 ring-foreground/10">
+            <Tabs defaultValue="details">
+              <TabsList variant="line" className="w-full justify-start gap-4 border-b">
+                <TabsTrigger value="details" className="flex-none px-0">My Details</TabsTrigger>
+                <TabsTrigger value="assignment" className="flex-none px-0">Assignment Info</TabsTrigger>
+              </TabsList>
+              <TabsContent value="details" className="pt-2">
                 <InfoRows
-                  className="mt-3 border-t pt-2.5"
                   rows={[
-                    ["Role", me.designation],
-                    ["Joined", me.joined],
+                    { icon: BadgeCheck, label: "Role", value: me.designation },
+                    { icon: CalendarDays, label: "Joined", value: me.joined },
                     // The ELPREMAR's own location (their address from onboarding), not the site they are posted to
-                    ["Location", `${profile.basic.city}, ${profile.basic.state}`],
+                    { icon: MapPin, label: "Location", value: `${profile.basic.city}, ${profile.basic.state}` },
+                    { icon: Phone, label: "Phone", value: <a href="tel:+919876543210" className="font-mono text-primary">+91 98765 43210</a> },
+                    { icon: Mail, label: "Email", value: <a href={`mailto:${email}`} className="text-primary">{email}</a> },
                   ]}
                 />
-                <div className="mt-3 space-y-1 border-t pt-2 text-sm">
-                  <a href="tel:+919876543210" className="-mx-1 flex min-h-11 items-center gap-2 rounded px-1 hover:bg-muted">
-                    <Phone className="size-4 text-primary" /> +91 98765 43210
-                  </a>
-                  <a href={`mailto:${email}`} className="-mx-1 flex min-h-11 items-center gap-2 rounded px-1 hover:bg-muted">
-                    <Mail className="size-4 shrink-0 text-primary" /> <span className="truncate">{email}</span>
-                  </a>
-                </div>
-              </SectionCard>
-            </TabsContent>
-
-            <TabsContent value="assignment">
-              <SectionCard title="" hoverable={false} className="mt-2">
+              </TabsContent>
+              <TabsContent value="assignment" className="pt-2">
                 <InfoRows
                   rows={[
                     // Where they are assigned: the enterprise, its plant and the department they sit in
-                    ["Enterprise", profile.posting.enterprise],
-                    ["Location", `${profile.posting.plant}, ${profile.posting.city}`],
-                    ["Department", profile.posting.department],
+                    { icon: Building2, label: "Enterprise", value: profile.posting.enterprise },
+                    { icon: Factory, label: "Location", value: `${profile.posting.plant}, ${profile.posting.city}` },
+                    { icon: Network, label: "Department", value: profile.posting.department },
                   ]}
                 />
-              </SectionCard>
-            </TabsContent>
-          </Tabs>
+              </TabsContent>
+            </Tabs>
+          </section>
 
-          <div className="space-y-4">
+          <div className="space-y-5">
             <button
               type="button"
               onClick={() => openPanel({ kind: "safety" })}
-              className="flex w-full items-start gap-3 rounded-lg bg-healthy-soft px-3 py-3 text-left ring-1 ring-foreground/10 transition-shadow hover:shadow-md active:bg-healthy-soft/70"
+              className="flex w-full items-center gap-3 rounded-2xl bg-healthy-soft/60 p-4 text-left ring-2 ring-healthy/35 transition-shadow hover:shadow-md active:bg-healthy-soft"
             >
               <span className="flex size-12 shrink-0 items-center justify-center rounded-full bg-healthy text-healthy-foreground shadow-sm">
                 <ShieldCheck className="size-6" />
               </span>
-              <div className="min-w-0 flex-1 text-sm">
-                <div className="text-base font-semibold">Safety First</div>
-                <p className="text-muted-foreground">Follow all safety procedures. Report any unsafe condition immediately.</p>
+              <div className="min-w-0 flex-1">
+                <div className="text-sm font-bold tracking-[0.06em] uppercase">Safety First</div>
+                <p className="text-sm text-muted-foreground">Follow all safety procedures. Report any unsafe condition immediately.</p>
               </div>
-              <ChevronRight className="mt-2 size-5 shrink-0 text-muted-foreground" />
+              <ChevronRight className="size-5 shrink-0 text-healthy" />
             </button>
 
-            <SectionCard title="Quick Actions" hoverable={false}>
-              <div className="grid grid-cols-2 gap-2 lg:grid-cols-1">
+            <section className="rounded-2xl bg-card p-4 shadow-xs ring-1 ring-foreground/10">
+              <h3 className="mb-3 text-xs font-bold tracking-[0.08em] text-muted-foreground uppercase">Quick Actions</h3>
+              <div className="grid grid-cols-2 gap-2.5 lg:grid-cols-1">
                 {quickActions.map((a) => (
-                  <button key={a.label} type="button" onClick={a.run} className={quickActionClass}>
-                    <span className={cn("flex size-11 shrink-0 items-center justify-center rounded-lg", a.tone)}>
-                      <a.icon className="size-6" />
+                  <button
+                    key={a.label}
+                    type="button"
+                    onClick={a.run}
+                    className="flex min-h-14 w-full items-center gap-3 rounded-xl bg-muted/30 px-3 py-2 text-left ring-1 ring-foreground/10 transition-colors hover:bg-muted active:bg-muted"
+                  >
+                    <span className={cn("flex size-10 shrink-0 items-center justify-center rounded-lg", a.tone)}>
+                      <a.icon className="size-5" />
                     </span>
-                    <span className="min-w-0 flex-1">
-                      <span className="block text-sm leading-tight font-semibold">{a.label}</span>
-                      <span className="block truncate text-xs text-muted-foreground">{a.detail}</span>
-                    </span>
+                    <span className="min-w-0 flex-1 text-sm font-semibold">{a.label}</span>
                     <ChevronRight className="size-4 shrink-0 text-muted-foreground" />
                   </button>
                 ))}
               </div>
-            </SectionCard>
+            </section>
           </div>
 
-          <SectionCard
-            title="Recent Notifications"
-            hoverable={false}
-            className="md:col-span-2 lg:col-span-1"
-            actions={
-              <button type="button" onClick={() => openPanel({ kind: "notifications" })} className="-my-2 flex min-h-11 items-center gap-1 px-1 text-sm font-medium text-primary hover:underline">
+          <section className="rounded-2xl bg-card p-4 shadow-xs ring-1 ring-foreground/10 md:col-span-2 lg:col-span-1">
+            <div className="mb-2 flex items-center justify-between">
+              <h3 className="text-xs font-bold tracking-[0.08em] text-muted-foreground uppercase">Recent Notifications</h3>
+              <button type="button" onClick={() => openPanel({ kind: "notifications" })} className="-my-2 flex min-h-11 items-center gap-1 px-1 text-sm font-semibold text-primary hover:underline">
                 View All <ChevronRight className="size-4" />
               </button>
-            }
-          >
+            </div>
             <ul className="-mx-1 space-y-0.5 text-sm">
               {notices.slice(0, 4).map((n) => (
                 <li key={n.id}>
@@ -387,23 +382,19 @@ export function DashboardPage() {
                       markRead(n.id)
                       if (n.to) navigate(n.to)
                     }}
-                    className="flex min-h-11 w-full items-start gap-2 rounded px-1 py-1.5 text-left hover:bg-muted"
+                    className="flex min-h-11 w-full items-start gap-2 rounded-lg px-1 py-1.5 text-left hover:bg-muted"
                   >
                     <span className={cn("mt-1.5 size-2 shrink-0 rounded-full", n.unread ? "bg-primary" : "bg-foreground/15")} />
                     <span className={cn("min-w-0 flex-1", n.unread && "font-medium")}>{n.title}</span>
-                    <span className="shrink-0 text-xs text-muted-foreground tabular-nums">{noticeTime(n.at)}</span>
+                    <span className="shrink-0 font-mono text-xs text-muted-foreground">{noticeTime(n.at)}</span>
                   </button>
                 </li>
               ))}
               {notices.length === 0 ? <li className="px-1 text-muted-foreground">Nothing new.</li> : null}
             </ul>
-          </SectionCard>
+          </section>
         </div>
       </div>
-
-      <p className="pt-1 text-center text-xs text-muted-foreground">
-        {format(new Date(), "EEEE, d MMM yyyy")} · Reliable Assets. Safer Operations. A Greener Tomorrow.
-      </p>
     </div>
   )
 }
