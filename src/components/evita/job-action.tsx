@@ -44,7 +44,8 @@ const actions = {
 export function JobStatusBadge({ job, className }: { job: Pick<Job, "field">; className?: string }) {
   const look = fieldStatusLook[job.field]
   return (
-    <Badge variant={look.badge} className={cn("h-auto rounded px-2 py-1 text-xs whitespace-nowrap", className)}>
+    <Badge variant={look.badge} className={cn("h-auto gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold whitespace-nowrap", className)}>
+      <span aria-hidden className="size-1.5 rounded-full bg-current" />
       {look.label}
     </Badge>
   )

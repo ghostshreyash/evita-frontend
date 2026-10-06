@@ -33,16 +33,16 @@ export function CountTile({
     <Box
       {...(onClick ? { type: "button" as const, onClick, "aria-pressed": active } : {})}
       className={cn(
-        "rounded-lg bg-card px-3 py-2.5 text-left ring-1 ring-foreground/10 transition-shadow",
+        "flex min-h-20 items-center gap-3 rounded-2xl bg-card p-3 text-left shadow-xs ring-1 ring-foreground/10 transition-shadow",
         onClick && "hover:shadow-md",
         active && "ring-2 ring-primary"
       )}
     >
-      <div className="text-sm text-muted-foreground">{label}</div>
-      <div className="mt-1 flex items-center gap-2.5">
-        <span className={cn("flex size-9 shrink-0 items-center justify-center rounded-lg text-sm font-bold tabular-nums", tone)}>{value}</span>
-        {note ? <span className="text-xs leading-tight text-muted-foreground">{note}</span> : null}
-      </div>
+      <span className={cn("flex size-14 shrink-0 items-center justify-center rounded-xl text-2xl font-bold tabular-nums", active ? "bg-primary text-primary-foreground" : tone)}>{value}</span>
+      <span className="min-w-0">
+        <span className="block text-base leading-tight font-semibold text-brand-navy dark:text-foreground">{label}</span>
+        {note ? <span className="block truncate text-xs text-muted-foreground">{note}</span> : null}
+      </span>
     </Box>
   )
 }

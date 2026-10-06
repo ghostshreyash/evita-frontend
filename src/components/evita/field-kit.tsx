@@ -1,7 +1,6 @@
-import { CircleCheck, Thermometer, X } from "lucide-react"
+import { Check, CircleCheck, CircleDashed, Thermometer, X } from "lucide-react"
 import { cn } from "cn"
 
-import { CheckList } from "@/components/common/detail-list"
 import type { EvidenceItem } from "@/data/evidence"
 import { bandLook } from "@/lib/health"
 
@@ -61,8 +60,9 @@ export function FieldLabel({ children, required }: { children: React.ReactNode; 
 }
 
 /**
- * One section of a task form, drawn like the asset screens' panels: an icon,
- * a navy heading with its step number, and a small tick once it is filled in.
+ * One section of a task form, as the EVITA tablet design draws it: a green
+ * tick disc once the section is complete (the section's icon until then), a
+ * numbered title, and a slot on the right for a count pill or an action.
  */
 export function StepCard({
   step,
@@ -82,17 +82,96 @@ export function StepCard({
   className?: string
 }) {
   return (
-    <section className={cn("rounded-lg bg-card shadow-xs ring-1 ring-foreground/10", className)}>
-      <header className="flex min-h-11 flex-wrap items-center gap-2 px-3 pt-2.5 pb-1.5">
-        <h3 className="flex flex-1 items-center gap-2 text-base font-semibold text-brand-navy dark:text-foreground">
-          <Icon className="size-5 shrink-0 text-primary" />
-          {step !== undefined ? <span className="tabular-nums">{step}.</span> : null}
+    <section className={cn("rounded-2xl bg-card shadow-xs ring-1 ring-foreground/10", className)}>
+      <header className="flex min-h-16 flex-wrap items-center gap-3 border-b px-5 py-3">
+        <span className={cn("flex size-9 shrink-0 items-center justify-center rounded-full", done ? "bg-healthy-soft text-healthy" : "bg-info-soft text-primary")}>
+          {done ? <Check className="size-5" strokeWidth={3} aria-label="Done" /> : <Icon className="size-5" />}
+        </span>
+        <h3 className="flex-1 text-lg font-semibold text-brand-navy dark:text-foreground">
+          {step !== undefined ? <span className="tabular-nums">{step}. </span> : null}
           {title}
-          {done ? <CircleCheck className="size-4 text-healthy" aria-label="Done" /> : null}
         </h3>
         {actions}
       </header>
-      <div className="px-3 pb-3">{children}</div>
+      <div className="p-5">{children}</div>
+    </section>
+  )
+}
+
+/** Small rounded count shown at the right of a section header, e.g. "5 / 6 Captured" */
+export function CountPill({ children, done }: { children: React.ReactNode; done?: boolean }) {
+  return (
+    <span className={cn("rounded-full px-3 py-1 text-sm font-semibold ring-1", done ? "bg-healthy-soft text-healthy-soft-foreground ring-healthy/25" : "bg-info-soft text-info-soft-foreground ring-info/20")}>
+      {children}
+    </span>
+  )
+}
+
+/**
+ * Where a task stands, as a horizontal tracker: done steps get a green tick,
+ * the current step a solid blue disc in a highlighted box, later steps grey.
+ */
+export function TaskStepper({ steps, current }: { steps: { title: string; note?: string }[]; current: number }) {
+  return (
+    <ol className="flex items-center gap-2 overflow-x-auto rounded-2xl bg-card px-4 py-3 shadow-xs ring-1 ring-foreground/10">
+      {steps.map((step, i) => {
+        const state = i < current ? "done" : i === current ? "current" : "upcoming"
+        return (
+          <li key={step.title} className="flex min-w-fit flex-1 items-center gap-2 last:flex-none">
+            <div className={cn("flex items-center gap-2.5 rounded-xl px-2.5 py-1.5", state === "current" && "bg-info-soft/60 ring-2 ring-primary/40")}>
+              <span
+                className={cn(
+                  "flex size-10 shrink-0 items-center justify-center rounded-full text-sm font-bold",
+                  state === "done" && "bg-healthy-soft text-healthy ring-2 ring-healthy",
+                  state === "current" && "bg-primary text-primary-foreground",
+                  state === "upcoming" && "bg-muted text-muted-foreground ring-1 ring-foreground/15"
+                )}
+              >
+                {state === "done" ? <Check className="size-5" strokeWidth={3} /> : i + 1}
+              </span>
+              <span className="leading-tight">
+                <span className={cn("block text-sm font-semibold whitespace-nowrap", state === "current" ? "text-primary" : state === "done" ? "text-foreground" : "text-muted-foreground")}>
+                  {i + 1}. {step.title}
+                </span>
+                <span className={cn("block text-xs whitespace-nowrap", state === "done" ? "text-healthy" : state === "current" ? "text-primary" : "text-muted-foreground")}>
+                  {step.note ?? (state === "done" ? "Completed" : state === "current" ? "Current" : "Pending")}
+                </span>
+              </span>
+            </div>
+            {i < steps.length - 1 ? <span className={cn("h-0.5 min-w-6 flex-1 rounded", i < current ? "bg-healthy" : "bg-border")} /> : null}
+          </li>
+        )
+      })}
+    </ol>
+  )
+}
+
+/** White panel with a navy icon tile and title, as the task screen's panels are drawn */
+export function TaskPanel({
+  icon: Icon,
+  title,
+  action,
+  className,
+  contentClassName,
+  children,
+}: {
+  icon: React.ComponentType<{ className?: string }>
+  title: string
+  action?: React.ReactNode
+  className?: string
+  contentClassName?: string
+  children: React.ReactNode
+}) {
+  return (
+    <section className={cn("rounded-2xl bg-card shadow-xs ring-1 ring-foreground/10", className)}>
+      <header className="flex min-h-16 items-center gap-3 border-b px-5 py-3">
+        <span className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-brand-navy text-brand-navy-foreground">
+          <Icon className="size-5" />
+        </span>
+        <h3 className="flex-1 text-lg font-semibold text-brand-navy dark:text-foreground">{title}</h3>
+        {action}
+      </header>
+      <div className={cn("p-5", contentClassName)}>{children}</div>
     </section>
   )
 }
@@ -111,12 +190,12 @@ export function EvidenceStrip({
   return (
     <div className="flex gap-3 overflow-x-auto pb-1">
       {items.map((e) => (
-        <figure key={e.id} className="relative w-40 shrink-0 overflow-hidden rounded-lg bg-card ring-1 ring-foreground/10">
-          <div className={cn("flex h-28 items-center justify-center", !e.src && (e.kind === "thermal" ? "bg-linear-to-br from-info via-attention to-critical" : "bg-linear-to-br from-muted to-info-soft"))}>
+        <figure key={e.id} className="relative w-44 shrink-0 overflow-hidden rounded-xl bg-card ring-1 ring-foreground/10">
+          <div className={cn("flex h-32 items-center justify-center", !e.src && (e.kind === "thermal" ? "bg-linear-to-br from-info via-attention to-critical" : "bg-linear-to-br from-muted to-info-soft"))}>
             {e.src ? <img src={e.src} alt={e.label} className="size-full object-cover" /> : <Thermometer className="size-7 text-white/80" />}
           </div>
-          <figcaption className="px-2 py-1.5">
-            <div className="truncate text-xs font-medium">{e.label}</div>
+          <figcaption className="px-2.5 py-2">
+            <div className="truncate text-sm font-semibold">{e.label}</div>
             <div className="truncate text-xs text-muted-foreground tabular-nums">{e.meta}</div>
           </figcaption>
           {onRemove ? (
@@ -136,9 +215,27 @@ export function EvidenceStrip({
   )
 }
 
-/** Submission checklist: every line must be ticked before the task can be submitted */
+/** Submission checklist: one tinted row per requirement — green when met, amber while outstanding */
 export function Checklist({ items, title = "Submission Checklist" }: { items: { label: string; done: boolean }[]; title?: string }) {
-  return <CheckList title={title} items={items} />
+  return (
+    <div>
+      <h4 className="mb-2.5 text-xs font-bold tracking-[0.08em] text-muted-foreground uppercase">{title}</h4>
+      <ul className="space-y-2">
+        {items.map((i) => (
+          <li
+            key={i.label}
+            className={cn(
+              "flex min-h-11 items-center gap-2.5 rounded-lg px-3 py-2 text-sm ring-1",
+              i.done ? "bg-healthy-soft/50 ring-healthy/25" : "bg-attention-soft/50 ring-attention/30"
+            )}
+          >
+            {i.done ? <CircleCheck className="size-4 shrink-0 text-healthy" /> : <CircleDashed className="size-4 shrink-0 text-attention" />}
+            <span className="min-w-0 flex-1">{i.label}</span>
+          </li>
+        ))}
+      </ul>
+    </div>
+  )
 }
 
 /** Health score ring with its band, as on the EVITA asset screens */
