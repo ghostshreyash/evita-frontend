@@ -2,7 +2,6 @@ import { useMemo } from "react"
 import { endOfWeek, parse, startOfDay, startOfWeek } from "date-fns"
 
 import { useInspectionDetails, useInspectionRows } from "@/data/inspection-store"
-import { assetCategories } from "@/data/master-data"
 import { useMaintenanceDetails, useMaintenanceRows, useStartedMaintenance } from "@/data/maintenance-store"
 import type { Priority } from "@/data/occ-tables"
 import { useCurrentElpremar } from "@/lib/me"
@@ -165,16 +164,4 @@ export function summarise(jobs: Job[]) {
   }
 }
 
-/**
- * The master category a job's asset name belongs to: "MCC - Unit 2" → MCC
- * (Motor Control Center). Job names use the short form the mockups show.
- */
-export function categoryFor(assetName: string) {
-  const prefix = assetName.split(" - ")[0].trim().toLowerCase()
-  return (
-    assetCategories.find((c) => c.toLowerCase() === prefix) ??
-    assetCategories.find((c) => c.toLowerCase().startsWith(prefix)) ??
-    assetCategories.find((c) => c.toLowerCase().includes(prefix)) ??
-    "Other"
-  )
-}
+export { categoryFor } from "@/lib/asset-category"
