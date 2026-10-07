@@ -205,7 +205,7 @@ export function DashboardPage() {
       icon: FileText,
       label: "Log Test Results",
       tone: "bg-healthy-soft text-healthy",
-      run: () => navigate(nextInspection ? `/my-tasks/${nextInspection.id}` : "/testing-measurements"),
+      run: () => navigate(nextInspection ? `/my-tasks/${nextInspection.id}` : "/my-tasks?type=inspection"),
     },
     { icon: TriangleAlert, label: "Report an Issue", tone: "bg-attention-soft text-attention", run: () => openPanel({ kind: "issue" }) },
     { icon: BookOpen, label: "View SOP / Manual", tone: "bg-highlight-soft text-highlight", run: () => openPanel({ kind: "sop", activity: nextInspection?.activity }) },

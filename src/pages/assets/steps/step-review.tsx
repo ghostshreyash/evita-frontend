@@ -9,7 +9,6 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { profileFrom } from "@/data/asset-store"
-import { assetDocumentTypes, assetImageSlots } from "@/data/master-data"
 import { td, th } from "@/lib/data-table"
 import { missingUploads, type AssetFormValues } from "@/pages/assets/schemas"
 
@@ -29,14 +28,13 @@ export function StepReview({
   onEdit: (step: number) => void
 }) {
   const values = form.watch()
-  const images = values.images ?? {}
-  const documents = values.documents ?? {}
+  const images = values.images ?? []
+  const documents = values.documents ?? []
   const missing = missingUploads(values)
 
   // form.watch() hands back a fresh object each render, so there is nothing to memoise
   const profile = profileFrom(values, { installed: values.installed ?? "", onboarded: "" })
 
-  const uploaded = assetImageSlots.filter((s) => images[s.key])
 
   return (
     <div>
@@ -68,18 +66,18 @@ export function StepReview({
 
         <DetailPanel
           icon={Images}
-          title={`Asset Images (${uploaded.length})`}
+          title={`Asset Images (${images.length})`}
           action={<EditButton onClick={() => onEdit(2)} />}
           className="lg:col-span-2 xl:col-span-1"
         >
-          {uploaded.length ? (
+          {images.length ? (
             <div className="grid grid-cols-3 gap-2">
-              {uploaded.map((slot) => (
-                <figure key={slot.key}>
+              {images.map((image) => (
+                <figure key={image.id}>
                   <div className="h-20 overflow-hidden rounded-md ring-1 ring-foreground/10">
-                    <AssetPhoto file={images[slot.key]} label={slot.label} />
+                    <AssetPhoto file={image.file} label={image.name} />
                   </div>
-                  <figcaption className="mt-1 text-center text-xs leading-tight">{slot.label}</figcaption>
+                  <figcaption className="mt-1 line-clamp-2 text-center text-xs leading-tight">{image.name}</figcaption>
                 </figure>
               ))}
             </div>
@@ -90,37 +88,38 @@ export function StepReview({
 
         <DetailPanel
           icon={FileText}
-          title="3. Documents"
+          title={`3. Documents (${documents.length})`}
           action={<EditButton onClick={() => onEdit(2)} />}
           contentClassName="px-1"
         >
-          <Table>
-            <TableHeader>
-              <TableRow className="hover:bg-transparent">
-                <TableHead className={th}>Document Type</TableHead>
-                <TableHead className={th}>File Name</TableHead>
-                <TableHead className={th}>Status</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {assetDocumentTypes.map((doc) => {
-                const file = documents[doc.key]
-                return (
-                  <TableRow key={doc.key}>
-                    <TableCell className={cn(td, "max-w-44 whitespace-normal font-medium")}>{doc.label}</TableCell>
-                    <TableCell className={cn(td, "max-w-44 truncate text-muted-foreground")} title={file?.name}>
-                      {file?.name ?? "—"}
+          {documents.length ? (
+            <Table>
+              <TableHeader>
+                <TableRow className="hover:bg-transparent">
+                  <TableHead className={th}>Name</TableHead>
+                  <TableHead className={th}>File</TableHead>
+                  <TableHead className={th}>Status</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {documents.map((doc) => (
+                  <TableRow key={doc.id}>
+                    <TableCell className={cn(td, "max-w-44 whitespace-normal font-medium")}>{doc.name}</TableCell>
+                    <TableCell className={cn(td, "max-w-44 truncate text-muted-foreground")} title={doc.file?.name}>
+                      {doc.file?.name}
                     </TableCell>
                     <TableCell className={td}>
-                      <Badge variant={file ? "success" : "neutral"} className="h-auto rounded px-2 py-1 text-xs">
-                        {file ? "Uploaded" : doc.required ? "Required" : "Optional"}
+                      <Badge variant="success" className="h-auto rounded px-2 py-1 text-xs">
+                        Uploaded
                       </Badge>
                     </TableCell>
                   </TableRow>
-                )
-              })}
-            </TableBody>
-          </Table>
+                ))}
+              </TableBody>
+            </Table>
+          ) : (
+            <p className="px-2 py-3 text-center text-sm text-muted-foreground">No documents attached.</p>
+          )}
         </DetailPanel>
 
         <DetailPanel
@@ -136,8 +135,8 @@ export function StepReview({
           items={[
             { label: "Asset details completed", done: !!values.tag && !!values.category && !!values.area },
             { label: "Technical details completed", done: !!values.primaryVoltage && !!values.capacity && !!values.cooling },
-            { label: "Images uploaded", done: missing.images.length === 0 },
-            { label: "Required documents uploaded", done: missing.documents.length === 0 },
+            { label: `Photographs added (${missing.images})`, done: missing.images > 0 },
+            { label: `Documents attached (${missing.documents})`, done: missing.documents > 0 },
             { label: "Information reviewed", done: true },
           ]}
           className="self-start"

@@ -11,7 +11,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { assetSyncMeta, parseDmy, type AssetRecord } from "@/data/asset-data"
+import { parseDmy, type AssetRecord } from "@/data/asset-data"
 import { kpisFor, useAssetRows } from "@/data/asset-store"
 import { assetCategories, assetCriticality, healthBandFor } from "@/data/master-data"
 import { control, nextSort, PAGE_SIZES, sortRows, td, th, type Accessors, type Sort } from "@/lib/data-table"
@@ -61,12 +61,11 @@ export function AssetsPage() {
   const [area, setArea] = useState(ANY)
   const [criticality, setCriticality] = useState(ANY)
   const [band, setBand] = useState(ANY)
-  const [status, setStatus] = useState(ANY)
   const [sort, setSort] = useState<Sort<Column>>(null)
   const [page, setPage] = useState(1)
   const [pageSize, setPageSize] = useState(PAGE_SIZES[0])
 
-  const filtersOn = [query, category, area, criticality, band, status].some((v) => v && v !== ANY)
+  const filtersOn = [query, category, area, criticality, band].some((v) => v && v !== ANY)
 
   const kpis = useMemo(() => kpisFor(register), [register])
 
@@ -87,11 +86,10 @@ export function AssetsPage() {
         (category === ANY || a.category === category) &&
         (area === ANY || a.area === area) &&
         (criticality === ANY || a.criticality === criticality) &&
-        (band === ANY || (a.health !== null && healthBandFor(a.health).tone === band)) &&
-        (status === ANY || a.status === status)
+        (band === ANY || (a.health !== null && healthBandFor(a.health).tone === band))
     )
     return sortRows(matched, sort, accessors)
-  }, [register, query, category, area, criticality, band, status, sort])
+  }, [register, query, category, area, criticality, band, sort])
 
   const pages = Math.max(1, Math.ceil(rows.length / pageSize))
 
@@ -100,7 +98,7 @@ export function AssetsPage() {
    * pager goes back to the first page whenever the filters move. Adjusted during
    * render rather than in an effect: an effect would paint the empty page first.
    */
-  const filterKey = JSON.stringify([query, category, area, criticality, band, status, pageSize])
+  const filterKey = JSON.stringify([query, category, area, criticality, band, pageSize])
   const [lastFilters, setLastFilters] = useState(filterKey)
   if (lastFilters !== filterKey) {
     setLastFilters(filterKey)
@@ -116,7 +114,6 @@ export function AssetsPage() {
     setArea(ANY)
     setCriticality(ANY)
     setBand(ANY)
-    setStatus(ANY)
     setSort(null)
     setParams({}, { replace: true })
   }
@@ -147,12 +144,11 @@ export function AssetsPage() {
       </p>
 
       {/* ---------- What the register adds up to ---------- */}
-      <div className="mb-3 grid grid-cols-2 gap-3 lg:grid-cols-5">
+      <div className="mb-3 grid grid-cols-2 gap-3 lg:grid-cols-4">
         <Kpi label="Total Assets" value={kpis.total} note={`${kpis.categories} categories`} tone="bg-info-soft text-info" />
         <Kpi label={healthStatus.healthy.label} value={kpis.healthy} note="Score 70 and above" tone="bg-healthy-soft text-healthy" />
         <Kpi label={healthStatus.attention.label} value={kpis.attention} note="Score 50 – 69" tone="bg-attention-soft text-attention" />
         <Kpi label={healthStatus.critical.label} value={kpis.critical} note="Score below 50" tone="bg-critical-soft text-critical" />
-        <Kpi label="Pending Sync" value={kpis.pendingSync} note="Not yet on the server" tone="bg-neutral-soft text-neutral-soft-foreground" />
       </div>
 
       {/* ---------- Narrowing the register ---------- */}
@@ -172,16 +168,7 @@ export function AssetsPage() {
           <Filter label="Category" value={category} onChange={setCategory} options={categories} />
           <Filter label="Location" value={area} onChange={setArea} options={areas} />
           <Filter label="Criticality" value={criticality} onChange={setCriticality} options={assetCriticality} />
-          <Filter label="Health" value={band} onChange={setBand} options={bands} />
-          <Filter
-            label="Status"
-            value={status}
-            onChange={setStatus}
-            options={[
-              { value: "onboarded", label: assetSyncMeta.onboarded.label },
-              { value: "pending_sync", label: assetSyncMeta.pending_sync.label },
-            ]}
-          />
+          <Filter label="Health Status" value={band} onChange={setBand} options={bands} />
 
           <Button variant="outline" className={cn(control, "bg-card")} onClick={reset} disabled={!filtersOn && !sort}>
             <X /> Clear
@@ -198,9 +185,9 @@ export function AssetsPage() {
                 <SortHead label="Category" column="category" sort={sort} onSort={(c) => setSort(nextSort(sort, c))} />
                 <SortHead label="Location" column="area" sort={sort} onSort={(c) => setSort(nextSort(sort, c))} />
                 <SortHead label="Criticality" column="criticality" sort={sort} onSort={(c) => setSort(nextSort(sort, c))} />
-                <SortHead label="Health" column="health" sort={sort} onSort={(c) => setSort(nextSort(sort, c))} />
-                <TableHead className={th}>Status</TableHead>
-                <SortHead label="Onboarded" column="onboarded" sort={sort} onSort={(c) => setSort(nextSort(sort, c))} />
+                <SortHead label="Score" column="health" sort={sort} onSort={(c) => setSort(nextSort(sort, c))} />
+                <TableHead className={th}>Health Status</TableHead>
+                <SortHead label="Onboarded On" column="onboarded" sort={sort} onSort={(c) => setSort(nextSort(sort, c))} />
                 <TableHead className={cn(th, "text-right")}>
                   <span className="sr-only">Open</span>
                 </TableHead>
@@ -237,15 +224,18 @@ export function AssetsPage() {
                         <span className="flex items-center gap-2">
                           <span className={cn("size-2 shrink-0 rounded-full", healthStatus[health.tone].dot)} />
                           <span className="font-semibold tabular-nums">{a.health}</span>
-                          <span className="text-xs text-muted-foreground">{health.label}</span>
                         </span>
                       ) : (
-                        <span className="text-xs text-muted-foreground">Not inspected</span>
+                        <span className="text-muted-foreground">—</span>
                       )}
                     </TableCell>
                     <TableCell className={td}>
-                      <Badge variant={assetSyncMeta[a.status].badge} className="h-auto rounded px-2 py-1 text-xs">
-                        {assetSyncMeta[a.status].label}
+                      {/* No score yet means the asset is registered but not inspected */}
+                      <Badge
+                        variant={health ? healthStatus[health.tone].badge : "neutral"}
+                        className="h-auto rounded px-2 py-1 text-xs"
+                      >
+                        {health ? health.label : "Onboarded"}
                       </Badge>
                     </TableCell>
                     <TableCell className={cn(td, "whitespace-nowrap tabular-nums")}>{a.onboarded}</TableCell>

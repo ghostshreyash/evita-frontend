@@ -390,23 +390,28 @@ export const assetCategoryCode = (category: string) => {
  * of them into the sheet's wording the moment the client rules on it.
  */
 
-/** Where an asset physically sits inside a plant */
-export const assetLocationsInPlant = [
-  "Indoor Substation",
-  "Outdoor Yard",
-  "Control Room",
-  "Electrical Room",
-  "Production Floor",
-  "Utility Block",
-  "Cable Trench",
-  "Rooftop",
-  "Basement",
+/**
+ * Whether the asset is in service. Mandatory, per the client's answer on the
+ * asset onboarding screen.
+ *
+ * CAUTION - these values are NOT from the parameter sheet. The sheet lists
+ * "Asset Operational Status" and gives its values as "Not Required", while the
+ * answer makes the field mandatory. The two disagree, so this list is a
+ * placeholder standing in until the client rules on it; do not treat it as
+ * ratified vocabulary.
+ */
+export const assetOperationalStatus = [
+  "In Service",
+  "Standby",
+  "Under Maintenance",
+  "Isolated / Shutdown",
+  "Decommissioned",
 ] as const
 
 /** Condition of the asset at the moment it is onboarded */
 export const assetConditions = ["New", "Refurbished", "In Service", "Relocated"] as const
 
-export const phaseTypes = ["1 Phase", "3 Phase", "DC"] as const
+export const phaseTypes = ["Single Phase (1Ø)", "Two Phase (2Ø)", "Three Phase (3Ø)", "DC", "Not Applicable"] as const
 
 export const coolingTypes = ["ONAN", "ONAF", "OFAF", "ODAF", "AN (Air Natural)", "AF (Air Forced)", "Dry Type", "Not Applicable"] as const
 
@@ -421,36 +426,39 @@ export const vectorGroups = ["Dyn11", "Dyn1", "Ynd11", "YNyn0", "Dd0", "Yy0", "N
 /** Units offered beside a numeric rating */
 export const voltageUnits = ["V", "kV"] as const
 export const powerUnits = ["kVA", "MVA", "kW", "MW", "A"] as const
-export const frequencyUnits = ["Hz"] as const
+/** Frequency is a choice on the parameter sheet, not a number with a unit */
+export const frequencyValues = ["DC", "50 Hz", "60 Hz", "Variable Frequency", "Not Applicable"] as const
 export const warrantyUnits = ["Months", "Years"] as const
 
 export const yesNo = ["Yes", "No"] as const
 
 /**
- * Images captured at onboarding. The first three are mandatory: without a
- * nameplate photo the ratings on the form cannot be checked against the asset.
+ * Suggested names for the photographs and documents captured at onboarding.
+ *
+ * Suggestions, not a fixed set. What is available varies from asset to asset
+ * and site to site, so the engineer names each upload themselves and these only
+ * save them typing the common ones - see the client's answer of 07-10-2026.
+ *
+ * Kept to six apiece: they are offered as tappable chips under the name box, so
+ * a longer list would wrap into a wall of them on a tablet.
  */
-export const assetImageSlots = [
-  { key: "front", label: "Front View", required: true },
-  { key: "side", label: "Side View", required: true },
-  { key: "nameplate", label: "Nameplate", required: true },
-  { key: "panel", label: "Panel / Accessories", required: false },
-  { key: "area", label: "Overall Area", required: false },
+export const suggestedImageNames = [
+  "Front View",
+  "Side View",
+  "Nameplate",
+  "Panel / Accessories",
+  "Overall Area",
+  "Cable Termination",
 ] as const
 
-export type AssetImageSlot = (typeof assetImageSlots)[number]["key"]
-
-/** Documents collected at onboarding, in the order the mockup lists them */
-export const assetDocumentTypes = [
-  { key: "nameplate", label: "Nameplate Photo (Close-up)", required: true },
-  { key: "datasheet", label: "Manufacturer Datasheet", required: false },
-  { key: "installation", label: "Installation Report (if available)", required: false },
-  { key: "sld", label: "Single Line Diagram (SLD)", required: false },
-  { key: "warranty", label: "Warranty Certificate", required: false },
-  { key: "other", label: "Other Documents", required: false },
+export const suggestedDocumentNames = [
+  "Nameplate Photo",
+  "Manufacturer Datasheet",
+  "Installation Report",
+  "Single Line Diagram",
+  "Warranty Certificate",
+  "Test Report",
 ] as const
-
-export type AssetDocumentType = (typeof assetDocumentTypes)[number]["key"]
 
 /* ---------- Work ---------- */
 

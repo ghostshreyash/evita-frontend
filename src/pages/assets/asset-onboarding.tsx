@@ -53,6 +53,7 @@ export function AssetOnboardingPage() {
       enterprise: site.enterprise,
       plant: site.plant.name,
       department: site.department,
+      subDepartment: "",
       area: "",
       category: "",
       tag: "",
@@ -70,9 +71,8 @@ export function AssetOnboardingPage() {
       secondaryVoltageUnit: "V",
       capacity: "",
       capacityUnit: "kVA",
-      frequency: "50",
-      frequencyUnit: "Hz",
-      phase: "3 Phase",
+      frequency: "50 Hz",
+      phase: "Three Phase (3Ø)",
       cooling: "",
       vectorGroup: "",
       impedance: "",
@@ -80,10 +80,10 @@ export function AssetOnboardingPage() {
       tapChanger: "",
       oilType: "",
 
+      operationalStatus: "",
       condition: "New",
       commissioned: "",
       load: "",
-      locationInPlant: "",
       // Pre-filled from the plant's own registered location, and editable on site
       latitude: site.plant.latitude,
       longitude: site.plant.longitude,
@@ -93,8 +93,8 @@ export function AssetOnboardingPage() {
       nextDue: "",
       remarks: "",
 
-      images: {},
-      documents: {},
+      images: [],
+      documents: [],
     },
   })
 
@@ -113,7 +113,11 @@ export function AssetOnboardingPage() {
     if (current === 2) {
       const missing = missingUploads(form.getValues())
       if (!missing.complete) {
-        toast.error("Front, side and nameplate photographs and the nameplate document are required.")
+        toast.error(
+          missing.images === 0
+            ? "Add at least one photograph of the asset."
+            : "Every photograph and document needs a name."
+        )
         return
       }
     }
