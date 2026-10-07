@@ -805,7 +805,7 @@ export function profileFor(e: EnterpriseRecord): EnterpriseProfile {
 /**
  * Asset health split for one enterprise. The record carries a total and an
  * overall status; these are the per-band counts behind that status, using the
- * platform's Healthy / Alarming / At Risk bands.
+ * platform's Healthy / Attention Required / At Risk bands.
  */
 export function assetHealthFor(e: EnterpriseRecord) {
   const mix =
