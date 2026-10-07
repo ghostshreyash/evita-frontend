@@ -44,27 +44,36 @@ export const assetSchema = z.object({
   installed: z.string().optional(),
   criticality: required("Asset Criticality"),
 
-  /* ---------- Step 2: Technical Details ---------- */
-  primaryVoltage: numeric("Rated voltage (primary)"),
-  primaryVoltageUnit: required("Unit"),
-  secondaryVoltage: numeric("Rated voltage (secondary)"),
-  secondaryVoltageUnit: required("Unit"),
-  capacity: numeric("Rated power / capacity"),
-  capacityUnit: required("Unit"),
-  frequency: numeric("Frequency"),
-  frequencyUnit: required("Unit"),
-  phase: required("Phase"),
-  cooling: required("Cooling type"),
+  /*
+   * Step 2: Technical Details.
+   *
+   * Only Operational Status is mandatory here. The client's answer lists the
+   * mandatory fields exactly - Enterprise, Plant, Location/Area, Department,
+   * Asset Category, Asset Tag/Name, Asset Criticality and Operational Status -
+   * and no rating is among them, so a panel whose nameplate is unreadable can
+   * still be registered and completed later.
+   */
+  primaryVoltage: optionalNumeric("Rated voltage (primary)"),
+  primaryVoltageUnit: z.string().optional(),
+  secondaryVoltage: optionalNumeric("Rated voltage (secondary)"),
+  secondaryVoltageUnit: z.string().optional(),
+  capacity: optionalNumeric("Rated power / capacity"),
+  capacityUnit: z.string().optional(),
+  frequency: z.string().optional(),
+  phase: z.string().optional(),
+  cooling: z.string().optional(),
   vectorGroup: z.string().optional(),
   impedance: optionalNumeric("Impedance"),
   insulation: z.string().optional(),
   tapChanger: z.string().optional(),
   oilType: z.string().optional(),
 
-  condition: required("Asset condition"),
+  /** Mandatory, per the client's answer */
+  operationalStatus: required("Operational status"),
+  condition: z.string().optional(),
   commissioned: z.string().optional(),
   load: optionalNumeric("Current load"),
-  locationInPlant: required("Location in plant"),
+  /* Defaults to the plant's coordinates; capturing them at the asset is optional */
   latitude: z.string().optional(),
   longitude: z.string().optional(),
   warranty: optionalNumeric("Warranty period"),
@@ -88,9 +97,9 @@ export const stepFields: (keyof AssetFormValues)[][] = [
   ],
   [
     "primaryVoltage", "primaryVoltageUnit", "secondaryVoltage", "secondaryVoltageUnit",
-    "capacity", "capacityUnit", "frequency", "frequencyUnit", "phase", "cooling", "vectorGroup",
+    "capacity", "capacityUnit", "frequency", "phase", "cooling", "vectorGroup",
     "impedance", "insulation", "tapChanger", "oilType",
-    "condition", "commissioned", "load", "locationInPlant", "latitude", "longitude",
+    "operationalStatus", "condition", "commissioned", "load", "latitude", "longitude",
     "warranty", "warrantyUnit", "amc", "nextDue", "remarks",
   ],
   ["images", "documents"],

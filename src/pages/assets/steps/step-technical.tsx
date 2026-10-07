@@ -1,14 +1,17 @@
+import { useState } from "react"
 import type { UseFormReturn } from "react-hook-form"
-import { Cog, Info, Zap } from "lucide-react"
+import { Cog, Info, LocateFixed, Zap } from "lucide-react"
+import { toast } from "sonner"
 
 import { StepCard } from "@/components/common/wizard"
+import { Button } from "@/components/ui/button"
 import { DetailList, DetailPanel } from "@/components/common/detail-list"
 import { DateField, MeasureField, SelectField, TextareaField, TextField } from "@/components/form/fields"
 import {
   assetConditions,
-  assetLocationsInPlant,
+  assetOperationalStatus,
   coolingTypes,
-  frequencyUnits,
+  frequencyValues,
   insulationClasses,
   oilTypes,
   phaseTypes,
@@ -31,6 +34,9 @@ import type { AssetFormValues } from "@/pages/assets/schemas"
  *
  * Asset Criticality and Year of Manufacture appear on this step in the mockup as
  * well as on step 1. They are asked once, on step 1, and shown here read-only.
+ *
+ * "Location in Plant" is gone: the client confirmed it duplicated Location /
+ * Area on step 1, which is the physical zone the asset is installed in.
  */
 export function StepTechnical({ form }: { form: UseFormReturn<AssetFormValues> }) {
   const { control } = form
@@ -51,7 +57,6 @@ export function StepTechnical({ form }: { form: UseFormReturn<AssetFormValues> }
                 name="primaryVoltage"
                 unitName="primaryVoltageUnit"
                 label="Rated Voltage (Primary)"
-                required
                 units={voltageUnits}
                 placeholder="11"
               />
@@ -60,7 +65,6 @@ export function StepTechnical({ form }: { form: UseFormReturn<AssetFormValues> }
                 name="secondaryVoltage"
                 unitName="secondaryVoltageUnit"
                 label="Rated Voltage (Secondary)"
-                required
                 units={voltageUnits}
                 placeholder="415"
               />
@@ -69,21 +73,12 @@ export function StepTechnical({ form }: { form: UseFormReturn<AssetFormValues> }
                 name="capacity"
                 unitName="capacityUnit"
                 label="Rated Power / Capacity"
-                required
                 units={powerUnits}
                 placeholder="1600"
               />
-              <MeasureField
-                control={control}
-                name="frequency"
-                unitName="frequencyUnit"
-                label="Frequency"
-                required
-                units={frequencyUnits}
-                placeholder="50"
-              />
-              <SelectField control={control} name="phase" label="Phase" required options={phaseTypes} />
-              <SelectField control={control} name="cooling" label="Cooling Type" required options={coolingTypes} />
+              <SelectField control={control} name="frequency" label="Frequency" options={frequencyValues} />
+              <SelectField control={control} name="phase" label="Phase" options={phaseTypes} />
+              <SelectField control={control} name="cooling" label="Cooling Type" options={coolingTypes} />
               <SelectField control={control} name="vectorGroup" label="Vector Group" options={vectorGroups} />
               <TextField control={control} name="impedance" label="Impedance (%)" inputMode="decimal" placeholder="6.25" />
               <SelectField control={control} name="insulation" label="Insulation Class" options={insulationClasses} />
@@ -95,20 +90,19 @@ export function StepTechnical({ form }: { form: UseFormReturn<AssetFormValues> }
           {/* ---------- Operational details ---------- */}
           <Group icon={Cog} title="Operational Details">
             <div className="grid gap-x-3 gap-y-2 sm:grid-cols-2">
-              <SelectField control={control} name="condition" label="Asset Condition" required options={assetConditions} />
-              <DateField control={control} name="commissioned" label="Commissioning Date" />
-
-              <TextField control={control} name="load" label="Current Load (kVA)" inputMode="decimal" placeholder="950" />
               <SelectField
                 control={control}
-                name="locationInPlant"
-                label="Location in Plant"
+                name="operationalStatus"
+                label="Operational Status"
                 required
-                options={assetLocationsInPlant}
+                options={assetOperationalStatus}
               />
+              <SelectField control={control} name="condition" label="Asset Condition" options={assetConditions} />
 
-              <TextField control={control} name="latitude" label="Latitude" description="Pre-filled from the plant" />
-              <TextField control={control} name="longitude" label="Longitude" description="Adjust at the asset" />
+              <TextField control={control} name="load" label="Current Load (kVA)" inputMode="decimal" placeholder="950" />
+              <DateField control={control} name="commissioned" label="Commissioning Date" />
+
+              <GpsCoordinates form={form} className="sm:col-span-2" />
 
               <MeasureField
                 control={control}
@@ -163,6 +157,58 @@ export function StepTechnical({ form }: { form: UseFormReturn<AssetFormValues> }
           are captured in the next step.
         </p>
       </div>
+    </div>
+  )
+}
+
+/**
+ * The asset's own coordinates.
+ *
+ * Optional, and pre-filled from the plant's registered location: every asset on
+ * one site shares that pair until someone stands at the asset and captures a
+ * reading, which is what Capture does. GPS is unreliable indoors, so a failed
+ * read leaves the plant's figures in place rather than clearing the fields.
+ */
+function GpsCoordinates({ form, className }: { form: UseFormReturn<AssetFormValues>; className?: string }) {
+  const [capturing, setCapturing] = useState(false)
+
+  const capture = () => {
+    if (!navigator.geolocation) {
+      toast.error("This device cannot report its location.")
+      return
+    }
+    setCapturing(true)
+    navigator.geolocation.getCurrentPosition(
+      ({ coords }) => {
+        form.setValue("latitude", coords.latitude.toFixed(4), { shouldDirty: true })
+        form.setValue("longitude", coords.longitude.toFixed(4), { shouldDirty: true })
+        setCapturing(false)
+        toast.success("Coordinates captured at this asset.")
+      },
+      () => {
+        setCapturing(false)
+        toast.error("Could not get a fix. Indoors this often fails — the plant's coordinates have been kept.")
+      },
+      { enableHighAccuracy: true, timeout: 10_000 }
+    )
+  }
+
+  return (
+    <div className={className}>
+      <div className="mb-1 flex flex-wrap items-center justify-between gap-2">
+        <span className="text-sm font-medium">
+          GPS Coordinates <span className="text-muted-foreground">(optional)</span>
+        </span>
+        <Button type="button" variant="outline" size="sm" onClick={capture} disabled={capturing}>
+          <LocateFixed className={capturing ? "animate-pulse" : undefined} />
+          {capturing ? "Capturing…" : "Capture at asset"}
+        </Button>
+      </div>
+      <div className="grid gap-x-3 gap-y-2 sm:grid-cols-2">
+        <TextField control={form.control} name="latitude" label="Latitude" />
+        <TextField control={form.control} name="longitude" label="Longitude" />
+      </div>
+      <p className="mt-1 text-xs text-muted-foreground">Defaults to the plant's location until captured at the asset.</p>
     </div>
   )
 }

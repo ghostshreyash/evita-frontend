@@ -16,7 +16,7 @@ import {
   assetCategoryCode,
   assetConditions,
   assetCriticality,
-  assetLocationsInPlant,
+  assetOperationalStatus,
   commonAssetCategories,
   coolingTypes,
   insulationClasses,
@@ -110,10 +110,10 @@ export type AssetProfile = {
     oilType: string
   }
   operational: {
+    operationalStatus: string
     condition: string
     commissioned: string
     load: string
-    locationInPlant: string
     latitude: string
     longitude: string
     criticality: string
@@ -266,10 +266,10 @@ export function assetProfileFor(a: AssetRecord): AssetProfile {
       oilType: oily ? pick(oilTypes, s, 6) : "Dry Type / None",
     },
     operational: {
+      operationalStatus: pick(assetOperationalStatus, s, 9),
       condition: pick(assetConditions, s, 7),
       commissioned: a.installed,
       load: String(Math.round(Number(rating.capacity) * (0.4 + (s % 45) / 100))),
-      locationInPlant: pick(assetLocationsInPlant, s, 8),
       latitude: plant?.latitude ?? "0.0000",
       longitude: plant?.longitude ?? "0.0000",
       criticality: a.criticality,
@@ -307,19 +307,24 @@ export function assetProfileFor(a: AssetRecord): AssetProfile {
 export function buildAssetId(parts: {
   enterprise: string
   city: string
-  voltage: string
-  voltageUnit: string
+  /** Blank when the nameplate could not be read; the segment is then omitted */
+  voltage?: string
+  voltageUnit?: string
   category: string
   /** Assets already registered, so the running number continues from them */
   existing?: readonly AssetRecord[]
 }) {
   const enterprise = enterpriseRecords.find((e) => e.name === parts.enterprise)
+  // The voltage segment drops out when the nameplate was unreadable - the rest
+  // still identifies the asset, and the running number keeps it unique
   const prefix = [
     enterprise?.id.slice(0, 3) ?? parts.enterprise.slice(0, 3).toUpperCase(),
     cityCode(parts.city),
-    voltageToken(parts.voltage, parts.voltageUnit),
+    parts.voltage ? voltageToken(parts.voltage, parts.voltageUnit ?? "") : "",
     assetCategoryCode(parts.category),
-  ].join("-")
+  ]
+    .filter(Boolean)
+    .join("-")
   const taken = (parts.existing ?? assetRegister).filter((a) => a.id.startsWith(prefix + "-"))
   const highest = taken.reduce((n, a) => Math.max(n, Number(a.id.slice(prefix.length + 1)) || 0), 0)
   return `${prefix}-${String(highest + 1).padStart(3, "0")}`

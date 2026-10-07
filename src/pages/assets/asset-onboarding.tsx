@@ -71,9 +71,8 @@ export function AssetOnboardingPage() {
       secondaryVoltageUnit: "V",
       capacity: "",
       capacityUnit: "kVA",
-      frequency: "50",
-      frequencyUnit: "Hz",
-      phase: "3 Phase",
+      frequency: "50 Hz",
+      phase: "Three Phase (3Ø)",
       cooling: "",
       vectorGroup: "",
       impedance: "",
@@ -81,10 +80,10 @@ export function AssetOnboardingPage() {
       tapChanger: "",
       oilType: "",
 
+      operationalStatus: "",
       condition: "New",
       commissioned: "",
       load: "",
-      locationInPlant: "",
       // Pre-filled from the plant's own registered location, and editable on site
       latitude: site.plant.latitude,
       longitude: site.plant.longitude,

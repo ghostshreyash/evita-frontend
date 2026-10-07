@@ -390,23 +390,28 @@ export const assetCategoryCode = (category: string) => {
  * of them into the sheet's wording the moment the client rules on it.
  */
 
-/** Where an asset physically sits inside a plant */
-export const assetLocationsInPlant = [
-  "Indoor Substation",
-  "Outdoor Yard",
-  "Control Room",
-  "Electrical Room",
-  "Production Floor",
-  "Utility Block",
-  "Cable Trench",
-  "Rooftop",
-  "Basement",
+/**
+ * Whether the asset is in service. Mandatory, per the client's answer on the
+ * asset onboarding screen.
+ *
+ * CAUTION - these values are NOT from the parameter sheet. The sheet lists
+ * "Asset Operational Status" and gives its values as "Not Required", while the
+ * answer makes the field mandatory. The two disagree, so this list is a
+ * placeholder standing in until the client rules on it; do not treat it as
+ * ratified vocabulary.
+ */
+export const assetOperationalStatus = [
+  "In Service",
+  "Standby",
+  "Under Maintenance",
+  "Isolated / Shutdown",
+  "Decommissioned",
 ] as const
 
 /** Condition of the asset at the moment it is onboarded */
 export const assetConditions = ["New", "Refurbished", "In Service", "Relocated"] as const
 
-export const phaseTypes = ["1 Phase", "3 Phase", "DC"] as const
+export const phaseTypes = ["Single Phase (1Ø)", "Two Phase (2Ø)", "Three Phase (3Ø)", "DC", "Not Applicable"] as const
 
 export const coolingTypes = ["ONAN", "ONAF", "OFAF", "ODAF", "AN (Air Natural)", "AF (Air Forced)", "Dry Type", "Not Applicable"] as const
 
@@ -421,7 +426,8 @@ export const vectorGroups = ["Dyn11", "Dyn1", "Ynd11", "YNyn0", "Dd0", "Yy0", "N
 /** Units offered beside a numeric rating */
 export const voltageUnits = ["V", "kV"] as const
 export const powerUnits = ["kVA", "MVA", "kW", "MW", "A"] as const
-export const frequencyUnits = ["Hz"] as const
+/** Frequency is a choice on the parameter sheet, not a number with a unit */
+export const frequencyValues = ["DC", "50 Hz", "60 Hz", "Variable Frequency", "Not Applicable"] as const
 export const warrantyUnits = ["Months", "Years"] as const
 
 export const yesNo = ["Yes", "No"] as const
