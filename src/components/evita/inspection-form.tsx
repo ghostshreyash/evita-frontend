@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react"
-import { Camera, Check, Flame, Gauge, Lock, NotebookPen, Plus, Save, Send, Sparkles, Thermometer, Trash2, Wind, X, Zap, type LucideIcon } from "lucide-react"
+import { Camera, Check, Flame, Gauge, Lock, NotebookPen, Save, Send, Sparkles, Thermometer, Wind, X, Zap, type LucideIcon } from "lucide-react"
 import { toast } from "sonner"
 import { format } from "date-fns"
 import { cn } from "cn"
@@ -16,18 +16,16 @@ import { healthScoreWeights } from "@/data/master-data"
 import {
   angleSlotsFor,
   contaminationLevel,
-  deltaTLimit,
   dustThickness,
   dustTypes,
   fpsStatuses,
   hygieneChecks,
   MIN_THERMAL_POINTS,
-  resultLabel,
   resultPill,
   thermalPointsFor,
 } from "@/data/test-template"
 import { categoryFor } from "@/lib/asset-category"
-import { emptyCapture, newId, observationsFrom, resultsFrom, scoreCapture, sectionsDone, thermalReadings } from "@/lib/testing"
+import { emptyCapture, newId, observationsFrom, resultsFrom, scoreCapture, sectionsDone } from "@/lib/testing"
 import type { Job } from "@/lib/work"
 
 type Section = "images" | "thermal" | "parameters" | "fps" | "pd"
@@ -50,8 +48,8 @@ type Setter = (p: Partial<InspectionCapture>) => void
 /**
  * Testing & Measurements for one inspection task, in the client's Phase-1
  * order: the asset images (angle views), the thermal images (one per point),
- * then the parameters read from them (ambient and hotspot temperatures,
- * contamination, physical hygiene), then the fire prevention system. Partial
+ * then the parameters (contamination, physical hygiene), then the fire
+ * prevention system. Partial
  * Discharge is Phase 2 and stays disabled until the measuring device
  * integration arrives.
  *
@@ -95,15 +93,7 @@ export function InspectionForm({ job, detail }: { job: Job; detail: InspectionDe
   }, [patch, job.id])
 
   const done = sectionsDone(capture, category, ids)
-  // The thermal page is about the images; the temperatures read off them count under Parameters
-  const thermalShots = capture.thermal.filter((t) => evidence.some((e) => e.slot === t.id)).length
-  const tabDone: Record<Section, boolean> = {
-    images: done.images,
-    thermal: thermalShots >= MIN_THERMAL_POINTS,
-    parameters: done.thermal && done.contamination,
-    fps: done.fps,
-    pd: false,
-  }
+  const tabDone: Record<Section, boolean> = { images: done.images, thermal: done.thermal, parameters: done.contamination, fps: done.fps, pd: false }
   const preview = scoreCapture(capture)
   const ready = done.images && done.thermal && done.contamination && done.fps
   const set: Setter = (p) => setCapture((c) => ({ ...c, ...p }))
@@ -162,15 +152,12 @@ export function InspectionForm({ job, detail }: { job: Job; detail: InspectionDe
           ) : section === "thermal" ? (
             <ThermalImagesSection category={category} capture={capture} evidence={evidence} set={set} onEvidence={setEvidence} onRemove={removeEvidence} />
           ) : section === "parameters" ? (
-            <>
-              <ThermalReadingsSection capture={capture} evidence={evidence} set={set} onImages={() => setSection("thermal")} />
-              <ContaminationSection capture={capture} set={set} />
-            </>
+            <ContaminationSection capture={capture} set={set} />
           ) : (
             <FpsSection capture={capture} set={set} />
           )}
 
-          <StepCard step={7} title="Inspection Remarks" icon={NotebookPen} done={!!remarks.trim()}>
+          <StepCard step={6} title="Inspection Remarks" icon={NotebookPen} done={!!remarks.trim()}>
             <Textarea value={remarks} rows={3} maxLength={500} onChange={(e) => setRemarks(e.target.value)} placeholder="Overall condition, anything OCC should know." />
           </StepCard>
         </div>
@@ -191,7 +178,7 @@ export function InspectionForm({ job, detail }: { job: Job; detail: InspectionDe
             <Checklist
               items={[
                 { label: "Required angles photographed", done: done.images },
-                { label: `Ambient + ${MIN_THERMAL_POINTS} or more thermal points`, done: done.thermal },
+                { label: `${MIN_THERMAL_POINTS} or more thermal images`, done: done.thermal },
                 { label: "Contamination and hygiene assessed", done: done.contamination },
                 { label: "Fire prevention system checked", done: done.fps },
               ]}
@@ -329,7 +316,6 @@ function Shot({ item, label, onRemove, badge }: { item: EvidenceItem; label: str
 /**
  * Each thermal image is one measurement point. The points usual for the asset
  * type are offered as empty tiles; any other point gets a tile of its own.
- * The temperatures are read off the images in the Parameters section.
  */
 function ThermalImagesSection({
   category,
@@ -346,142 +332,51 @@ function ThermalImagesSection({
   onEvidence: React.Dispatch<React.SetStateAction<EvidenceItem[]>>
   onRemove: (id: string) => void
 }) {
-  const readings = thermalReadings(capture)
   const suggested = thermalPointsFor(category).filter((p) => !capture.thermal.some((t) => t.point === p))
-  const shot = readings.filter((r) => evidence.some((e) => e.slot === r.id)).length
+  const count = capture.thermal.length
 
-  /** A new point from its first thermal image */
+  /** A new point from its thermal image */
   const addPoint = (point: string, item: EvidenceItem) => {
     const id = newId()
     set({ thermal: [...capture.thermal, { id, point, maxTemp: "" }] })
     onEvidence((ev) => [...ev, { ...item, label: `${point} (thermal)`, slot: id }])
   }
-  /** Removing the image removes the point unless a temperature was already read off it */
-  const removePoint = (r: (typeof readings)[number], image?: EvidenceItem) => {
+  /** Removing the image removes its point */
+  const removePoint = (id: string, image?: EvidenceItem) => {
     if (image) onRemove(image.id)
-    if (r.max === undefined) set({ thermal: capture.thermal.filter((t) => t.id !== r.id) })
+    set({ thermal: capture.thermal.filter((t) => t.id !== id) })
   }
 
   return (
-    <StepCard step={2} title="Thermal Images (Multiple Points)" icon={Thermometer} done={shot >= MIN_THERMAL_POINTS} actions={<CountPill done={shot >= MIN_THERMAL_POINTS}>{shot} {shot === 1 ? "Point" : "Points"}</CountPill>}>
-      <p className="mb-4 text-sm text-muted-foreground">
-        Capture a thermal image at each joint or termination you scan, at least {MIN_THERMAL_POINTS}. Each image is one point; its temperature goes in under Parameters.
-      </p>
+    <StepCard step={2} title="Thermal Images (Multiple Points)" icon={Thermometer} done={count >= MIN_THERMAL_POINTS} actions={<CountPill done={count >= MIN_THERMAL_POINTS}>{count} {count === 1 ? "Image" : "Images"}</CountPill>}>
+      <p className="mb-4 text-sm text-muted-foreground">Capture a thermal image at each joint or termination you scan, at least {MIN_THERMAL_POINTS}.</p>
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-4">
-        {readings.map((r) => {
-          const image = evidence.find((e) => e.slot === r.id)
+        {capture.thermal.map((t) => {
+          const image = evidence.find((e) => e.slot === t.id)
           return image ? (
-            <Shot
-              key={r.id}
-              item={image}
-              label={r.point}
-              onRemove={() => removePoint(r, image)}
-              badge={r.max !== undefined ? <span className="rounded-md bg-black/70 px-2 py-0.5 tabular-nums text-xs font-semibold text-white">Max {r.max} °C</span> : null}
-            />
+            <Shot key={t.id} item={image} label={t.point} onRemove={() => removePoint(t.id, image)} />
           ) : (
-            <CaptureTile key={r.id} kind="thermal" label={r.point} className="w-full" onCapture={(items) => onEvidence((ev) => [...ev, { ...items[0], label: `${r.point} (thermal)`, slot: r.id }])} />
+            <CaptureTile key={t.id} kind="thermal" label={t.point} className="w-full" onCapture={(items) => onEvidence((ev) => [...ev, { ...items[0], label: `${t.point} (thermal)`, slot: t.id }])} />
           )
         })}
         {suggested.map((p) => (
           <CaptureTile key={p} kind="thermal" label={p} className="w-full" onCapture={(items) => addPoint(p, items[0])} />
         ))}
-        <CaptureTile kind="thermal" label="Other Point" className="w-full" onCapture={(items) => addPoint(`Point ${capture.thermal.length + 1}`, items[0])} />
+        <CaptureTile kind="thermal" label="Add More Thermal Images" className="w-full" onCapture={(items) => addPoint(`Point ${capture.thermal.length + 1}`, items[0])} />
       </div>
       <OfflineNote thermal />
     </StepCard>
   )
 }
 
-/* ---------- 3. Parameters: the temperatures read off the thermal images ---------- */
-
-function ThermalReadingsSection({ capture, evidence, set, onImages }: { capture: InspectionCapture; evidence: EvidenceItem[]; set: Setter; onImages: () => void }) {
-  const readings = thermalReadings(capture)
-  const read = readings.filter((r) => r.max !== undefined).length
-  const setPoint = (id: string, p: Partial<InspectionCapture["thermal"][number]>) => set({ thermal: capture.thermal.map((t) => (t.id === id ? { ...t, ...p } : t)) })
-
-  return (
-    <StepCard
-      step={3}
-      title="Thermal Readings"
-      icon={Thermometer}
-      done={capture.ambient.trim() !== "" && readings.length >= MIN_THERMAL_POINTS && read === readings.length}
-      actions={<CountPill done={read >= MIN_THERMAL_POINTS}>{read} of {readings.length} Read</CountPill>}
-    >
-      <div className="mb-4 flex flex-wrap items-end gap-4 rounded-xl bg-muted/50 p-4">
-        <div className="w-40">
-          <FieldLabel required>Ambient temperature</FieldLabel>
-          <div className="relative">
-            <Input inputMode="decimal" value={capture.ambient} onChange={(e) => set({ ambient: e.target.value.replace(/[^\d.-]/g, "") })} className="bg-card pr-10 tabular-nums" placeholder="e.g. 34" />
-            <span className="absolute top-1/2 right-3 -translate-y-1/2 text-sm text-muted-foreground">°C</span>
-          </div>
-        </div>
-        <p className="max-w-md text-sm text-muted-foreground">
-          Each point is judged on its rise over ambient (ΔT). Limit: <span className="font-semibold text-foreground">{deltaTLimit.text}</span> pass, up to {deltaTLimit.critical} °C warning, above that critical.
-        </p>
-      </div>
-
-      {readings.length ? (
-        <ul className="divide-y">
-          {readings.map((r) => {
-            const image = evidence.find((e) => e.slot === r.id)
-            return (
-              <li key={r.id} className="grid items-center gap-3 py-3 first:pt-0 last:pb-0 sm:grid-cols-[4.5rem_minmax(0,1fr)_9rem_auto]">
-                <div className={cn("hidden h-12 w-[4.5rem] overflow-hidden rounded-lg sm:flex items-center justify-center", !image?.src && "bg-linear-to-br from-info via-attention to-critical")}>
-                  {image?.src ? <img src={image.src} alt="" className="size-full object-cover" /> : <Thermometer className="size-5 text-white/80" />}
-                </div>
-                <div>
-                  <FieldLabel required>Point</FieldLabel>
-                  <Input value={r.point} onChange={(e) => setPoint(r.id, { point: e.target.value })} className="bg-card" />
-                </div>
-                <div>
-                  <FieldLabel required>Max temperature</FieldLabel>
-                  <div className="relative">
-                    <Input inputMode="decimal" value={r.maxTemp} onChange={(e) => setPoint(r.id, { maxTemp: e.target.value.replace(/[^\d.-]/g, "") })} className="bg-card pr-10 tabular-nums" />
-                    <span className="absolute top-1/2 right-3 -translate-y-1/2 text-sm text-muted-foreground">°C</span>
-                  </div>
-                </div>
-                <div className="flex items-center justify-between gap-2 sm:w-44 sm:flex-col sm:items-end">
-                  {r.status ? (
-                    <span className={cn("inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-sm font-semibold", resultPill[r.status])}>
-                      <span className="size-1.5 rounded-full bg-current" /> ΔT {r.dt} °C · {resultLabel[r.status]}
-                    </span>
-                  ) : (
-                    <span className="text-xs text-muted-foreground">Awaiting temperatures</span>
-                  )}
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="text-critical"
-                    aria-label={`Remove ${r.point}`}
-                    onClick={() => set({ thermal: capture.thermal.filter((t) => t.id !== r.id) })}
-                  >
-                    <Trash2 /> Remove
-                  </Button>
-                </div>
-              </li>
-            )
-          })}
-        </ul>
-      ) : (
-        <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl bg-muted/50 p-4 text-sm text-muted-foreground">
-          <span>No thermal points yet. Add a thermal image for each point first.</span>
-          <Button variant="outline" className="h-11" onClick={onImages}>
-            <Plus /> Add Thermal Images
-          </Button>
-        </div>
-      )}
-    </StepCard>
-  )
-}
-
-/* ---------- 4–5. Parameters: contamination & hygiene ---------- */
+/* ---------- 3–4. Parameters: contamination & hygiene ---------- */
 
 function ContaminationSection({ capture, set }: { capture: InspectionCapture; set: Setter }) {
   const level = contaminationLevel(capture.thickness, capture.dustTypes)
   const checked = hygieneChecks.filter((c) => capture.hygiene[c.key]).length
   return (
     <>
-      <StepCard step={4} title="Contamination Assessment" icon={Wind} done={!!capture.thickness} actions={level ? <span className={cn("rounded-full px-3 py-1 text-sm font-bold", levelPill[level])}>{level}</span> : null}>
+      <StepCard step={3} title="Contamination Assessment" icon={Wind} done={!!capture.thickness} actions={level ? <span className={cn("rounded-full px-3 py-1 text-sm font-bold", levelPill[level])}>{level}</span> : null}>
         <div className="space-y-4">
           <div>
             <FieldLabel required>Dust accumulation thickness</FieldLabel>
@@ -516,7 +411,7 @@ function ContaminationSection({ capture, set }: { capture: InspectionCapture; se
         </div>
       </StepCard>
 
-      <StepCard step={5} title="Physical Hygiene Checks" icon={Check} done={checked === hygieneChecks.length} actions={<CountPill done={checked === hygieneChecks.length}>{checked} / {hygieneChecks.length}</CountPill>}>
+      <StepCard step={4} title="Physical Hygiene Checks" icon={Check} done={checked === hygieneChecks.length} actions={<CountPill done={checked === hygieneChecks.length}>{checked} / {hygieneChecks.length}</CountPill>}>
         <ul className="divide-y">
           {hygieneChecks.map((c) => {
             const h = capture.hygiene[c.key]
@@ -549,12 +444,12 @@ function ContaminationSection({ capture, set }: { capture: InspectionCapture; se
   )
 }
 
-/* ---------- 6. Fire prevention ---------- */
+/* ---------- 5. Fire prevention ---------- */
 
 function FpsSection({ capture, set }: { capture: InspectionCapture; set: Setter }) {
   const fps = capture.fps
   return (
-    <StepCard step={6} title="Fire Prevention System" icon={Flame} done={fps.installed === "No" || (fps.installed === "Yes" && !!fps.status)}>
+    <StepCard step={5} title="Fire Prevention System" icon={Flame} done={fps.installed === "No" || (fps.installed === "Yes" && !!fps.status)}>
       <div className="space-y-4">
         <div>
           <FieldLabel required>Is a fire prevention system installed in the panel?</FieldLabel>

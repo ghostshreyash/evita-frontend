@@ -50,10 +50,10 @@ const worst = (list: (ResultStatus | undefined)[]): ResultStatus | undefined =>
 
 /** Which of the four Phase-1 sections are complete enough to submit */
 export function sectionsDone(capture: InspectionCapture, category: string, evidenceIds: Set<string>) {
-  const readings = thermalReadings(capture)
   return {
     images: angleSlotsFor(category).filter((s) => s.required).every((s) => evidenceIds.has(capture.angles[s.key])),
-    thermal: num(capture.ambient) !== undefined && readings.length >= MIN_THERMAL_POINTS && readings.every((r) => r.max !== undefined),
+    // Phase 1 records the images; the temperatures are read off them after sync
+    thermal: capture.thermal.length >= MIN_THERMAL_POINTS,
     contamination: !!capture.thickness && hygieneChecks.every((c) => capture.hygiene[c.key]),
     fps: capture.fps.installed === "No" || (capture.fps.installed === "Yes" && !!capture.fps.status),
   }
