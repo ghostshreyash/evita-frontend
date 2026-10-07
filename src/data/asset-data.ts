@@ -110,8 +110,9 @@ export type AssetProfile = {
     nextDue: string
     remarks: string
   }
-  documents: { type: string; file: string; uploaded: string }[]
-  images: { slot: string; label: string; caption: string }[]
+  /** Named by the engineer who captured them - there is no fixed set */
+  documents: { id: string; name: string; file: string; uploaded: string }[]
+  images: { id: string; name: string }[]
 }
 
 /* ---------- Seeded helpers ---------- */
@@ -268,18 +269,18 @@ export function assetProfileFor(a: AssetRecord): AssetProfile {
       remarks: s % 4 === 0 ? "Installed as part of the Phase-2 expansion." : "",
     },
     documents: [
-      { type: "Nameplate Photo (Close-up)", file: `${a.tag}-Nameplate.jpg`, uploaded: a.onboarded },
-      { type: "Manufacturer Datasheet", file: `${a.manufacturer.replace(/\W/g, "")}_${a.tag}_Datasheet.pdf`, uploaded: a.onboarded },
-      { type: "Installation Report", file: `${a.tag}_InstallationReport.pdf`, uploaded: a.onboarded },
-      { type: "Single Line Diagram (SLD)", file: `SLD_${a.area.replace(/\W/g, "")}.pdf`, uploaded: a.onboarded },
-      { type: "Warranty Certificate", file: `Warranty_${a.tag}.pdf`, uploaded: a.onboarded },
+      { id: "d1", name: "Nameplate Photo (Close-up)", file: `${a.tag}-Nameplate.jpg`, uploaded: a.onboarded },
+      { id: "d2", name: "Manufacturer Datasheet", file: `${a.manufacturer.replace(/\W/g, "")}_${a.tag}_Datasheet.pdf`, uploaded: a.onboarded },
+      { id: "d3", name: "Installation Report", file: `${a.tag}_InstallationReport.pdf`, uploaded: a.onboarded },
+      { id: "d4", name: "Single Line Diagram (SLD)", file: `SLD_${a.area.replace(/\W/g, "")}.pdf`, uploaded: a.onboarded },
+      { id: "d5", name: "Warranty Certificate", file: `Warranty_${a.tag}.pdf`, uploaded: a.onboarded },
     ],
     images: [
-      { slot: "front", label: "Front View", caption: `${a.tag} front elevation` },
-      { slot: "side", label: "Side View", caption: `${a.tag} side elevation` },
-      { slot: "nameplate", label: "Nameplate", caption: `${a.manufacturer} rating plate` },
-      { slot: "panel", label: "Panel / Accessories", caption: "Control and metering panel" },
-      { slot: "area", label: "Overall Area", caption: a.area },
+      { id: "i1", name: "Front View" },
+      { id: "i2", name: "Side View" },
+      { id: "i3", name: "Nameplate" },
+      { id: "i4", name: "Panel / Accessories" },
+      { id: "i5", name: "Overall Area" },
     ],
   }
 }

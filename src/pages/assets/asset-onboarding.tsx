@@ -93,8 +93,8 @@ export function AssetOnboardingPage() {
       nextDue: "",
       remarks: "",
 
-      images: {},
-      documents: {},
+      images: [],
+      documents: [],
     },
   })
 
@@ -113,7 +113,11 @@ export function AssetOnboardingPage() {
     if (current === 2) {
       const missing = missingUploads(form.getValues())
       if (!missing.complete) {
-        toast.error("Front, side and nameplate photographs and the nameplate document are required.")
+        toast.error(
+          missing.images === 0
+            ? "Add at least one photograph of the asset."
+            : "Every photograph and document needs a name."
+        )
         return
       }
     }

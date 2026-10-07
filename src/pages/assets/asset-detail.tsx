@@ -131,11 +131,11 @@ function AssetDetail({ asset, onBack }: { asset: AssetRecord; onBack: () => void
           {profile.images.length ? (
             <div className="grid grid-cols-3 gap-2">
               {profile.images.map((image) => (
-                <figure key={image.slot}>
+                <figure key={image.id}>
                   <div className="h-24 overflow-hidden rounded-md ring-1 ring-foreground/10">
-                    <AssetPhoto file={captures?.images[image.slot]} label={image.label} caption={image.caption} />
+                    <AssetPhoto file={captures?.images[image.id]} label={image.name} caption={image.name} />
                   </div>
-                  <figcaption className="mt-1 text-center text-xs leading-tight">{image.label}</figcaption>
+                  <figcaption className="mt-1 line-clamp-2 text-center text-xs leading-tight">{image.name}</figcaption>
                 </figure>
               ))}
             </div>
@@ -164,15 +164,15 @@ function AssetDetail({ asset, onBack }: { asset: AssetRecord; onBack: () => void
               <Table>
                 <TableHeader>
                   <TableRow className="hover:bg-transparent">
-                    <TableHead className={th}>Document Type</TableHead>
+                    <TableHead className={th}>Name</TableHead>
                     <TableHead className={th}>File Name</TableHead>
                     <TableHead className={th}>Uploaded</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {profile.documents.map((doc) => (
-                    <TableRow key={doc.type}>
-                      <TableCell className={cn(td, "font-medium")}>{doc.type}</TableCell>
+                    <TableRow key={doc.id}>
+                      <TableCell className={cn(td, "font-medium")}>{doc.name}</TableCell>
                       <TableCell className={cn(td, "text-muted-foreground")}>{doc.file}</TableCell>
                       <TableCell className={cn(td, "whitespace-nowrap tabular-nums")}>{doc.uploaded}</TableCell>
                     </TableRow>

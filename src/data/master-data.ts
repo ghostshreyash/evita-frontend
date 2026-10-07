@@ -433,30 +433,33 @@ export const warrantyUnits = ["Months", "Years"] as const
 export const yesNo = ["Yes", "No"] as const
 
 /**
- * Images captured at onboarding. The first three are mandatory: without a
- * nameplate photo the ratings on the form cannot be checked against the asset.
+ * Suggested names for the photographs and documents captured at onboarding.
+ *
+ * Suggestions, not a fixed set. What is available varies from asset to asset
+ * and site to site, so the engineer names each upload themselves and these only
+ * save them typing the common ones - see the client's answer of 07-10-2026.
  */
-export const assetImageSlots = [
-  { key: "front", label: "Front View", required: true },
-  { key: "side", label: "Side View", required: true },
-  { key: "nameplate", label: "Nameplate", required: true },
-  { key: "panel", label: "Panel / Accessories", required: false },
-  { key: "area", label: "Overall Area", required: false },
+export const suggestedImageNames = [
+  "Front View",
+  "Side View",
+  "Nameplate",
+  "Panel / Accessories",
+  "Overall Area",
+  "Rating Plate",
+  "Earthing Connection",
+  "Cable Termination",
 ] as const
 
-export type AssetImageSlot = (typeof assetImageSlots)[number]["key"]
-
-/** Documents collected at onboarding, in the order the mockup lists them */
-export const assetDocumentTypes = [
-  { key: "nameplate", label: "Nameplate Photo (Close-up)", required: true },
-  { key: "datasheet", label: "Manufacturer Datasheet", required: false },
-  { key: "installation", label: "Installation Report (if available)", required: false },
-  { key: "sld", label: "Single Line Diagram (SLD)", required: false },
-  { key: "warranty", label: "Warranty Certificate", required: false },
-  { key: "other", label: "Other Documents", required: false },
+export const suggestedDocumentNames = [
+  "Nameplate Photo (Close-up)",
+  "Manufacturer Datasheet",
+  "Installation Report",
+  "Single Line Diagram (SLD)",
+  "Warranty Certificate",
+  "Test Report",
+  "Commissioning Certificate",
+  "Maintenance History",
 ] as const
-
-export type AssetDocumentType = (typeof assetDocumentTypes)[number]["key"]
 
 /* ---------- Work ---------- */
 

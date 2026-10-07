@@ -7,7 +7,7 @@ import {
   type AssetProfile,
   type AssetRecord,
 } from "@/data/asset-data"
-import { assetDocumentTypes, assetImageSlots, healthBandFor, type AssetCriticality } from "@/data/master-data"
+import { healthBandFor, type AssetCriticality } from "@/data/master-data"
 import type { AssetFormValues } from "@/pages/assets/schemas"
 
 /**
@@ -120,12 +120,13 @@ export function profileFrom(
       nextDue: toDmy(values.nextDue),
       remarks: values.remarks ?? "",
     },
-    documents: assetDocumentTypes
-      .filter((d) => values.documents?.[d.key])
-      .map((d) => ({ type: d.label, file: values.documents[d.key]!.name, uploaded: dates.onboarded })),
-    images: assetImageSlots
-      .filter((s) => values.images?.[s.key])
-      .map((s) => ({ slot: s.key, label: s.label, caption: `${values.tag} - ${s.label.toLowerCase()}` })),
+    documents: (values.documents ?? []).map((d) => ({
+      id: d.id,
+      name: d.name,
+      file: d.file.name,
+      uploaded: dates.onboarded,
+    })),
+    images: (values.images ?? []).map((i) => ({ id: i.id, name: i.name })),
   }
 }
 
@@ -169,7 +170,13 @@ export function onboardAsset(values: AssetFormValues, site: { city: string }): A
 
   profiles = { ...profiles, [id]: profileFrom(values, { installed, onboarded }) }
 
-  captures = { ...captures, [id]: { images: { ...values.images }, documents: { ...values.documents } } }
+  captures = {
+    ...captures,
+    [id]: {
+      images: Object.fromEntries((values.images ?? []).map((i) => [i.id, i.file])),
+      documents: Object.fromEntries((values.documents ?? []).map((d) => [d.id, d.file])),
+    },
+  }
   rows = [record, ...rows]
   emit()
   return record
