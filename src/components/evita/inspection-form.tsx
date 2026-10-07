@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react"
-import { Camera, Check, Flame, Gauge, Lock, NotebookPen, Save, Send, Sparkles, Thermometer, Wind, X, Zap, type LucideIcon } from "lucide-react"
+import { Camera, Check, Flame, Gauge, Lock, NotebookPen, Save, Send, Sparkles, Thermometer, Wind, Zap, type LucideIcon } from "lucide-react"
 import { toast } from "sonner"
 import { format } from "date-fns"
 import { cn } from "cn"
@@ -7,9 +7,10 @@ import { cn } from "cn"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
-import { CaptureTile } from "@/components/evita/photo-capture"
-import { Checklist, CountPill, EvidenceStrip, FieldLabel, HealthRing, Segmented, StepCard } from "@/components/evita/field-kit"
+import { UploadSection } from "@/components/evita/upload-section"
+import { Checklist, CountPill, FieldLabel, HealthRing, Segmented, StepCard } from "@/components/evita/field-kit"
 import type { EvidenceItem } from "@/data/evidence"
+import { stampNow } from "@/data/persist"
 import { completeInspection, saveInspectionDraft } from "@/data/inspection-store"
 import type { InspectionCapture, InspectionDetail } from "@/data/inspection-detail"
 import { healthScoreWeights } from "@/data/master-data"
@@ -25,6 +26,7 @@ import {
   thermalPointsFor,
 } from "@/data/test-template"
 import { categoryFor } from "@/lib/asset-category"
+import { urlFor } from "@/lib/object-url"
 import { emptyCapture, newId, observationsFrom, resultsFrom, scoreCapture, sectionsDone } from "@/lib/testing"
 import type { Job } from "@/lib/work"
 
@@ -177,7 +179,7 @@ export function InspectionForm({ job, detail }: { job: Job; detail: InspectionDe
             <ScoreBreakdown breakdown={preview.breakdown} />
             <Checklist
               items={[
-                { label: "Required angles photographed", done: done.images },
+                { label: "At least one asset image", done: done.images },
                 { label: `${MIN_THERMAL_POINTS} or more thermal images`, done: done.thermal },
                 { label: "Contamination and hygiene assessed", done: done.contamination },
                 { label: "Fire prevention system checked", done: done.fps },
@@ -237,8 +239,13 @@ export function ScoreBreakdown({ breakdown }: { breakdown?: { visual?: number; t
   )
 }
 
-/* ---------- 1. Asset images: the angle views ---------- */
+/* ---------- 1. Asset images ---------- */
 
+/**
+ * As many photographs as the asset needs, each named as it is added, the same
+ * way asset onboarding takes them. The angle views for the asset type are the
+ * suggestions; a name that matches one also fills that view.
+ */
 function ImagesSection({
   category,
   capture,
@@ -255,67 +262,37 @@ function ImagesSection({
   onRemove: (id: string) => void
 }) {
   const slots = angleSlotsFor(category)
-  const shot = slots.filter((s) => evidence.some((e) => e.id === capture.angles[s.key])).length
-  const slotIds = new Set(Object.values(capture.angles))
-  const extra = evidence.filter((e) => e.kind === "photo" && !slotIds.has(e.id))
-  return (
-    <StepCard step={1} title="Asset Images (Multiple Angles)" icon={Camera} done={slots.filter((s) => s.required).every((s) => evidence.some((e) => e.id === capture.angles[s.key]))} actions={<CountPill done={shot > 0}>{shot} of {slots.length} Views</CountPill>}>
-      <p className="mb-4 text-sm text-muted-foreground">Capture clear images of the asset from each angle. Views marked * are required.</p>
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-4">
-        {slots.map((s) => {
-          const item = evidence.find((e) => e.id === capture.angles[s.key])
-          return item ? (
-            <Shot key={s.key} item={item} label={s.label} onRemove={() => onRemove(item.id)} />
-          ) : (
-            <CaptureTile
-              key={s.key}
-              kind="photo"
-              label={`${s.label}${s.required ? " *" : ""}`}
-              className="w-full"
-              onCapture={(items) => {
-                const [first] = items
-                onEvidence((ev) => [...ev, { ...first, label: s.label, slot: s.key }])
-                onCapture((c) => ({ ...c, angles: { ...c.angles, [s.key]: first.id } }))
-              }}
-            />
-          )
-        })}
-      </div>
-      <div className="mt-5">
-        <FieldLabel>Additional images ({extra.length})</FieldLabel>
-        <EvidenceStrip items={extra} onRemove={onRemove}>
-          <CaptureTile kind="photo" label="Add More Images" onCapture={(items) => onEvidence((ev) => [...ev, ...items])} />
-        </EvidenceStrip>
-      </div>
-      <OfflineNote />
-    </StepCard>
-  )
-}
+  const ids = new Set(Object.values(capture.angles))
+  const items = evidence.filter((e) => ids.has(e.id)).map((e) => ({ id: e.id, name: e.label, fileName: e.caption, src: e.src }))
 
-/** One captured image in a slot, with its label and a remove button */
-function Shot({ item, label, onRemove, badge }: { item: EvidenceItem; label: string; onRemove: () => void; badge?: React.ReactNode }) {
+  const add = (named: { name: string; file: File }[]) => {
+    const at = stampNow()
+    const made: EvidenceItem[] = named.map(({ name, file }) => {
+      const slot = slots.find((s) => s.label.toLowerCase() === name.toLowerCase())
+      return { id: newId(), kind: "photo", label: name, caption: file.name, meta: at, src: urlFor(file), slot: slot?.key }
+    })
+    onEvidence((ev) => [...ev, ...made])
+    // A named view fills its slot; anything else is kept under its own id
+    onCapture((c) => ({ ...c, angles: { ...c.angles, ...Object.fromEntries(made.map((m) => [m.slot && !c.angles[m.slot] ? m.slot : m.id, m.id])) } }))
+  }
+  const remove = (id: string) => {
+    onRemove(id)
+    onCapture((c) => ({ ...c, angles: Object.fromEntries(Object.entries(c.angles).filter(([, v]) => v !== id)) }))
+  }
+
   return (
-    <figure className="relative overflow-hidden rounded-xl bg-card ring-1 ring-foreground/10">
-      <div className={cn("flex h-32 items-center justify-center", !item.src && (item.kind === "thermal" ? "bg-linear-to-br from-info via-attention to-critical" : "bg-linear-to-br from-muted to-info-soft"))}>
-        {item.src ? <img src={item.src} alt={label} className="size-full object-cover" /> : item.kind === "thermal" ? <Thermometer className="size-7 text-white/80" /> : <Camera className="size-7 text-primary/60" />}
-      </div>
-      {badge ? <span className="absolute top-2 left-2">{badge}</span> : null}
-      <figcaption className="flex items-center gap-1.5 px-2.5 py-2">
-        <Check className="size-4 shrink-0 text-healthy" strokeWidth={3} />
-        <span className="truncate text-sm font-semibold">{label}</span>
-      </figcaption>
-      <button type="button" aria-label={`Remove ${label}`} onClick={onRemove} className="absolute top-1 right-1 flex size-9 items-center justify-center rounded-full bg-black/60 text-white">
-        <X className="size-4" />
-      </button>
-    </figure>
+    <div className="rounded-2xl bg-card p-4 shadow-xs ring-1 ring-foreground/10">
+      <UploadSection icon={Camera} title="Asset Images" noun="photograph" items={items} suggestions={slots.map((s) => s.label)} onAdd={add} onRemove={remove} />
+      <OfflineNote />
+    </div>
   )
 }
 
 /* ---------- 2. Thermal images, one per point ---------- */
 
 /**
- * Each thermal image is one measurement point. The points usual for the asset
- * type are offered as empty tiles; any other point gets a tile of its own.
+ * Each thermal image is one measurement point, named as it is added. The
+ * points usual for the asset type are the suggestions.
  */
 function ThermalImagesSection({
   category,
@@ -332,40 +309,33 @@ function ThermalImagesSection({
   onEvidence: React.Dispatch<React.SetStateAction<EvidenceItem[]>>
   onRemove: (id: string) => void
 }) {
-  const suggested = thermalPointsFor(category).filter((p) => !capture.thermal.some((t) => t.point === p))
-  const count = capture.thermal.length
+  const items = capture.thermal.map((t) => {
+    const image = evidence.find((e) => e.slot === t.id)
+    return { id: t.id, name: t.point, fileName: image?.caption, src: image?.src }
+  })
 
-  /** A new point from its thermal image */
-  const addPoint = (point: string, item: EvidenceItem) => {
-    const id = newId()
-    set({ thermal: [...capture.thermal, { id, point, maxTemp: "" }] })
-    onEvidence((ev) => [...ev, { ...item, label: `${point} (thermal)`, slot: id }])
+  const add = (named: { name: string; file: File }[]) => {
+    const at = stampNow()
+    const points = named.map(({ name }) => ({ id: newId(), point: name, maxTemp: "" }))
+    set({ thermal: [...capture.thermal, ...points] })
+    onEvidence((ev) => [
+      ...ev,
+      ...named.map(({ name, file }, i) => ({ id: newId(), kind: "thermal" as const, label: `${name} (thermal)`, caption: file.name, meta: at, src: urlFor(file), slot: points[i].id })),
+    ])
   }
   /** Removing the image removes its point */
-  const removePoint = (id: string, image?: EvidenceItem) => {
+  const remove = (pointId: string) => {
+    const image = evidence.find((e) => e.slot === pointId)
     if (image) onRemove(image.id)
-    set({ thermal: capture.thermal.filter((t) => t.id !== id) })
+    set({ thermal: capture.thermal.filter((t) => t.id !== pointId) })
   }
 
   return (
-    <StepCard step={2} title="Thermal Images (Multiple Points)" icon={Thermometer} done={count >= MIN_THERMAL_POINTS} actions={<CountPill done={count >= MIN_THERMAL_POINTS}>{count} {count === 1 ? "Image" : "Images"}</CountPill>}>
-      <p className="mb-4 text-sm text-muted-foreground">Capture a thermal image at each joint or termination you scan, at least {MIN_THERMAL_POINTS}.</p>
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-4">
-        {capture.thermal.map((t) => {
-          const image = evidence.find((e) => e.slot === t.id)
-          return image ? (
-            <Shot key={t.id} item={image} label={t.point} onRemove={() => removePoint(t.id, image)} />
-          ) : (
-            <CaptureTile key={t.id} kind="thermal" label={t.point} className="w-full" onCapture={(items) => onEvidence((ev) => [...ev, { ...items[0], label: `${t.point} (thermal)`, slot: t.id }])} />
-          )
-        })}
-        {suggested.map((p) => (
-          <CaptureTile key={p} kind="thermal" label={p} className="w-full" onCapture={(items) => addPoint(p, items[0])} />
-        ))}
-        <CaptureTile kind="thermal" label="Add More Thermal Images" className="w-full" onCapture={(items) => addPoint(`Point ${capture.thermal.length + 1}`, items[0])} />
-      </div>
+    <div className="rounded-2xl bg-card p-4 shadow-xs ring-1 ring-foreground/10">
+      <p className="mb-3 text-sm text-muted-foreground">Add a thermal image for each joint or termination you scan, at least {MIN_THERMAL_POINTS}.</p>
+      <UploadSection icon={Thermometer} title="Thermal Images" noun="thermal image" thermal items={items} suggestions={thermalPointsFor(category)} onAdd={add} onRemove={remove} />
       <OfflineNote thermal />
-    </StepCard>
+    </div>
   )
 }
 

@@ -1,7 +1,6 @@
 import type { InspectionCapture, InspectionResult, Measurement, Observation } from "@/data/inspection-detail"
 import { healthBandFor, healthScoreWeights } from "@/data/master-data"
 import {
-  angleSlotsFor,
   contaminationLevel,
   contaminationScore,
   deltaTLimit,
@@ -49,9 +48,10 @@ const worst = (list: (ResultStatus | undefined)[]): ResultStatus | undefined =>
   list.includes("Fail") ? "Fail" : list.includes("Attention") ? "Attention" : list.includes("Pass") ? "Pass" : undefined
 
 /** Which of the four Phase-1 sections are complete enough to submit */
-export function sectionsDone(capture: InspectionCapture, category: string, evidenceIds: Set<string>) {
+export function sectionsDone(capture: InspectionCapture, _category: string, evidenceIds: Set<string>) {
   return {
-    images: angleSlotsFor(category).filter((s) => s.required).every((s) => evidenceIds.has(capture.angles[s.key])),
+    // As in asset onboarding: as many named images as the asset has, at least one
+    images: Object.values(capture.angles).some((id) => evidenceIds.has(id)),
     // Phase 1 records the images; the temperatures are read off them after sync
     thermal: capture.thermal.length >= MIN_THERMAL_POINTS,
     contamination: !!capture.thickness && hygieneChecks.every((c) => capture.hygiene[c.key]),
@@ -60,20 +60,10 @@ export function sectionsDone(capture: InspectionCapture, category: string, evide
 }
 
 /** The Test Results table: one row per value, with its limit and result */
-export function resultsFrom(capture: InspectionCapture, category: string, evidenceIds: Set<string>): Measurement[] {
+export function resultsFrom(capture: InspectionCapture, _category: string, evidenceIds: Set<string>): Measurement[] {
   const rows: Measurement[] = []
-  const slots = angleSlotsFor(category)
-  const shot = slots.filter((s) => evidenceIds.has(capture.angles[s.key]))
-  const required = slots.filter((s) => s.required)
-  if (shot.length)
-    rows.push({
-      parameter: "Asset images (multiple angles)",
-      value: `${shot.length} of ${slots.length}`,
-      unit: "views",
-      source: "Camera",
-      limit: `${required.map((s) => s.label.replace(" View", "")).join(", ")} required`,
-      status: required.every((s) => evidenceIds.has(capture.angles[s.key])) ? "Pass" : "Attention",
-    })
+  const shot = Object.values(capture.angles).filter((id) => evidenceIds.has(id)).length
+  if (shot) rows.push({ parameter: "Asset images", value: String(shot), unit: "images", source: "Camera", limit: "At least one", status: "Pass" })
 
   const ambient = num(capture.ambient)
   if (ambient !== undefined) rows.push({ parameter: "Ambient temperature", value: String(ambient), unit: "°C", source: "Manual entry", limit: "Reference", status: "Pass" })
