@@ -11,19 +11,57 @@
  * only appear here as a recommended follow-up action.
  */
 import type { EvidenceItem, TimelineStep } from "@/data/evidence"
-import { areas, assetCategories, commissionDate } from "@/data/mock"
+import { areas, commissionDate } from "@/data/mock"
 import { assetCriticality, type AssetCriticality } from "@/data/master-data"
 import type { TaskRow } from "@/data/occ-tables"
+import { angleSlotsFor, dustThickness, dustTypes, hygieneChecks, thermalPointsFor, type DustThickness, type FpsStatus } from "@/data/test-template"
+import { categoryFor } from "@/lib/asset-category"
+import { emptyCapture, observationsFrom, resultsFrom, scoreCapture } from "@/lib/testing"
 
 /** One reading from the test sheet */
 export type Measurement = {
   parameter: string
   value: string
   unit: string
-  /** The instrument that produced it, or "Manual entry" */
+  /** How it was captured, and the instrument where there was one: "Thermal camera · FLIR E8" */
   source: string
   status: "Pass" | "Attention" | "Fail"
+  /** EVITA: the standard limit it was judged against, from the test template */
+  limit?: string
 }
+
+/** One thermography point: where the camera was pointed and the hottest reading there */
+export type ThermalPoint = {
+  id: string
+  point: string
+  /** Max temperature read off the TIC image, °C, as typed */
+  maxTemp: string
+}
+
+/**
+ * EVITA: the structured Testing & Measurements capture (Phase 1), kept beside
+ * the flat `measurements` OCC reads. `measurements` and `observations` are
+ * derived from it on every save, so both apps see the same record.
+ */
+export type InspectionCapture = {
+  /** Angle slot key → id of the evidence item captured for it */
+  angles: Record<string, string>
+  thermal: ThermalPoint[]
+  /** Ambient temperature, °C, as typed */
+  ambient: string
+  thickness?: DustThickness
+  dustTypes: string[]
+  /** Hygiene check key → OK or an issue, with a note when it is an issue */
+  hygiene: Record<string, { ok: boolean; note: string }>
+  fps: { installed?: "Yes" | "No"; status?: FpsStatus; remarks: string }
+}
+
+/**
+ * Where this record stands against the server. Draft = saved on the tablet
+ * only; Pending = submitted while offline, queued for POST /sync/batch;
+ * Synced = the server has it.
+ */
+export type SyncState = { state: "draft" | "pending" | "synced"; at?: string }
 
 export type Severity = "Low" | "Medium" | "High" | "Critical"
 
@@ -50,6 +88,8 @@ export type InspectionResult = {
   recommendedActions: string[]
   /** Drives the Schedule Maintenance action on the results card */
   maintenanceRequired: boolean
+  /** EVITA: each weighted input, normalised 0–100; absent for records scored before it existed */
+  breakdown?: { visual?: number; thermal?: number; fps?: number }
 }
 
 export type InspectionDetail = {
@@ -69,6 +109,8 @@ export type InspectionDetail = {
   observations: Observation[]
   evidence: EvidenceItem[]
   result?: InspectionResult
+  capture?: InspectionCapture
+  sync?: SyncState
 }
 
 const supervisors = ["Priya Nair", "Rakesh Menon", "Divya Iyer", "Arun Prakash"]
@@ -88,58 +130,6 @@ export const instructions: Record<string, string> = {
   "Fire Prevention System Check":
     "Verify suppression readiness, detector function and cable-entry sealing. Record the state of every device checked.",
 }
-
-/** Readings that suit each activity, so a thermal scan does not report megger values */
-const sheets: Record<string, Measurement[]> = {
-  "Thermal Scan": [
-    { parameter: "Hotspot temperature", value: "46.2", unit: "°C", source: "FLIR E8 TIC", status: "Pass" },
-    { parameter: "Reference temperature", value: "33.8", unit: "°C", source: "FLIR E8 TIC", status: "Pass" },
-    { parameter: "Temperature rise over ambient", value: "12.4", unit: "°C", source: "Derived", status: "Pass" },
-    { parameter: "Load current at scan", value: "248", unit: "A", source: "Clamp meter Fluke 376", status: "Pass" },
-    { parameter: "Ambient temperature", value: "33.8", unit: "°C", source: "Manual entry", status: "Pass" },
-  ],
-  "Insulation Resistance Testing": [
-    { parameter: "Insulation resistance L-E", value: "512", unit: "MΩ", source: "Megger MIT525", status: "Pass" },
-    { parameter: "Insulation resistance L-L", value: "486", unit: "MΩ", source: "Megger MIT525", status: "Pass" },
-    { parameter: "Polarisation index", value: "2.4", unit: "ratio", source: "Megger MIT525", status: "Pass" },
-    { parameter: "Earth continuity", value: "0.12", unit: "Ω", source: "DLRO10", status: "Pass" },
-    { parameter: "Relative humidity", value: "58", unit: "%", source: "Manual entry", status: "Pass" },
-  ],
-  "Partial Discharge Testing": [
-    { parameter: "PD level — incomer", value: "24", unit: "pC", source: "UltraTEV Plus²", status: "Pass" },
-    { parameter: "PD level — busbar chamber", value: "118", unit: "pC", source: "UltraTEV Plus²", status: "Attention" },
-    { parameter: "PD level — cable box", value: "31", unit: "pC", source: "UltraTEV Plus²", status: "Pass" },
-    { parameter: "Operating voltage", value: "11", unit: "kV", source: "Panel meter", status: "Pass" },
-  ],
-  "Visual Inspection": [
-    { parameter: "Enclosure integrity", value: "Satisfactory", unit: "—", source: "Manual entry", status: "Pass" },
-    { parameter: "Termination tightness", value: "Within spec", unit: "Nm", source: "Torque wrench", status: "Pass" },
-    { parameter: "Contamination level", value: "Moderate", unit: "—", source: "Manual entry", status: "Attention" },
-    { parameter: "Cable gland sealing", value: "Intact", unit: "—", source: "Manual entry", status: "Pass" },
-  ],
-  "Fire Prevention System Check": [
-    { parameter: "Detector response time", value: "3.8", unit: "s", source: "Test aerosol", status: "Pass" },
-    { parameter: "Suppression cylinder pressure", value: "22.4", unit: "bar", source: "Gauge reading", status: "Pass" },
-    { parameter: "Cable entry sealing", value: "Intact", unit: "—", source: "Manual entry", status: "Pass" },
-  ],
-}
-
-const fallbackSheet: Measurement[] = [
-  { parameter: "Hotspot temperature", value: "41.6", unit: "°C", source: "FLIR E8 TIC", status: "Pass" },
-  { parameter: "Insulation resistance L-E", value: "398", unit: "MΩ", source: "Megger MIT525", status: "Pass" },
-  { parameter: "Contact resistance", value: "18.4", unit: "µΩ", source: "DLRO10", status: "Pass" },
-  { parameter: "Earth continuity", value: "0.15", unit: "Ω", source: "DLRO10", status: "Pass" },
-  { parameter: "Ambient temperature", value: "31.2", unit: "°C", source: "Manual entry", status: "Pass" },
-]
-
-const findings: { type: string; value: string; severity: Severity; remarks: string }[] = [
-  { type: "Visual / physical condition", value: "Minor paint blistering on the door", severity: "Low", remarks: "Cosmetic only; no effect on ingress protection." },
-  { type: "Thermal abnormality", value: "Warm termination on the R-phase incomer", severity: "Medium", remarks: "12 °C above the adjacent phases. Re-torque at the next maintenance window." },
-  { type: "Contamination", value: "Dust accumulation in the busbar chamber", severity: "Medium", remarks: "Reduces creepage distance. Panel cleaning recommended." },
-  { type: "Corrosion", value: "Surface corrosion on the earth bar clamp", severity: "Low", remarks: "Clean and apply protective compound." },
-  { type: "Moisture ingress", value: "Damp patch below the bottom cable gland", severity: "High", remarks: "Gland sealing has failed. Seal before the monsoon." },
-  { type: "Wiring / terminations", value: "Two control wires without ferrules", severity: "Low", remarks: "Label and ferrule at the next opportunity." },
-]
 
 const remarks = [
   "All scheduled tests completed. Readings logged in EVITA and the asset re-scored against the current baseline.",
@@ -164,7 +154,7 @@ export function inspectionDetail(row: TaskRow): InspectionDetail {
     createdBy: `${pick(supervisors)} (OCC)`,
     area: pick(areas),
     assetTag: `TAG-${row.plant.slice(0, 3).toUpperCase()}-${row.id.slice(-4)}`,
-    assetCategory: pick(assetCategories),
+    assetCategory: categoryFor(row.asset),
     assetCriticality: pick(assetCriticality),
     commissionedOn: commissionDate(random),
     measurements: [],
@@ -184,55 +174,43 @@ export function inspectionDetail(row: TaskRow): InspectionDetail {
     remarks: done ? pick(remarks) : "Testing under way; readings being captured on site.",
   }
 
-  const sheet = sheets[row.activity] ?? fallbackSheet
-  // Work still in progress has only recorded part of the sheet so far
-  detail.measurements = done ? sheet : sheet.slice(0, Math.max(1, Math.floor(sheet.length / 2)))
-
-  // Findings only exist where there was something to report
-  const count = done ? Math.floor(random() * 4) : Math.floor(random() * 2)
-  const seen = new Set<string>()
-  for (let i = 0; i < count; i++) {
-    const f = pick(findings)
-    if (seen.has(f.type)) continue
-    seen.add(f.type)
-    detail.observations.push(f)
+  // The Phase-1 capture, part-filled while the work is under way
+  const category = categoryFor(row.asset)
+  const capture = emptyCapture()
+  const stamp = (m: number) => at(row.due, row.slot, m)
+  const slots = angleSlotsFor(category).filter((x, i) => (done ? x.required || random() < 0.6 : i < 2))
+  for (const [i, slot] of slots.entries()) {
+    const id = `${row.id}-${slot.key}`
+    capture.angles[slot.key] = id
+    detail.evidence.push({ id, kind: "photo", label: slot.label, caption: `${row.asset}, ${slot.label.toLowerCase()}`, meta: stamp(5 + i * 2), slot: slot.key })
   }
-
-  detail.evidence = [
-    { id: `${row.id}-p1`, kind: "photo", label: "Panel front", caption: `${row.asset} as found`, meta: at(row.due, row.slot, 5) },
-    { id: `${row.id}-t1`, kind: "thermal", label: "TIC — incomer terminations", caption: "Hotspot 46.2 °C against a 33.8 °C reference", meta: at(row.due, row.slot, 25) },
-  ]
-  if (done) {
-    detail.evidence.push(
-      { id: `${row.id}-p2`, kind: "photo", label: "Busbar chamber", caption: "Contamination recorded before cleaning", meta: at(row.due, row.slot, 40) },
-      { id: `${row.id}-d1`, kind: "document", label: "EVITA test sheet.pdf", caption: "Signed readings for every measurement point", meta: "308 KB" }
-    )
+  capture.ambient = String(31 + Math.floor(random() * 6))
+  const points = thermalPointsFor(category).slice(0, done ? 3 + Math.floor(random() * 2) : 1)
+  for (const [i, point] of points.entries()) {
+    // Mostly a few degrees over ambient, with the odd warm joint
+    const rise = random() < 0.2 ? 11 + Math.floor(random() * 14) : 2 + Math.floor(random() * 7)
+    const id = `${row.id}-tp${i + 1}`
+    capture.thermal.push({ id, point, maxTemp: String(Number(capture.ambient) + rise) })
+    detail.evidence.push({ id: `${id}-img`, kind: "thermal", label: `${point} (thermal)`, caption: `Max ${Number(capture.ambient) + rise} °C`, meta: stamp(20 + i * 3), slot: id })
   }
-
   if (done) {
-    const worst = detail.observations.reduce<Severity | undefined>(
-      (acc, o) => (!acc || ["Low", "Medium", "High", "Critical"].indexOf(o.severity) > ["Low", "Medium", "High", "Critical"].indexOf(acc) ? o.severity : acc),
-      undefined
-    )
-    const flagged = detail.measurements.some((m) => m.status !== "Pass")
-    const score = worst === "Critical" ? 48 : worst === "High" ? 63 : worst === "Medium" || flagged ? 78 : 93
-
-    detail.result = {
-      healthScore: score,
-      classification: score >= 85 ? "Healthy" : score >= 60 ? "Attention" : "Critical",
-      majorFindings: detail.observations.length
-        ? detail.observations.map((o) => `${o.type}: ${o.value}`)
-        : ["No abnormality found. All readings within acceptable limits."],
-      recommendedActions:
-        detail.observations.length || flagged
-          ? [
-              "Raise a condition-based maintenance activity for the flagged compartment.",
-              "Re-scan under load after the intervention to confirm the reading has settled.",
-            ]
-          : ["No action required. Retain the present inspection interval."],
-      maintenanceRequired: detail.observations.length > 0 || flagged,
+    capture.thickness = pick(dustThickness)
+    capture.dustTypes = random() < 0.7 ? [pick(dustTypes)] : []
+    for (const c of hygieneChecks) {
+      const ok = random() > 0.15
+      capture.hygiene[c.key] = { ok, note: ok ? "" : "Corrected on site where possible; rest listed for maintenance." }
     }
+    const installed = random() < 0.7
+    capture.fps = installed
+      ? { installed: "Yes", status: random() < 0.8 ? "Healthy / Normal" : "Attention Required", remarks: "Aerosol suppression module, panel-mounted" }
+      : { installed: "No", remarks: "" }
   }
+  const ids = new Set(detail.evidence.map((e) => e.id))
+  detail.capture = capture
+  detail.measurements = resultsFrom(capture, category, ids)
+  detail.observations = observationsFrom(capture)
+  detail.sync = done ? { state: "synced", at: detail.execution.completedAt } : { state: "draft", at: stamp(30) }
+  if (done) detail.result = scoreCapture(capture)
 
   return detail
 }
