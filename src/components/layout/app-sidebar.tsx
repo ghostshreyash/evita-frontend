@@ -86,7 +86,7 @@ export function AppSidebar() {
                       tooltip={item.title}
                       className="h-12 rounded-xl px-4 text-[0.9375rem] data-active:bg-sidebar-primary data-active:font-semibold data-active:text-sidebar-primary-foreground data-active:shadow-lg data-active:shadow-primary/30 [&_svg]:size-5"
                     >
-                      {/* On a phone-width sheet, choosing a section closes the sheet */}
+                      {/* In the drawer (tablets and phones), choosing a section closes it */}
                       <NavLink to={item.path} onClick={() => isMobile && setOpenMobile(false)}>
                         <item.icon />
                         <span>{item.title}</span>

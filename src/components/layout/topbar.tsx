@@ -1,11 +1,11 @@
 import { useEffect, useState } from "react"
 import { useNavigate } from "react-router"
 import { format } from "date-fns"
-import { Bell, Clock, CloudCheck, CloudOff, Factory, LogOut } from "lucide-react"
+import { Bell, Clock, CloudCheck, CloudOff, Factory, LogOut, Menu } from "lucide-react"
 import { cn } from "cn"
 
 import { Button } from "@/components/ui/button"
-import { SidebarTrigger } from "@/components/ui/sidebar"
+import { useSidebar } from "@/components/ui/sidebar"
 import { useOnline } from "@/hooks/use-media"
 import { useAuth } from "@/lib/auth/context"
 import { useCurrentElpremar } from "@/lib/me"
@@ -38,10 +38,18 @@ export function Topbar() {
   const me = useCurrentElpremar()
   const online = useOnline()
   const { unread } = useNotifications()
+  const { toggleSidebar } = useSidebar()
 
   return (
     <header className="sticky top-0 z-20 flex h-16 shrink-0 items-center gap-2.5 border-b border-topbar-border bg-topbar px-3 text-topbar-foreground">
-      <SidebarTrigger className="size-11 text-topbar-foreground hover:bg-white/10 hover:text-topbar-foreground" />
+      <button
+        type="button"
+        aria-label="Open menu"
+        onClick={toggleSidebar}
+        className="flex size-11 shrink-0 items-center justify-center rounded-lg hover:bg-white/10"
+      >
+        <Menu className="size-6" />
+      </button>
 
       <div className="flex min-w-0 items-center gap-2">
         <span className="text-2xl leading-none font-black tracking-[-0.03em]">
