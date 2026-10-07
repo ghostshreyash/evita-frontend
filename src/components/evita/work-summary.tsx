@@ -1,4 +1,4 @@
-import { Activity, Camera, Droplets, Eye, Flame, Gauge, Timer, Wrench } from "lucide-react"
+import { Activity, Camera, ClipboardList, Droplets, Eye, Flame, Gauge, Timer, Wrench } from "lucide-react"
 import { cn } from "cn"
 
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
@@ -7,14 +7,16 @@ import { EvidenceStrip, TaskPanel } from "@/components/evita/field-kit"
 import { TimeLog } from "@/components/evita/time-log"
 import type { InspectionDetail } from "@/data/inspection-detail"
 import type { MaintenanceDetail } from "@/data/maintenance-detail"
+import { resultLabel, resultPill } from "@/data/test-template"
 import { td, th } from "@/lib/data-table"
+import { bandLook } from "@/lib/health"
+import { inspectionTypeFor } from "@/lib/testing"
 
 /**
  * Read-only views of what was recorded, for work that is submitted, approved
  * or closed — the same panels and label/value lists as the asset screens.
  */
 
-const resultTone = { Pass: "text-healthy", Attention: "text-attention", Fail: "text-critical" } as const
 const severityTone = {
   Low: "bg-neutral-soft text-neutral-soft-foreground",
   Medium: "bg-attention-soft text-attention-soft-foreground",
@@ -24,29 +26,66 @@ const severityTone = {
 
 const empty = (text: string) => <p className="py-1 text-sm text-muted-foreground">{text}</p>
 
-export function InspectionRecord({ detail }: { detail: InspectionDetail }) {
+/**
+ * A submitted inspection, laid out like the Inspection Completed screen
+ * (mockup p.22): the inspection details, the Test Results table with each
+ * value's standard limit and result, what was found, and the images.
+ */
+export function InspectionRecord({ detail, activity }: { detail: InspectionDetail; activity?: string }) {
   const images = detail.evidence.filter((e) => e.kind !== "document")
+  const { execution, result } = detail
+  const [date, start] = (execution?.startedAt ?? "").split(" ")
+  const end = execution?.completedAt?.split(" ")[1]
   return (
-    <div className="space-y-3">
+    <div className="space-y-5">
+      <TaskPanel icon={ClipboardList} title="Inspection Details">
+        <DetailList
+          rows={[
+            { label: "Inspection Type", value: activity ? inspectionTypeFor(activity) : "—" },
+            { label: "Activity", value: activity ?? "—" },
+            { label: "Inspection Date", value: date || "—" },
+            { label: "Inspection Time", value: start ? `${start}${end ? ` – ${end}` : ""}` : "—" },
+            {
+              label: "Overall Condition",
+              value: result ? <span className={cn("rounded-full px-2.5 py-0.5 text-sm font-semibold", bandLook(result.healthScore).soft)}>{bandLook(result.healthScore).label}</span> : "Not Inspected",
+            },
+            { label: "Health Score", value: result ? <span className="font-mono font-bold">{result.healthScore} / 100</span> : "—" },
+            { label: "Inspected By", value: execution?.performedBy ?? "—" },
+            { label: "Remarks", value: execution?.remarks || "—" },
+          ]}
+        />
+      </TaskPanel>
+
       <TaskPanel icon={Gauge} title="Test Results" contentClassName="px-2 py-3">
         {detail.measurements.length ? (
           <div className="overflow-x-auto">
             <Table>
               <TableHeader>
-                <TableRow className="hover:bg-transparent">
-                  <TableHead className={th}>Parameter</TableHead>
-                  <TableHead className={th}>Measured</TableHead>
-                  <TableHead className={cn(th, "max-md:hidden")}>Instrument</TableHead>
-                  <TableHead className={th}>Result</TableHead>
+                <TableRow className="bg-muted/60 hover:bg-muted/60">
+                  <TableHead className={cn(th, "w-10")}>#</TableHead>
+                  <TableHead className={th}>Test Parameter</TableHead>
+                  <TableHead className={th}>Measured Value</TableHead>
+                  <TableHead className={cn(th, "max-md:hidden")}>Standard Limit</TableHead>
+                  <TableHead className={cn(th, "max-lg:hidden")}>Captured By</TableHead>
+                  <TableHead className={th}>Status</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {detail.measurements.map((m, i) => (
                   <TableRow key={i}>
+                    <TableCell className={cn(td, "text-muted-foreground tabular-nums")}>{i + 1}</TableCell>
                     <TableCell className={cn(td, "font-medium whitespace-normal")}>{m.parameter}</TableCell>
-                    <TableCell className={cn(td, "tabular-nums")}>{m.value} {m.unit !== "—" && m.unit !== "Other" ? m.unit : ""}</TableCell>
-                    <TableCell className={cn(td, "text-muted-foreground max-md:hidden")}>{m.source}</TableCell>
-                    <TableCell className={cn(td, "font-semibold", resultTone[m.status])}>{m.status}</TableCell>
+                    <TableCell className={cn(td, "font-mono font-semibold whitespace-nowrap")}>
+                      {m.value} {m.unit !== "—" && m.unit !== "Other" ? m.unit : ""}
+                    </TableCell>
+                    <TableCell className={cn(td, "whitespace-normal text-muted-foreground max-md:hidden")}>{m.limit ?? "—"}</TableCell>
+                    <TableCell className={cn(td, "max-w-56 whitespace-normal text-muted-foreground max-lg:hidden")}>{m.source}</TableCell>
+                    <TableCell className={td}>
+                      <span className={cn("inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-semibold", resultPill[m.status])}>
+                        <span className="size-1.5 rounded-full bg-current" />
+                        {resultLabel[m.status]}
+                      </span>
+                    </TableCell>
                   </TableRow>
                 ))}
               </TableBody>
@@ -57,7 +96,7 @@ export function InspectionRecord({ detail }: { detail: InspectionDetail }) {
         )}
       </TaskPanel>
 
-      <TaskPanel icon={Eye} title={`Observations (${detail.observations.length})`}>
+      <TaskPanel icon={Eye} title={`Findings (${detail.observations.length})`}>
         {detail.observations.length ? (
           <ul className="divide-y">
             {detail.observations.map((o, i) => (
@@ -72,7 +111,7 @@ export function InspectionRecord({ detail }: { detail: InspectionDetail }) {
             ))}
           </ul>
         ) : (
-          empty("No abnormality observed.")
+          empty("No abnormality observed. All values within limits.")
         )}
       </TaskPanel>
 
