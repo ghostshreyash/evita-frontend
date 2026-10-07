@@ -22,7 +22,7 @@ export const healthStatus: Record<
     tile: "bg-healthy-soft text-healthy-soft-foreground",
   },
   attention: {
-    label: "Attention Required",
+    label: "Alarming",
     color: "var(--warning)",
     badge: "attention",
     dot: "bg-attention",
@@ -47,7 +47,7 @@ export const healthStatus: Record<
 /** Ready-made Recharts config for health donuts and trend lines */
 export const healthChartConfig = {
   healthy: { label: "Healthy", color: "var(--success)" },
-  attention: { label: "Attention Required", color: "var(--warning)" },
+  attention: { label: "Alarming", color: "var(--warning)" },
   critical: { label: "At Risk", color: "var(--destructive)" },
   offline: { label: "Offline", color: "var(--neutral)" },
 } satisfies ChartConfig
