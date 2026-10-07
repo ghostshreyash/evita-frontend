@@ -540,7 +540,8 @@ export const dcVoltageRatings = [
 /** Health score bands from the specification */
 export const healthBands = [
   { min: 70, max: 100, label: "Healthy", tone: "healthy" as const },
-  { min: 50, max: 69, label: "Alarming", tone: "attention" as const },
+  // Client's Parameters sheet: 50–69 = Attention Required (Orange)
+  { min: 50, max: 69, label: "Attention Required", tone: "attention" as const },
   { min: 0, max: 49, label: "At Risk", tone: "critical" as const },
 ]
 
