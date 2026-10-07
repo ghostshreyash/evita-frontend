@@ -1,5 +1,5 @@
 import { Link } from "react-router"
-import { ClipboardList, Download, ExternalLink, Sparkles, Wrench, X } from "lucide-react"
+import { ClipboardList, Download, ExternalLink, QrCode, Sparkles, Wrench, X } from "lucide-react"
 import { cn } from "cn"
 import { toast } from "sonner"
 
@@ -18,17 +18,17 @@ import { td, th } from "@/lib/data-table"
 /**
  * Asset Details & Health Report — the report for the selected row.
  *
- * It opens when a row's View is pressed and closes on the cross, rather than
- * preselecting the first result. The parameter sheet suggests preselecting for
- * usability; the client asked on review for it to open only on View.
+ * It floats over the table rather than pushing it aside or sitting above it, as
+ * the mockup draws it: the row stays where it was, highlighted, and the report
+ * covers the right of the table until the cross is pressed. Below `lg` there is
+ * no room to float, so it drops to a full-width block over the table instead.
  *
- * It sits inside the report card, directly above the table, at full width. The
- * identity runs across the top and the record underneath, so long values like
- * "ACB (Air Circuit Breaker) - 01" wrap against the whole panel rather than
- * against a narrow column.
+ * It opens on View rather than preselecting the first result. The parameter
+ * sheet suggests preselecting for usability; the client asked at review for it
+ * to open only on View.
  *
- * The mockup's third tab, Trend & Analytics, is not here — trend reporting was
- * dropped from this screen along with the Trend Analysis tab above it.
+ * The mockup's Trend & Analytics tab is not here — trend reporting was dropped
+ * from this screen along with the Trend Analysis tab above it.
  */
 export function AssetReportPanel({ row, onClose }: { row: ReportRow; onClose: () => void }) {
   const { asset } = row
@@ -36,93 +36,115 @@ export function AssetReportPanel({ row, onClose }: { row: ReportRow; onClose: ()
   const band = row.healthScore === null ? null : healthBandFor(row.healthScore)
 
   return (
-    <aside className="rounded-lg bg-card p-3 shadow-xs ring-2 ring-primary/30">
-      <header className="mb-3 flex items-start justify-between gap-2 border-b pb-2">
-        <h3 className="flex flex-wrap items-baseline gap-x-2 text-base font-semibold text-brand-navy dark:text-foreground">
-          Asset Details &amp; Health Report
-          <span className="text-sm font-normal text-muted-foreground tabular-nums">{asset.id}</span>
+    <aside className="max-h-[36rem] overflow-y-auto rounded-lg bg-card shadow-2xl ring-1 ring-foreground/15">
+      {/* Sticky so the asset being read stays named while the panel scrolls */}
+      <header className="sticky top-0 z-10 flex items-start justify-between gap-2 border-b bg-card px-3 py-2">
+        <h3 className="min-w-0 text-base font-semibold text-brand-navy dark:text-foreground">
+          Asset Details
+          <span className="ml-2 text-sm font-normal text-muted-foreground tabular-nums">{asset.id}</span>
         </h3>
-        <Button type="button" variant="ghost" size="icon-sm" aria-label="Close the report panel" onClick={onClose}>
-          <X />
-        </Button>
+        <div className="flex shrink-0 items-center gap-1">
+          <Button asChild variant="link" size="sm" className="px-1">
+            <Link to={`/assets/${asset.id}`}>
+              View Full Details <ExternalLink />
+            </Link>
+          </Button>
+          <Button type="button" variant="ghost" size="icon-sm" aria-label="Close the report panel" onClick={onClose}>
+            <X />
+          </Button>
+        </div>
       </header>
 
-      {/* Identity across the top, the record underneath */}
-      <div className="grid gap-3 lg:grid-cols-[auto_minmax(0,1fr)_minmax(0,15rem)]">
-        <figure className="w-32 shrink-0">
-          <div className="h-24 overflow-hidden rounded-md ring-1 ring-foreground/10">
-            <AssetPhoto label={asset.category} caption={asset.name} />
-          </div>
-          <figcaption className="mt-1 text-center">
-            <Badge variant={findingLook[row.contaminationStatus].badge} className="h-auto rounded px-2 py-0.5 text-xs">
-              {row.contaminationStatus}
-            </Badge>
-          </figcaption>
-        </figure>
-
-        <DetailList
-          className="min-w-0"
-          rows={[
-            { label: "Asset Tag ID", value: asset.tag, always: true },
-            { label: "Asset Name", value: asset.name, always: true },
-            { label: "Category", value: asset.category },
-            { label: "Location", value: asset.area },
-            { label: "Department", value: asset.department },
-            { label: "Manufacturer", value: asset.manufacturer },
-            { label: "Model", value: asset.model },
-            { label: "Serial Number", value: asset.serial },
-          ]}
-        />
-
-        <div className="space-y-2">
-          <div className="grid grid-cols-3 gap-2">
-            <Stat label="Health">
-              {band ? (
-                <HealthDial score={row.healthScore!} label={band.label} tone={band.tone} className="size-16" />
-              ) : (
-                <span className="text-xs text-muted-foreground">Not inspected</span>
-              )}
-            </Stat>
-            <Stat label="Contamination">
-              <span className={cn("rounded px-2 py-1 text-sm font-semibold", contaminationTone[row.contamination])}>
-                {row.contamination}
-              </span>
-            </Stat>
-            <Stat label="Hygiene">
-              <Badge variant={findingLook[row.hygieneStatus].badge} className="h-auto rounded px-1.5 py-1 text-xs">
-                {row.hygieneStatus}
+      <div className="space-y-3 p-3">
+        {/* ---------- Which asset this is ---------- */}
+        <div className="flex gap-3">
+          <figure className="w-28 shrink-0">
+            <div className="h-24 overflow-hidden rounded-md ring-1 ring-foreground/10">
+              <AssetPhoto label={asset.category} caption={asset.name} />
+            </div>
+            <figcaption className="mt-1 text-center">
+              <Badge variant={findingLook[row.contaminationStatus].badge} className="h-auto rounded px-2 py-0.5 text-xs">
+                {row.contaminationStatus}
               </Badge>
-            </Stat>
-          </div>
+            </figcaption>
+          </figure>
+          <DetailList
+            className="min-w-0 flex-1"
+            rows={[
+              { label: "Asset Tag ID", value: asset.tag, always: true },
+              { label: "Asset Name", value: asset.name, always: true },
+              { label: "Category", value: asset.category },
+              { label: "Enterprise", value: asset.enterprise },
+              { label: "Location", value: asset.area },
+              { label: "Department", value: asset.department },
+              { label: "Manufacturer", value: asset.manufacturer },
+              { label: "Model", value: asset.model },
+              { label: "Serial Number", value: asset.serial },
+            ]}
+          />
+        </div>
 
-          <div className="flex items-center gap-2 rounded-md bg-muted/40 p-2">
+        {/* ---------- Its identity on the platform ---------- */}
+        <section className="rounded-md bg-info-soft/60 p-2">
+          <h4 className="mb-1.5 flex items-center gap-1.5 text-sm font-semibold text-brand-navy dark:text-foreground">
+            <QrCode className="size-4 text-primary" /> Asset ID &amp; QR Code
+          </h4>
+          <div className="flex items-center gap-3">
             <div className="shrink-0 rounded bg-white p-1 ring-1 ring-foreground/10">
-              <AssetQrCode asset={asset} size={52} />
+              <AssetQrCode asset={asset} size={76} />
             </div>
             <div className="min-w-0">
               <div className="text-xs text-muted-foreground">Asset ID (Unique)</div>
               <AssetIdChip id={asset.id} className="mt-0.5" />
+              <p className="mt-1 text-xs text-muted-foreground">
+                Scan the code, or tap the Asset ID, to open the full asset record.
+              </p>
             </div>
           </div>
+        </section>
+
+        {/* ---------- Where it stands ---------- */}
+        <div className="grid grid-cols-3 gap-2">
+          <Stat label="Health Score">
+            {band ? (
+              <HealthDial score={row.healthScore!} label={band.label} tone={band.tone} className="size-20" />
+            ) : (
+              <span className="py-2 text-xs text-muted-foreground">Not inspected</span>
+            )}
+          </Stat>
+          <Stat label="Contamination">
+            <span className={cn("rounded px-2 py-1 text-sm font-semibold", contaminationTone[row.contamination])}>
+              {row.contamination}
+            </span>
+            <span className="mt-1 block text-[0.65rem] leading-tight text-muted-foreground">
+              {report.inspection.dustType || "No assessment yet"}
+            </span>
+          </Stat>
+          <Stat label="Hygiene">
+            <Badge variant={findingLook[row.hygieneStatus].badge} className="h-auto rounded px-1.5 py-1 text-xs">
+              {row.hygieneStatus}
+            </Badge>
+            <span className="mt-1 block text-[0.65rem] leading-tight text-muted-foreground">
+              {row.hygieneStatus === "Not Inspected" ? "No walk yet" : `${row.hygieneOpen} of 8 points open`}
+            </span>
+          </Stat>
         </div>
-      </div>
 
-      {/* ---------- The record behind it ---------- */}
-      <Tabs defaultValue="inspection" className="mt-3">
-        <TabsList className="w-full">
-          <TabsTrigger value="inspection" className="flex-1">
-            <ClipboardList className="size-4" /> Inspection
-          </TabsTrigger>
-          <TabsTrigger value="hygiene" className="flex-1">
-            <Sparkles className="size-4" /> Hygiene
-          </TabsTrigger>
-          <TabsTrigger value="maintenance" className="flex-1">
-            <Wrench className="size-4" /> Maintenance
-          </TabsTrigger>
-        </TabsList>
+        {/* ---------- The record behind it ---------- */}
+        <Tabs defaultValue="inspection">
+          <TabsList className="w-full">
+            <TabsTrigger value="inspection" className="flex-1">
+              <ClipboardList className="size-4" /> Inspection
+            </TabsTrigger>
+            <TabsTrigger value="hygiene" className="flex-1">
+              <Sparkles className="size-4" /> Hygiene
+            </TabsTrigger>
+            <TabsTrigger value="maintenance" className="flex-1">
+              <Wrench className="size-4" /> Maintenance
+            </TabsTrigger>
+          </TabsList>
 
-        <TabsContent value="inspection" className="mt-2">
-          <div className="grid gap-x-8 gap-y-1 sm:grid-cols-2">
+          <TabsContent value="inspection" className="mt-2">
             <DetailList
               rows={[
                 { label: "Last Inspection", value: row.lastInspection, always: true },
@@ -131,10 +153,6 @@ export function AssetReportPanel({ row, onClose }: { row: ReportRow; onClose: ()
                 { label: "Inspection Type", value: report.inspection.type },
                 { label: "Inspected By", value: report.inspection.inspectedBy },
                 { label: "Overall Condition", value: report.inspection.overallCondition },
-              ]}
-            />
-            <DetailList
-              rows={[
                 { label: "Dust Thickness", value: report.inspection.dustThickness },
                 { label: "Type of Dust", value: report.inspection.dustType },
                 { label: "Hotspot Temperature", value: report.inspection.hotspot },
@@ -142,73 +160,68 @@ export function AssetReportPanel({ row, onClose }: { row: ReportRow; onClose: ()
                 { label: "Recommended Action", value: report.inspection.recommendedAction },
               ]}
             />
-          </div>
-        </TabsContent>
+          </TabsContent>
 
-        <TabsContent value="hygiene" className="mt-2">
-          {/* Point specific, and no score: the client was explicit that the
-              hygiene report carries none — see report-data.ts */}
-          <ul className="grid gap-x-8 sm:grid-cols-2">
-            {row.hygiene.map((point) => (
-              <li
-                key={point.check}
-                className="flex items-center justify-between gap-2 border-b py-1.5 text-sm last:border-0"
-              >
-                <span className="flex min-w-0 items-center gap-2">
-                  <span className={cn("size-2 shrink-0 rounded-full", findingLook[point.finding].dot)} />
-                  <span className="truncate">{point.check}</span>
-                </span>
-                <span className="shrink-0 text-xs text-muted-foreground">{point.finding}</span>
-              </li>
-            ))}
-          </ul>
-        </TabsContent>
+          <TabsContent value="hygiene" className="mt-2">
+            {/* Point specific, and no score: the client was explicit that the
+                hygiene report carries none — see report-data.ts */}
+            <ul className="text-sm">
+              {row.hygiene.map((point) => (
+                <li
+                  key={point.check}
+                  className="flex items-center justify-between gap-2 border-b py-1.5 last:border-0"
+                >
+                  <span className="flex min-w-0 items-center gap-2">
+                    <span className={cn("size-2 shrink-0 rounded-full", findingLook[point.finding].dot)} />
+                    <span className="truncate">{point.check}</span>
+                  </span>
+                  <span className="shrink-0 text-xs text-muted-foreground">{point.finding}</span>
+                </li>
+              ))}
+            </ul>
+          </TabsContent>
 
-        <TabsContent value="maintenance" className="mt-2">
-          {report.maintenance.length ? (
-            <Table>
-              <TableHeader>
-                <TableRow className="hover:bg-transparent">
-                  <TableHead className={th}>Date</TableHead>
-                  <TableHead className={th}>Type</TableHead>
-                  <TableHead className={th}>By</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {report.maintenance.map((m) => (
-                  <TableRow key={m.date}>
-                    <TableCell className={cn(td, "whitespace-nowrap tabular-nums")}>{m.date}</TableCell>
-                    <TableCell className={td}>{m.type}</TableCell>
-                    <TableCell className={cn(td, "text-muted-foreground")}>{m.by}</TableCell>
+          <TabsContent value="maintenance" className="mt-2">
+            {report.maintenance.length ? (
+              <Table>
+                <TableHeader>
+                  <TableRow className="hover:bg-transparent">
+                    <TableHead className={th}>Date</TableHead>
+                    <TableHead className={th}>Type</TableHead>
+                    <TableHead className={th}>By</TableHead>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          ) : (
-            <p className="py-4 text-center text-sm text-muted-foreground">No maintenance recorded against this asset.</p>
-          )}
-          <DetailList
-            className="mt-2"
-            rows={[
-              { label: "Next Maintenance Due", value: row.nextMaintenanceDue },
-              { label: "Maintenance Type", value: row.maintenanceType },
-            ]}
-          />
-        </TabsContent>
-      </Tabs>
+                </TableHeader>
+                <TableBody>
+                  {report.maintenance.map((m) => (
+                    <TableRow key={m.date}>
+                      <TableCell className={cn(td, "whitespace-nowrap tabular-nums")}>{m.date}</TableCell>
+                      <TableCell className={td}>{m.type}</TableCell>
+                      <TableCell className={cn(td, "text-muted-foreground")}>{m.by}</TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            ) : (
+              <p className="py-4 text-center text-sm text-muted-foreground">
+                No maintenance recorded against this asset.
+              </p>
+            )}
+            <DetailList
+              className="mt-2"
+              rows={[
+                { label: "Next Maintenance Due", value: row.nextMaintenanceDue },
+                { label: "Maintenance Type", value: row.maintenanceType },
+              ]}
+            />
+          </TabsContent>
+        </Tabs>
 
-      <div className="mt-3 flex flex-wrap justify-end gap-2 border-t pt-3">
-        <Button asChild variant="outline" size="sm">
-          <Link to={`/assets/${asset.id}`}>
-            <ExternalLink /> Full asset
-          </Link>
-        </Button>
         <Button
           type="button"
-          size="sm"
+          className="w-full"
           onClick={() => toast.info("Report generation is a Phase-1 server job; nothing is produced on the tablet yet.")}
         >
-          <Download /> Download PDF
+          <Download /> Download Report (PDF)
         </Button>
       </div>
     </aside>

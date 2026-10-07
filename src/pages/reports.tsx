@@ -540,13 +540,6 @@ function ReportTable({
     <div className="rounded-lg bg-card p-3 shadow-xs ring-1 ring-foreground/10">
       <div className="mb-3 grid grid-cols-2 gap-3 lg:grid-cols-5">{kpis}</div>
 
-      {/* The selected asset's report opens here, directly on top of the table */}
-      {selected ? (
-        <div className="mb-3">
-          <AssetReportPanel row={selected} onClose={onClose} />
-        </div>
-      ) : null}
-
       <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
         <h3 className="text-base font-semibold text-brand-navy dark:text-foreground">{title}</h3>
         <Button
@@ -558,6 +551,15 @@ function ReportTable({
           <Download /> Export
         </Button>
       </div>
+
+      {/* The report floats over the table rather than displacing it, so the row
+          it belongs to stays exactly where it was */}
+      <div className="relative">
+        {selected ? (
+          <div className="absolute inset-x-0 top-0 z-20 lg:inset-x-auto lg:right-0 lg:w-[30rem]">
+            <AssetReportPanel row={selected} onClose={onClose} />
+          </div>
+        ) : null}
 
       <div className="overflow-x-auto">
         <Table>
@@ -613,6 +615,7 @@ function ReportTable({
             ) : null}
           </TableBody>
         </Table>
+      </div>
       </div>
 
       <TablePager
