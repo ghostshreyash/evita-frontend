@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { suggestedDocumentNames, suggestedImageNames } from "@/data/master-data"
+import { urlFor } from "@/lib/object-url"
 import { missingUploads, type AssetFormValues, type AssetUpload } from "@/pages/assets/schemas"
 
 const IMAGE_TYPES = "image/png,image/jpeg"
@@ -437,7 +438,8 @@ function IconAction({
 
 const size = (file: File) => `${(file.size / 1024 / 1024).toFixed(1)} MB`
 
-const preview = (item: AssetUpload) => window.open(URL.createObjectURL(item.file), "_blank", "noopener")
+/** Reuses the tile's own URL rather than minting a fresh one on every click */
+const preview = (item: AssetUpload) => window.open(urlFor(item.file), "_blank", "noopener")
 
 /** Rejects an oversized file with a message, rather than failing quietly at sync */
 function within(file: File, limitMb: number) {
