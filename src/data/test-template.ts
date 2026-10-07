@@ -6,8 +6,9 @@
  * Phase 1 captures asset images at multiple angles, thermography at multiple
  * points and the fire prevention system, plus the contamination and physical
  * hygiene assessment the Asset Health Report is built from. Electrical
- * parameters and Partial Discharge are Phase 2: shown as locked sections so the
- * screen and the data model already have room for them.
+ * parameters and Partial Discharge are Phase 2: the capture screen keeps a
+ * disabled Partial Discharge tab so the flow and the data model already have
+ * room for them.
  *
  * Stands in for `GET /api/v1/master-data` (parameter templates per Asset Type).
  * Every limit below is a working placeholder: the client was explicit that the
@@ -135,7 +136,7 @@ export const hygieneChecks = [
 export const fpsStatuses = ["Healthy / Normal", "Alarming", "At Risk", "Not Tested"] as const
 export type FpsStatus = (typeof fpsStatuses)[number]
 
-/* ---------- Phase 2: shown locked so the template already has room ---------- */
+/* ---------- Phase 2: what the disabled Partial Discharge tab will hold ---------- */
 
 export const phase2Parameters = [
   { label: "Partial Discharge", unit: "dB", method: "Device (Bluetooth)" },
