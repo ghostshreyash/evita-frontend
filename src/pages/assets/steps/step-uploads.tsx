@@ -19,9 +19,6 @@ const DOCUMENT_TYPES = "application/pdf,image/png,image/jpeg"
 const MAX_IMAGE_MB = 5
 const MAX_DOCUMENT_MB = 10
 
-const IMAGE_LIST = "suggested-image-names"
-const DOCUMENT_LIST = "suggested-document-names"
-
 /** Files picked but not yet named; the dialog below collects the names */
 type Pending = { kind: "image" | "document"; files: File[] }
 
@@ -261,30 +258,28 @@ function NameUploadsDialog({
                   autoFocus={i === 0}
                   value={names[i] ?? ""}
                   maxLength={60}
-                  list={isImage ? IMAGE_LIST : DOCUMENT_LIST}
                   placeholder={isImage ? "e.g. Front View" : "e.g. Manufacturer Datasheet"}
                   aria-invalid={!(names[i] ?? "").trim()}
                   onChange={(e) => setNames(names.map((n, j) => (j === i ? e.target.value : n)))}
                 />
-                <span className="mt-0.5 block truncate text-xs text-muted-foreground" title={file.name}>
+                <div className="mt-1.5 flex flex-wrap gap-1">
+                  {(isImage ? suggestedImageNames : suggestedDocumentNames).map((suggestion) => (
+                    <Chip
+                      key={suggestion}
+                      selected={names[i] === suggestion}
+                      onClick={() => setNames(names.map((n, j) => (j === i ? suggestion : n)))}
+                    >
+                      {suggestion}
+                    </Chip>
+                  ))}
+                </div>
+                <span className="mt-1 block truncate text-xs text-muted-foreground" title={file.name}>
                   {file.name} · {size(file)}
                 </span>
               </div>
             </li>
           ))}
         </ul>
-
-        {/* Suggestions for the boxes above; typing anything else is fine */}
-        <datalist id={IMAGE_LIST}>
-          {suggestedImageNames.map((name) => (
-            <option key={name} value={name} />
-          ))}
-        </datalist>
-        <datalist id={DOCUMENT_LIST}>
-          {suggestedDocumentNames.map((name) => (
-            <option key={name} value={name} />
-          ))}
-        </datalist>
 
         <DialogFooter>
           <Button type="button" variant="outline" onClick={onCancel}>
@@ -296,6 +291,33 @@ function NameUploadsDialog({
         </DialogFooter>
       </DialogContent>
     </Dialog>
+  )
+}
+
+/** A tappable suggestion. Fills the name box; typing anything else is fine. */
+function Chip({
+  selected,
+  onClick,
+  children,
+}: {
+  selected: boolean
+  onClick: () => void
+  children: React.ReactNode
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-pressed={selected}
+      className={cn(
+        "rounded-full px-2.5 py-1 text-xs font-medium ring-1 transition-colors",
+        selected
+          ? "bg-primary text-primary-foreground ring-primary"
+          : "bg-muted/60 text-muted-foreground ring-foreground/10 hover:bg-muted hover:text-foreground"
+      )}
+    >
+      {children}
+    </button>
   )
 }
 

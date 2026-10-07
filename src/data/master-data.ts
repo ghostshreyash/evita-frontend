@@ -438,6 +438,9 @@ export const yesNo = ["Yes", "No"] as const
  * Suggestions, not a fixed set. What is available varies from asset to asset
  * and site to site, so the engineer names each upload themselves and these only
  * save them typing the common ones - see the client's answer of 07-10-2026.
+ *
+ * Kept to six apiece: they are offered as tappable chips under the name box, so
+ * a longer list would wrap into a wall of them on a tablet.
  */
 export const suggestedImageNames = [
   "Front View",
@@ -445,20 +448,16 @@ export const suggestedImageNames = [
   "Nameplate",
   "Panel / Accessories",
   "Overall Area",
-  "Rating Plate",
-  "Earthing Connection",
   "Cable Termination",
 ] as const
 
 export const suggestedDocumentNames = [
-  "Nameplate Photo (Close-up)",
+  "Nameplate Photo",
   "Manufacturer Datasheet",
   "Installation Report",
-  "Single Line Diagram (SLD)",
+  "Single Line Diagram",
   "Warranty Certificate",
   "Test Report",
-  "Commissioning Certificate",
-  "Maintenance History",
 ] as const
 
 /* ---------- Work ---------- */
