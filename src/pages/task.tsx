@@ -29,7 +29,7 @@ import { cn } from "cn"
 import { Timeline } from "@/components/common/detail-view"
 import { CategoryIcon } from "@/components/common/category-icon"
 import { HealthRing, TaskPanel, TaskStepper } from "@/components/evita/field-kit"
-import { InspectionForm } from "@/components/evita/inspection-form"
+import { InspectionForm, ScoreBreakdown } from "@/components/evita/inspection-form"
 import { JobStatusBadge } from "@/components/evita/job-action"
 import { MaintenanceForm } from "@/components/evita/maintenance-form"
 import { InspectionRecord, MaintenanceRecord } from "@/components/evita/work-summary"
@@ -241,12 +241,13 @@ export function TaskPage() {
           <OutcomeBanner job={job} assetTag={detail?.assetTag} />
           <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_19rem]">
             <div className="min-w-0 space-y-5">
-              {inspection ? <InspectionRecord detail={inspection} /> : maintenance ? <MaintenanceRecord detail={maintenance} /> : null}
+              {inspection ? <InspectionRecord detail={inspection} activity={job.activity} /> : maintenance ? <MaintenanceRecord detail={maintenance} /> : null}
             </div>
             <aside className="space-y-5">
               {inspection?.result ? (
                 <TaskPanel icon={Activity} title="Health & Condition">
                   <HealthRing score={inspection.result.healthScore} />
+                  {inspection.result.breakdown ? <div className="mt-4"><ScoreBreakdown breakdown={inspection.result.breakdown} /></div> : null}
                   <ul className="mt-4 list-disc space-y-1 pl-5 text-sm">
                     {inspection.result.recommendedActions.map((a) => <li key={a}>{a}</li>)}
                   </ul>
