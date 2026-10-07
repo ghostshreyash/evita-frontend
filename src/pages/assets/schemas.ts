@@ -47,21 +47,24 @@ export const assetSchema = z.object({
   /*
    * Step 2: Technical Details.
    *
-   * Only Operational Status is mandatory here. The client's answer lists the
-   * mandatory fields exactly - Enterprise, Plant, Location/Area, Department,
-   * Asset Category, Asset Tag/Name, Asset Criticality and Operational Status -
-   * and no rating is among them, so a panel whose nameplate is unreadable can
-   * still be registered and completed later.
+   * Which fields carry a * follows the approved mockup: the ratings a nameplate
+   * always shows are mandatory, and the ones that only apply to some asset types
+   * - vector group, impedance, insulation class, tap changer, oil type - are not.
+   *
+   * Note this is wider than the client's written answer, which named only eight
+   * mandatory fields across the whole wizard and no rating among them. The
+   * mockup is being followed here; if the answer governs instead, the six
+   * ratings below and Asset Condition drop back to optional.
    */
-  primaryVoltage: optionalNumeric("Rated voltage (primary)"),
-  primaryVoltageUnit: z.string().optional(),
-  secondaryVoltage: optionalNumeric("Rated voltage (secondary)"),
-  secondaryVoltageUnit: z.string().optional(),
-  capacity: optionalNumeric("Rated power / capacity"),
-  capacityUnit: z.string().optional(),
-  frequency: z.string().optional(),
-  phase: z.string().optional(),
-  cooling: z.string().optional(),
+  primaryVoltage: numeric("Rated voltage (primary)"),
+  primaryVoltageUnit: required("Unit"),
+  secondaryVoltage: numeric("Rated voltage (secondary)"),
+  secondaryVoltageUnit: required("Unit"),
+  capacity: numeric("Rated power / capacity"),
+  capacityUnit: required("Unit"),
+  frequency: required("Frequency"),
+  phase: required("Phase"),
+  cooling: required("Cooling type"),
   vectorGroup: z.string().optional(),
   impedance: optionalNumeric("Impedance"),
   insulation: z.string().optional(),
@@ -70,7 +73,7 @@ export const assetSchema = z.object({
 
   /** Mandatory, per the client's answer */
   operationalStatus: required("Operational status"),
-  condition: z.string().optional(),
+  condition: required("Asset condition"),
   commissioned: z.string().optional(),
   load: optionalNumeric("Current load"),
   /* Defaults to the plant's coordinates; capturing them at the asset is optional */

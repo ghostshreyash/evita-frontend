@@ -55,6 +55,7 @@ export function StepTechnical({ form }: { form: UseFormReturn<AssetFormValues> }
               <MeasureField
                 control={control}
                 name="primaryVoltage"
+                required
                 unitName="primaryVoltageUnit"
                 label="Rated Voltage (Primary)"
                 units={voltageUnits}
@@ -63,6 +64,7 @@ export function StepTechnical({ form }: { form: UseFormReturn<AssetFormValues> }
               <MeasureField
                 control={control}
                 name="secondaryVoltage"
+                required
                 unitName="secondaryVoltageUnit"
                 label="Rated Voltage (Secondary)"
                 units={voltageUnits}
@@ -71,14 +73,15 @@ export function StepTechnical({ form }: { form: UseFormReturn<AssetFormValues> }
               <MeasureField
                 control={control}
                 name="capacity"
+                required
                 unitName="capacityUnit"
                 label="Rated Power / Capacity"
                 units={powerUnits}
                 placeholder="1600"
               />
-              <SelectField control={control} name="frequency" label="Frequency" options={frequencyValues} />
-              <SelectField control={control} name="phase" label="Phase" options={phaseTypes} />
-              <SelectField control={control} name="cooling" label="Cooling Type" options={coolingTypes} />
+              <SelectField control={control} name="frequency" label="Frequency" required options={frequencyValues} />
+              <SelectField control={control} name="phase" label="Phase" required options={phaseTypes} />
+              <SelectField control={control} name="cooling" label="Cooling Type" required options={coolingTypes} />
               <SelectField control={control} name="vectorGroup" label="Vector Group" options={vectorGroups} />
               <TextField control={control} name="impedance" label="Impedance (%)" inputMode="decimal" placeholder="6.25" />
               <SelectField control={control} name="insulation" label="Insulation Class" options={insulationClasses} />
@@ -97,7 +100,7 @@ export function StepTechnical({ form }: { form: UseFormReturn<AssetFormValues> }
                 required
                 options={assetOperationalStatus}
               />
-              <SelectField control={control} name="condition" label="Asset Condition" options={assetConditions} />
+              <SelectField control={control} name="condition" label="Asset Condition" required options={assetConditions} />
 
               <TextField control={control} name="load" label="Current Load (kVA)" inputMode="decimal" placeholder="950" />
               <DateField control={control} name="commissioned" label="Commissioning Date" />
