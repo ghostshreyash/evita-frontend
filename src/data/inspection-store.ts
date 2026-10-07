@@ -15,8 +15,8 @@ import { emptyCapture } from "@/lib/testing"
  */
 type Snapshot = { rows: TaskRow[]; details: Record<string, InspectionDetail> }
 
-// v2: records now carry the structured Testing & Measurements capture
-const saved = loadSnapshot<Snapshot>("inspections.v2")
+// v3: Alarming replaces Attention Required in the stored statuses
+const saved = loadSnapshot<Snapshot>("inspections.v3")
 let rows: TaskRow[] = saved?.rows ?? inspectionActivities
 let details: Record<string, InspectionDetail> = saved?.details ?? Object.fromEntries(rows.map((r) => [r.id, inspectionDetail(r)]))
 
@@ -26,7 +26,7 @@ const subscribe = (listener: () => void) => {
   return () => void listeners.delete(listener)
 }
 const emit = () => {
-  saveSnapshot("inspections.v2", { rows, details } satisfies Snapshot)
+  saveSnapshot("inspections.v3", { rows, details } satisfies Snapshot)
   listeners.forEach((listener) => listener())
 }
 

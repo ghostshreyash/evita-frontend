@@ -202,7 +202,7 @@ export function inspectionDetail(row: TaskRow): InspectionDetail {
     }
     const installed = random() < 0.7
     capture.fps = installed
-      ? { installed: "Yes", status: random() < 0.8 ? "Healthy / Normal" : "Attention Required", remarks: "Aerosol suppression module, panel-mounted" }
+      ? { installed: "Yes", status: random() < 0.8 ? "Healthy / Normal" : "Alarming", remarks: "Aerosol suppression module, panel-mounted" }
       : { installed: "No", remarks: "" }
   }
   const ids = new Set(detail.evidence.map((e) => e.id))
