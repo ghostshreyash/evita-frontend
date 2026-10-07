@@ -57,7 +57,7 @@ export function Topbar() {
         </span>
       </div>
 
-      <div className={cn(chip, "bg-white/5 font-mono ring-white/15 max-sm:hidden")}>
+      <div className={cn(chip, "bg-white/5 tabular-nums ring-white/15 max-sm:hidden")}>
         <Clock className="size-4 text-topbar-muted-foreground" />
         {format(now, "HH:mm")} • {format(now, "dd MMM")}
       </div>

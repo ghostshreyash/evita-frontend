@@ -138,7 +138,7 @@ export function MaintenanceForm({ job, detail }: { job: Job; detail: Maintenance
                           placeholder="Qty"
                           value={row.quantity ? String(row.quantity) : ""}
                           onChange={(e) => setItems((rows) => rows.map((r) => (r.name === x.name ? { ...r, quantity: Number(e.target.value.replace(/[^\d.]/g, "")) || 0 } : r)))}
-                          className="bg-card font-mono tabular-nums"
+                          className="bg-card tabular-nums"
                         />
                         <span className="w-10 text-sm font-medium text-muted-foreground">{x.unit}</span>
                       </div>

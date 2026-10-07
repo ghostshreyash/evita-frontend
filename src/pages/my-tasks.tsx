@@ -187,7 +187,7 @@ function MyTasks({ kind, title = "My Tasks" }: { kind?: JobKind; title?: string 
             <TableBody>
               {shown.map((j) => (
                 <TableRow key={j.id} onClick={() => navigate(`/my-tasks/${j.id}`)} className={cn("h-20 cursor-pointer", isOverdue(j) && "bg-critical-soft/40 hover:bg-critical-soft/60")}>
-                  <TableCell className={cn(td, "font-mono font-bold whitespace-nowrap max-lg:hidden")}>{j.id}</TableCell>
+                  <TableCell className={cn(td, "tabular-nums font-bold whitespace-nowrap max-lg:hidden")}>{j.id}</TableCell>
                   <TableCell className={cn(td, "whitespace-normal")}>
                     <span className="block font-semibold text-brand-navy dark:text-foreground">{j.asset}</span>
                     <span className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1">
@@ -206,7 +206,7 @@ function MyTasks({ kind, title = "My Tasks" }: { kind?: JobKind; title?: string 
                       <Clock className="size-4 shrink-0" />
                       {isToday(j.date) ? "Today" : format(parseDay(j.date), "d MMM yyyy")}
                     </span>
-                    <span className={cn("block pl-5.5 font-mono text-xs", isOverdue(j) ? "text-critical" : "text-muted-foreground")}>
+                    <span className={cn("block pl-5.5 tabular-nums text-xs", isOverdue(j) ? "text-critical" : "text-muted-foreground")}>
                       {slotLabel(j.slot)}
                       {isOverdue(j) ? " · Overdue" : ""}
                     </span>

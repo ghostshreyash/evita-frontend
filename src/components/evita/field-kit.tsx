@@ -219,7 +219,7 @@ export function EvidenceStrip({
 export function Checklist({ items, title = "Submission Checklist" }: { items: { label: string; done: boolean }[]; title?: string }) {
   return (
     <div>
-      <h4 className="mb-2.5 text-xs font-bold tracking-[0.08em] text-muted-foreground uppercase">{title}</h4>
+      <h4 className="mb-2.5 text-xs font-bold tracking-wide text-muted-foreground uppercase">{title}</h4>
       <ul className="space-y-2">
         {items.map((i) => (
           <li

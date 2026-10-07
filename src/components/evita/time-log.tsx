@@ -55,11 +55,11 @@ export function TimeLog({
       {/* Big live clock, as on a stopwatch */}
       <div className={cn("flex flex-wrap items-center justify-between gap-4 rounded-2xl px-5 py-4 ring-1", running ? "bg-healthy-soft/60 ring-healthy/25" : "bg-muted/50 ring-foreground/10")}>
         <div>
-          <div className="flex items-center gap-2 text-xs font-bold tracking-widest text-muted-foreground uppercase">
+          <div className="flex items-center gap-2 text-xs font-bold tracking-wide text-muted-foreground uppercase">
             <span className={cn("size-2.5 rounded-full", running ? "animate-pulse bg-healthy" : "bg-neutral")} />
             {running ? "Work in progress" : entries.length ? "Paused" : "Not started"}
           </div>
-          <div className="mt-1 font-mono text-4xl font-bold tracking-tight text-brand-navy tabular-nums dark:text-foreground">{formatSpan(total)}</div>
+          <div className="mt-1 tabular-nums text-4xl font-bold tracking-tight text-brand-navy dark:text-foreground">{formatSpan(total)}</div>
           <div className="mt-0.5 text-sm text-muted-foreground">Total time on the job · {entries.length} entr{entries.length === 1 ? "y" : "ies"}</div>
         </div>
         {readOnly ? null : running ? (
@@ -83,7 +83,7 @@ export function TimeLog({
             <span className="text-right">Status</span>
           </li>
           {entries.map((e, i) => (
-            <li key={e.start} className="grid grid-cols-[2.5rem_minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)_6rem] items-center gap-2 border-t px-4 py-3 font-mono text-sm tabular-nums">
+            <li key={e.start} className="grid grid-cols-[2.5rem_minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)_6rem] items-center gap-2 border-t px-4 py-3 tabular-nums text-sm">
               <span className="text-muted-foreground">{i + 1}</span>
               <span>{at(e.start)}</span>
               <span>{e.end ? at(e.end) : <span className="text-muted-foreground">—</span>}</span>
