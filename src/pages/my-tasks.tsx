@@ -40,26 +40,29 @@ const sortValue: Record<SortKey, (j: Job) => string | number> = {
   status: (j) => statusRank[j.field],
 }
 
+const kinds: JobKind[] = ["inspection", "maintenance"]
+
 /**
- * The ELPREMAR's book of work from both OCC queues: inspections and
- * maintenance. Also serves Testing & Measurements (inspections only) and
- * Maintenance Activities (maintenance only) through `kind`.
+ * The ELPREMAR's book of work from both OCC queues: inspections (Testing &
+ * Measurements) and maintenance activities, told apart by the Work filter.
  *
  * The dashboard links here with `?status=` (Open, Overdue, In Progress,
- * Completed, Approved) or `?date=today`, which preset the filters.
+ * Completed, Approved), `?type=` (inspection, maintenance) or `?date=today`,
+ * which preset the filters.
  */
-export function MyTasksPage(props: { kind?: JobKind; title?: string }) {
+export function MyTasksPage() {
   // The dashboard can link here while My Tasks is already open; a new query string resets the filters
   const [params] = useSearchParams()
-  return <MyTasks key={params.toString()} {...props} />
+  return <MyTasks key={params.toString()} />
 }
 
-function MyTasks({ kind, title = "My Tasks" }: { kind?: JobKind; title?: string }) {
+function MyTasks() {
   const navigate = useNavigate()
   const jobs = useMyJobs()
   const [params] = useSearchParams()
 
   const initialStatus = params.get("status")
+  const initialType = params.get("type")
   const [status, setStatus] = useState<FieldStatus | "all">(fieldStatuses.includes(initialStatus as FieldStatus) ? (initialStatus as FieldStatus) : "all")
   const [range, setRange] = useState<DateRange | undefined>(() => {
     if (params.get("date") === "week") return thisWeek()
@@ -68,20 +71,19 @@ function MyTasks({ kind, title = "My Tasks" }: { kind?: JobKind; title?: string 
     return { from: today, to: today }
   })
   const [query, setQuery] = useState("")
-  const [type, setType] = useState<JobKind | "all">("all")
+  const [type, setType] = useState<JobKind | "all">(kinds.includes(initialType as JobKind) ? (initialType as JobKind) : "all")
   const [sort, setSort] = useState<Sort<SortKey>>(null)
   const [page, setPage] = useState(1)
   const [pageSize, setPageSize] = useState(10)
 
-  /** The jobs this page covers, before the status, date and search filters */
-  const scoped = useMemo(() => jobs.filter((j) => (kind ? j.kind === kind : type === "all" || j.kind === type)), [jobs, kind, type])
+  /** The kind of work on view, before the status, date and search filters */
+  const scoped = useMemo(() => jobs.filter((j) => type === "all" || j.kind === type), [jobs, type])
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase()
     const from = range?.from && startOfDay(range.from)
     const to = startOfDay(range?.to ?? range?.from ?? new Date(0))
-    return jobs.filter((j) => {
-      if (kind ? j.kind !== kind : type !== "all" && j.kind !== type) return false
+    return scoped.filter((j) => {
       if (status !== "all" && j.field !== status) return false
       if (from) {
         const on = parseDay(j.date)
@@ -90,7 +92,7 @@ function MyTasks({ kind, title = "My Tasks" }: { kind?: JobKind; title?: string 
       if (!q) return true
       return [j.id, j.asset, j.plant, j.enterprise, j.activity, j.date, j.priority, fieldStatusLook[j.field].label].some((f) => f.toLowerCase().includes(q))
     })
-  }, [jobs, kind, type, status, range, query])
+  }, [scoped, status, range, query])
 
   // Default order: what needs doing first, then by time
   const sorted = useMemo(
@@ -112,15 +114,9 @@ function MyTasks({ kind, title = "My Tasks" }: { kind?: JobKind; title?: string 
   return (
     <div>
       <PageHeader
-        title={title}
-        description={
-          kind === "inspection"
-            ? "Inspections and tests assigned to you. Start one to record readings, observations and evidence."
-            : kind === "maintenance"
-              ? "Maintenance assigned to you. Record the work and submit it to OCC for approval."
-              : "Everything OCC has assigned to you, inspections and maintenance together."
-        }
-        breadcrumbs={[{ label: title }]}
+        title="My Tasks"
+        description="Everything OCC has assigned to you. Filter by Work for Testing & Measurements (inspections) or Maintenance Activities."
+        breadcrumbs={[{ label: "My Tasks" }]}
       />
 
       {/* ---------- Where the work stands; a tile applies that status filter ---------- */}
@@ -149,17 +145,15 @@ function MyTasks({ kind, title = "My Tasks" }: { kind?: JobKind; title?: string 
             onChange={(v) => reset(() => setStatus(v as typeof status))}
             options={fieldStatuses.map((s) => ({ value: s, label: fieldStatusLook[s].label }))}
           />
-          {!kind ? (
-            <FilterSelect
-              label="Work"
-              value={type}
-              onChange={(v) => reset(() => setType(v as typeof type))}
-              options={[
-                { value: "inspection", label: "Inspections" },
-                { value: "maintenance", label: "Maintenance" },
-              ]}
-            />
-          ) : null}
+          <FilterSelect
+            label="Work"
+            value={type}
+            onChange={(v) => reset(() => setType(v as typeof type))}
+            options={[
+              { value: "inspection", label: "Testing & Measurements" },
+              { value: "maintenance", label: "Maintenance Activities" },
+            ]}
+          />
           <DateRangeFilter label="Due" range={range} onApply={(r) => reset(() => setRange(r))} />
           <Button
             variant="outline"
