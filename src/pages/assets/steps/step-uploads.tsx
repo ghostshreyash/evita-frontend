@@ -1,6 +1,6 @@
-import { useRef } from "react"
+import { useRef, useState } from "react"
 import type { UseFormReturn } from "react-hook-form"
-import { Camera, Eye, FileText, ImagePlus, Paperclip, Trash2 } from "lucide-react"
+import { Camera, Eye, FileText, Paperclip, Plus, Trash2, UploadCloud } from "lucide-react"
 import { cn } from "cn"
 import { toast } from "sonner"
 
@@ -17,17 +17,20 @@ const DOCUMENT_TYPES = "application/pdf,image/png,image/jpeg"
 const MAX_IMAGE_MB = 5
 const MAX_DOCUMENT_MB = 10
 
+const IMAGE_LIST = "suggested-image-names"
+const DOCUMENT_LIST = "suggested-document-names"
+
 /**
  * Step 3 of 4: the photographs and paperwork that back the ratings.
  *
  * There is no fixed set of slots to fill. The client confirmed on 07-10-2026
  * that what is available varies from asset to asset and site to site, so the
  * engineer adds as many photographs and documents as the asset actually has and
- * names each one. The names offered below are suggestions that save typing on
- * the common ones, not a checklist to satisfy.
+ * names each one. The old fixed labels survive as suggestions on the name box.
  *
- * A name is seeded from the file name on pick, so nothing is ever left unnamed
- * by accident, and stays editable.
+ * Photographs stay a tile grid rather than becoming a list of form rows: on a
+ * tablet the picture is what is being checked, so it leads and the name sits
+ * under it. Documents are a list, because a file name is all there is to see.
  */
 export function StepUploads({ form }: { form: UseFormReturn<AssetFormValues> }) {
   const values = form.watch()
@@ -43,46 +46,126 @@ export function StepUploads({ form }: { form: UseFormReturn<AssetFormValues> }) 
     <div className="grid gap-3 xl:grid-cols-[minmax(0,1fr)_22rem]">
       <StepCard
         title="Step 3 of 4: Images & Documents"
-        description="Add whatever this asset actually has, and name each one so the next engineer knows what they are looking at."
+        description="Add what this asset actually has, and name each one so the next engineer knows what they are looking at."
       >
         {/* ---------- Photographs ---------- */}
-        <UploadSection
+        <Section
           icon={Camera}
           title="Asset Images"
-          hint={`JPG or PNG, up to ${MAX_IMAGE_MB} MB each`}
-          addLabel="Add photograph"
-          accept={IMAGE_TYPES}
-          limitMb={MAX_IMAGE_MB}
-          items={images}
-          suggestions={suggestedImageNames}
-          onChange={setImages}
-          empty="No photographs yet. Capture the asset from the angles that matter — at least one is required."
-          render={(item) => (
-            <div className="h-24 w-32 shrink-0 overflow-hidden rounded-md ring-1 ring-foreground/10">
-              <AssetPhoto file={item.file} label={item.name} />
-            </div>
-          )}
-        />
+          count={images.length}
+          hint={`JPG or PNG · up to ${MAX_IMAGE_MB} MB each`}
+        >
+          <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 lg:grid-cols-4">
+            {images.map((item) => (
+              <figure key={item.id} className="overflow-hidden rounded-lg ring-1 ring-foreground/10">
+                <div className="relative h-28 bg-muted/40">
+                  <AssetPhoto file={item.file} label={item.name} />
+                  <div className="absolute top-1 right-1 flex gap-1">
+                    {item.file ? (
+                      <IconAction label={`Preview ${item.name}`} onClick={() => preview(item)}>
+                        <Eye />
+                      </IconAction>
+                    ) : null}
+                    <IconAction
+                      label={`Remove ${item.name}`}
+                      destructive
+                      onClick={() => setImages(images.filter((i) => i.id !== item.id))}
+                    >
+                      <Trash2 />
+                    </IconAction>
+                  </div>
+                </div>
+                <figcaption className="p-1.5">
+                  <Input
+                    aria-label="Photograph name"
+                    value={item.name}
+                    maxLength={60}
+                    list={IMAGE_LIST}
+                    placeholder="Name this photo"
+                    aria-invalid={!item.name.trim()}
+                    onChange={(e) => setImages(rename(images, item.id, e.target.value))}
+                    className="h-9 text-sm"
+                  />
+                  <span className="mt-0.5 block truncate text-xs text-muted-foreground" title={item.file?.name}>
+                    {item.file?.name}
+                  </span>
+                </figcaption>
+              </figure>
+            ))}
+
+            <AddTile
+              label="Add photographs"
+              note="or drag them here"
+              accept={IMAGE_TYPES}
+              onAdd={(files) => setImages([...images, ...toUploads(files, images.length, MAX_IMAGE_MB)])}
+            />
+          </div>
+          {images.length === 0 ? (
+            <p className="mt-2 text-sm text-muted-foreground">
+              At least one photograph is needed — capture the asset from whichever angles matter here.
+            </p>
+          ) : null}
+        </Section>
 
         {/* ---------- Documents ---------- */}
-        <UploadSection
+        <Section
           className="mt-3"
           icon={FileText}
           title="Documents"
-          hint={`PDF, JPG or PNG, up to ${MAX_DOCUMENT_MB} MB each`}
-          addLabel="Add document"
-          accept={DOCUMENT_TYPES}
-          limitMb={MAX_DOCUMENT_MB}
-          items={documents}
-          suggestions={suggestedDocumentNames}
-          onChange={setDocuments}
-          empty="No documents yet. Add the datasheet, test report or drawing if the site holds one."
-          render={() => (
-            <span className="flex size-12 shrink-0 items-center justify-center rounded-md bg-info-soft text-primary">
-              <Paperclip className="size-5" />
-            </span>
-          )}
-        />
+          count={documents.length}
+          hint={`PDF, JPG or PNG · up to ${MAX_DOCUMENT_MB} MB each`}
+        >
+          <ul className="space-y-2">
+            {documents.map((item) => (
+              <li key={item.id} className="flex items-center gap-2.5 rounded-lg p-2 ring-1 ring-foreground/10">
+                <span className="flex size-10 shrink-0 items-center justify-center rounded-md bg-info-soft text-primary">
+                  <Paperclip className="size-5" />
+                </span>
+                <span className="min-w-0 flex-1">
+                  <Input
+                    aria-label="Document name"
+                    value={item.name}
+                    maxLength={60}
+                    list={DOCUMENT_LIST}
+                    placeholder="Name this document"
+                    aria-invalid={!item.name.trim()}
+                    onChange={(e) => setDocuments(rename(documents, item.id, e.target.value))}
+                    className="h-9 text-sm"
+                  />
+                  <span className="mt-0.5 block truncate text-xs text-muted-foreground" title={item.file?.name}>
+                    {item.file?.name} · {size(item.file)}
+                  </span>
+                </span>
+                <span className="flex shrink-0 items-center gap-1">
+                  {item.file ? (
+                    <IconAction label={`Preview ${item.name}`} onClick={() => preview(item)}>
+                      <Eye />
+                    </IconAction>
+                  ) : null}
+                  <IconAction
+                    label={`Remove ${item.name}`}
+                    destructive
+                    onClick={() => setDocuments(documents.filter((d) => d.id !== item.id))}
+                  >
+                    <Trash2 />
+                  </IconAction>
+                </span>
+              </li>
+            ))}
+          </ul>
+
+          <AddTile
+            className={cn("h-20", documents.length && "mt-2")}
+            label="Add documents"
+            note="or drag them here"
+            accept={DOCUMENT_TYPES}
+            onAdd={(files) => setDocuments([...documents, ...toUploads(files, documents.length, MAX_DOCUMENT_MB)])}
+          />
+        </Section>
+
+        {/* One datalist per kind, shared by every name box in that section */}
+        <Suggestions id={IMAGE_LIST} names={suggestedImageNames} />
+        <Suggestions id={DOCUMENT_LIST} names={suggestedDocumentNames} />
       </StepCard>
 
       {/* ---------- Preview, which finally has a photograph to show ---------- */}
@@ -115,9 +198,9 @@ export function StepUploads({ form }: { form: UseFormReturn<AssetFormValues> }) 
         <CheckList
           title="Upload Checklist"
           items={[
-            { label: `At least one photograph (${missing.images} added)`, done: missing.images > 0 },
-            { label: `Documents attached (${missing.documents} added)`, done: missing.documents > 0 },
-            { label: "Every upload is named", done: missing.unnamed === 0 },
+            { label: "At least one photograph", done: missing.images > 0 },
+            { label: "Supporting documents attached", done: missing.documents > 0 },
+            { label: "Every upload named", done: missing.unnamed === 0 },
           ]}
         />
       </div>
@@ -127,126 +210,79 @@ export function StepUploads({ form }: { form: UseFormReturn<AssetFormValues> }) 
 
 /* ---------- Pieces ---------- */
 
-/**
- * A named list of uploads. Images and documents differ only in what they accept
- * and how a row is illustrated, so both are this one component.
- */
-function UploadSection({
+/** A titled block with a count and the format note, matching the other steps */
+function Section({
   icon: Icon,
   title,
+  count,
   hint,
-  addLabel,
-  accept,
-  limitMb,
-  items,
-  suggestions,
-  onChange,
-  empty,
-  render,
   className,
+  children,
 }: {
   icon: React.ComponentType<{ className?: string }>
   title: string
+  count: number
   hint: string
-  addLabel: string
+  className?: string
+  children: React.ReactNode
+}) {
+  return (
+    <section className={cn("rounded-lg ring-1 ring-foreground/10", className)}>
+      <h4 className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 rounded-t-lg bg-info-soft px-3 py-2">
+        <span className="flex items-center gap-2 text-base font-semibold text-brand-navy dark:text-foreground">
+          <Icon className="size-5 text-primary" />
+          {title}
+          <span className="rounded-full bg-background/70 px-2 py-0.5 text-xs font-semibold tabular-nums">{count}</span>
+        </span>
+        <span className="text-xs text-muted-foreground">{hint}</span>
+      </h4>
+      <div className="p-3">{children}</div>
+    </section>
+  )
+}
+
+/** The dashed tile that takes a click or a drop, as the mockup draws it */
+function AddTile({
+  label,
+  note,
+  accept,
+  onAdd,
+  className,
+}: {
+  label: string
+  note: string
   accept: string
-  limitMb: number
-  items: AssetUpload[]
-  suggestions: readonly string[]
-  onChange: (next: AssetUpload[]) => void
-  empty: string
-  /** The thumbnail or glyph shown beside the name */
-  render: (item: AssetUpload) => React.ReactNode
+  onAdd: (files: FileList | null) => void
   className?: string
 }) {
   const input = useRef<HTMLInputElement>(null)
-
-  const add = (files: FileList | null) => {
-    const picked = [...(files ?? [])].filter((f) => within(f, limitMb))
-    if (!picked.length) return
-    onChange([
-      ...items,
-      ...picked.map((file, i) => ({ id: `${file.name}-${items.length + i}-${file.size}`, name: nameFrom(file), file })),
-    ])
-  }
-
-  const rename = (id: string, name: string) => onChange(items.map((i) => (i.id === id ? { ...i, name } : i)))
-  const remove = (id: string) => onChange(items.filter((i) => i.id !== id))
+  const [over, setOver] = useState(false)
 
   return (
-    <section className={cn("rounded-lg ring-1 ring-foreground/10", className)}>
-      <h4 className="flex flex-wrap items-center justify-between gap-2 rounded-t-lg bg-info-soft px-3 py-2">
-        <span className="flex items-center gap-2 text-base font-semibold text-brand-navy dark:text-foreground">
-          <Icon className="size-5 text-primary" /> {title}
-          <span className="rounded-full bg-background/70 px-2 py-0.5 text-xs font-medium tabular-nums">{items.length}</span>
-        </span>
-        <span className="flex items-center gap-2">
-          <span className="text-xs text-muted-foreground">{hint}</span>
-          <Button type="button" size="sm" onClick={() => input.current?.click()}>
-            <ImagePlus /> {addLabel}
-          </Button>
-        </span>
-      </h4>
-
-      <div className="space-y-2 p-3">
-        {items.length === 0 ? (
-          <p className="py-4 text-center text-sm text-muted-foreground">{empty}</p>
-        ) : (
-          items.map((item) => (
-            <div key={item.id} className="flex flex-wrap items-center gap-3 rounded-lg p-2 ring-1 ring-foreground/10">
-              {render(item)}
-              <div className="min-w-48 flex-1">
-                <label htmlFor={`name-${item.id}`} className="text-xs font-medium text-muted-foreground">
-                  Name
-                </label>
-                <Input
-                  id={`name-${item.id}`}
-                  value={item.name}
-                  maxLength={60}
-                  list={`suggest-${title.replace(/\W/g, "")}`}
-                  onChange={(e) => rename(item.id, e.target.value)}
-                  aria-invalid={!item.name.trim()}
-                  placeholder="What is this?"
-                />
-                <p className="mt-0.5 truncate text-xs text-muted-foreground" title={item.file?.name}>
-                  {item.file?.name}
-                </p>
-              </div>
-              <span className="flex items-center gap-1">
-                {item.file ? (
-                  <Button
-                    type="button"
-                    size="icon-sm"
-                    variant="ghost"
-                    aria-label={`Preview ${item.name}`}
-                    onClick={() => window.open(URL.createObjectURL(item.file!), "_blank", "noopener")}
-                  >
-                    <Eye />
-                  </Button>
-                ) : null}
-                <Button
-                  type="button"
-                  size="icon-sm"
-                  variant="ghost"
-                  aria-label={`Remove ${item.name}`}
-                  onClick={() => remove(item.id)}
-                  className="text-critical"
-                >
-                  <Trash2 />
-                </Button>
-              </span>
-            </div>
-          ))
-        )}
-
-        {/* Typed into the name box; a suggestion saves typing without limiting it */}
-        <datalist id={`suggest-${title.replace(/\W/g, "")}`}>
-          {suggestions.map((name) => (
-            <option key={name} value={name} />
-          ))}
-        </datalist>
-      </div>
-
+    <button
+      type="button"
+      onClick={() => input.current?.click()}
+      onDragOver={(e) => {
+        e.preventDefault()
+        setOver(true)
+      }}
+      onDragLeave={() => setOver(false)}
+      onDrop={(e) => {
+        e.preventDefault()
+        setOver(false)
+        onAdd(e.dataTransfer.files)
+      }}
+      className={cn(
+        "flex min-h-28 w-full flex-col items-center justify-center gap-1 rounded-lg border-2 border-dashed px-2 text-center transition-colors",
+        over ? "border-primary bg-info-soft" : "border-input bg-muted/30 hover:border-primary hover:bg-accent",
+        className
+      )}
+    >
+      <span className="flex size-9 items-center justify-center rounded-full bg-background text-primary">
+        {over ? <UploadCloud className="size-5" /> : <Plus className="size-5" />}
+      </span>
+      <span className="text-sm font-medium">{label}</span>
+      <span className="text-xs text-muted-foreground">{note}</span>
       <input
         ref={input}
         type="file"
@@ -254,19 +290,70 @@ function UploadSection({
         accept={accept}
         className="sr-only"
         onChange={(e) => {
-          add(e.target.files)
+          onAdd(e.target.files)
           // Reset, so picking the same file twice still fires a change
           e.target.value = ""
         }}
       />
-    </section>
+    </button>
   )
 }
 
-/** The file name without its extension, as a first guess at what to call it */
-const nameFrom = (file: File) => file.name.replace(/\.[^.]+$/, "").replace(/[_-]+/g, " ").slice(0, 60)
+/** Small round button sitting over a thumbnail */
+function IconAction({
+  label,
+  destructive,
+  onClick,
+  children,
+}: {
+  label: string
+  destructive?: boolean
+  onClick: () => void
+  children: React.ReactNode
+}) {
+  return (
+    <Button
+      type="button"
+      size="icon-sm"
+      variant="secondary"
+      aria-label={label}
+      onClick={onClick}
+      className={cn("size-7 rounded-full bg-background/90 shadow-sm", destructive && "text-critical")}
+    >
+      {children}
+    </Button>
+  )
+}
 
-/** Rejects an oversized file with a message, rather than failing quietly at sync */
+function Suggestions({ id, names }: { id: string; names: readonly string[] }) {
+  return (
+    <datalist id={id}>
+      {names.map((name) => (
+        <option key={name} value={name} />
+      ))}
+    </datalist>
+  )
+}
+
+/* ---------- Helpers ---------- */
+
+const rename = (items: AssetUpload[], id: string, name: string) =>
+  items.map((i) => (i.id === id ? { ...i, name } : i))
+
+/** Picked files as named uploads, oversized ones rejected with a message */
+function toUploads(files: FileList | null, offset: number, limitMb: number): AssetUpload[] {
+  return [...(files ?? [])]
+    .filter((file) => within(file, limitMb))
+    .map((file, i) => ({ id: `${offset + i}-${file.size}-${file.name}`, name: nameFrom(file), file }))
+}
+
+/** The file name without its extension, as a first guess at what to call it */
+const nameFrom = (file: File) => file.name.replace(/\.[^.]+$/, "").replace(/[_-]+/g, " ").trim().slice(0, 60)
+
+const size = (file?: File) => (file ? `${(file.size / 1024 / 1024).toFixed(1)} MB` : "")
+
+const preview = (item: AssetUpload) => window.open(URL.createObjectURL(item.file), "_blank", "noopener")
+
 function within(file: File, limitMb: number) {
   if (file.size <= limitMb * 1024 * 1024) return true
   toast.error(`${file.name} is larger than ${limitMb} MB. Capture it again at a lower resolution.`)
