@@ -12,7 +12,7 @@ import { CategoryIcon } from "@/components/common/category-icon"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { assetSyncMeta, type AssetRecord } from "@/data/asset-data"
+import type { AssetRecord } from "@/data/asset-data"
 import { capturesOf, findAsset, profileOf, useAssetRows } from "@/data/asset-store"
 import { criticalityTone } from "@/data/occ-tables"
 import { healthBandFor } from "@/data/master-data"
@@ -74,8 +74,11 @@ function AssetDetail({ asset, onBack }: { asset: AssetRecord; onBack: () => void
         <span className={cn("rounded px-2 py-1 text-xs font-semibold", criticalityTone[asset.criticality])}>
           {asset.criticality} criticality
         </span>
-        <Badge variant={assetSyncMeta[asset.status].badge} className="h-auto rounded px-2 py-1 text-xs">
-          {assetSyncMeta[asset.status].label}
+        <Badge
+          variant={band ? healthStatus[band.tone].badge : "neutral"}
+          className="h-auto rounded px-2 py-1 text-xs"
+        >
+          {band ? `${band.label} · ${asset.health}` : "Onboarded"}
         </Badge>
         <span className="ml-auto text-sm text-muted-foreground">
           Onboarded <span className="font-medium text-foreground tabular-nums">{asset.onboarded}</span>

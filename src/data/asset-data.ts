@@ -32,18 +32,6 @@ import { enterpriseRecords, profileFor, type PlantProfile } from "@/data/occ-tab
 
 /* ---------- Types ---------- */
 
-/**
- * Whether the record has reached the central server. EVITA is used on a tablet
- * that is often offline in a substation, so an asset can be fully onboarded on
- * the device and still be waiting to sync.
- */
-export type AssetSyncStatus = "onboarded" | "pending_sync"
-
-export const assetSyncMeta: Record<AssetSyncStatus, { label: string; badge: "success" | "warning" }> = {
-  onboarded: { label: "Onboarded", badge: "success" },
-  pending_sync: { label: "Pending Sync", badge: "warning" },
-}
-
 /** One row of the asset register */
 export type AssetRecord = {
   /** Unique platform id, e.g. TSL-MUM-11KV-TRF-001 */
@@ -67,12 +55,11 @@ export type AssetRecord = {
   installed: string
   onboarded: string
   /**
-    * 0-100, scored from the last inspection. Null until one has happened - an
-    * asset registered on the tablet and not yet synced has never been inspected,
-    * so it has no score rather than a placeholder one.
-    */
+   * 0-100, scored from the last inspection. Null until one has happened: a
+   * newly onboarded asset has no score rather than a placeholder one, and
+   * reads as "Onboarded" wherever a health status is shown.
+   */
   health: number | null
-  status: AssetSyncStatus
 }
 
 /** Everything the onboarding wizard captured, as the detail screen reads it */
@@ -300,31 +287,28 @@ export function assetProfileFor(a: AssetRecord): AssetProfile {
 /* ---------- Asset ID ---------- */
 
 /**
- * The unique platform id for an asset: enterprise, plant, voltage class,
- * category and a running number within that group — TSL-MUM-11KV-TRF-001.
- * Built here rather than typed, so two assets can never be handed the same one.
+ * The unique platform id for an asset: enterprise, plant, category and a running
+ * number within that group — TSL-MUM-TRF-001. Built here rather than typed, so
+ * two assets can never be handed the same one.
+ *
+ * It deliberately carries no voltage segment. The mockup's id does, but the
+ * ratings are optional and entered on step 2, while the id is shown filled in on
+ * step 1 — an id that changed once a voltage was typed would not be a prefilled
+ * id. Every id now has the same shape whether or not the nameplate was readable.
  */
 export function buildAssetId(parts: {
   enterprise: string
   city: string
-  /** Blank when the nameplate could not be read; the segment is then omitted */
-  voltage?: string
-  voltageUnit?: string
   category: string
   /** Assets already registered, so the running number continues from them */
   existing?: readonly AssetRecord[]
 }) {
   const enterprise = enterpriseRecords.find((e) => e.name === parts.enterprise)
-  // The voltage segment drops out when the nameplate was unreadable - the rest
-  // still identifies the asset, and the running number keeps it unique
   const prefix = [
     enterprise?.id.slice(0, 3) ?? parts.enterprise.slice(0, 3).toUpperCase(),
     cityCode(parts.city),
-    parts.voltage ? voltageToken(parts.voltage, parts.voltageUnit ?? "") : "",
     assetCategoryCode(parts.category),
-  ]
-    .filter(Boolean)
-    .join("-")
+  ].join("-")
   const taken = (parts.existing ?? assetRegister).filter((a) => a.id.startsWith(prefix + "-"))
   const highest = taken.reduce((n, a) => Math.max(n, Number(a.id.slice(prefix.length + 1)) || 0), 0)
   return `${prefix}-${String(highest + 1).padStart(3, "0")}`
@@ -360,17 +344,12 @@ function buildRegister(elpremarId: string): AssetRecord[] {
     const s = seedOf(`${plant.code}-${category}-${i}`)
     const rating = ratingFor(category, s)
 
-    const prefix = [
-      house,
-      cityCode(plant.city),
-      voltageToken(rating.primary, rating.primaryUnit),
-      assetCategoryCode(category),
-    ].join("-")
+    const prefix = [house, cityCode(plant.city), assetCategoryCode(category)].join("-")
     const n = (counters.get(prefix) ?? 0) + 1
     counters.set(prefix, n)
 
     const code = assetCategoryCode(category)
-    const synced = i % 9 !== 8
+    const inspected = i % 9 !== 8
     const installed = dateOffset(-(400 + ((s + i * 53) % 3200)))
     // Manufactured in the year it was installed or the one before, never after
     const year = parseDmy(installed).getFullYear() - (s % 2)
@@ -391,11 +370,12 @@ function buildRegister(elpremarId: string): AssetRecord[] {
       year,
       installed,
       onboarded: dateOffset(-(5 + ((s + i * 29) % 420))),
-      // Roughly one in nine is still waiting on the tablet to sync
-      status: synced ? "onboarded" : "pending_sync",
-      // Spread across the three health bands by position, so none is ever empty.
-      // An unsynced asset has not been inspected yet, so it carries no score.
-      health: synced ? [88, 92, 74, 61, 55, 44, 96, 68, 38, 81][i % 10] + (s % 4) : null,
+      /*
+       * Spread across the three health bands by position, so none is ever empty.
+       * Roughly one in nine is newly onboarded and not yet inspected, so it has
+       * no score at all - those read as "Onboarded" rather than as a band.
+       */
+      health: inspected ? [88, 92, 74, 61, 55, 44, 96, 68, 38, 81][i % 10] + (s % 4) : null,
     }
   })
 }

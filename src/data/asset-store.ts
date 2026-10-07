@@ -141,8 +141,6 @@ export function onboardAsset(values: AssetFormValues, site: { city: string }): A
   const id = buildAssetId({
     enterprise: values.enterprise,
     city: site.city,
-    voltage: values.primaryVoltage,
-    voltageUnit: values.primaryVoltageUnit,
     category: values.category,
     existing: rows,
   })
@@ -167,8 +165,6 @@ export function onboardAsset(values: AssetFormValues, site: { city: string }): A
     onboarded,
     // Never inspected, so there is no score to show yet - not a placeholder one
     health: null,
-    // Registered on the tablet; the next sync is what puts it on the server
-    status: "pending_sync",
   }
 
   profiles = { ...profiles, [id]: profileFrom(values, { installed, onboarded }) }
@@ -186,6 +182,5 @@ export const kpisFor = (list: readonly AssetRecord[]) => ({
   healthy: list.filter((a) => a.health !== null && healthBandFor(a.health).tone === "healthy").length,
   attention: list.filter((a) => a.health !== null && healthBandFor(a.health).tone === "attention").length,
   critical: list.filter((a) => a.health !== null && healthBandFor(a.health).tone === "critical").length,
-  pendingSync: list.filter((a) => a.status === "pending_sync").length,
   categories: new Set(list.map((a) => a.category)).size,
 })
