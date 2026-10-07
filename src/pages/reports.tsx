@@ -1,11 +1,12 @@
 import { useMemo, useState } from "react"
-import { BookOpen, Download, HardDrive, Search, Sparkles, SprayCan, TriangleAlert, X } from "lucide-react"
+import { BookOpen, Download, HardDrive, Search, Sparkles, SprayCan, TrendingUp, TriangleAlert, X } from "lucide-react"
 import { cn } from "cn"
 import { toast } from "sonner"
 
 import { PageHeader } from "@/components/common/page-header"
 import { SortHead, TablePager } from "@/components/common/data-table"
 import { CategoryIcon } from "@/components/common/category-icon"
+import { DonutChart, TrendChart, type Slice } from "@/components/common/charts"
 import { AssetReportPanel } from "@/components/reports/asset-report-panel"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -20,6 +21,7 @@ import {
   healthSplit,
   hygieneHotspots,
   hygieneKpis,
+  hygieneTrend,
   reportRows,
   type Finding,
   type ReportRow,
@@ -265,7 +267,13 @@ function HygieneReport({
   onClear: () => void
 }) {
   const kpis = hygieneKpis(rows)
-  const hotspots = hygieneHotspots(rows).filter((h) => h.failing > 0)
+  const trend = hygieneTrend(rows)
+  const slices: Slice[] = [
+    { key: "healthy", label: "Healthy", value: kpis.clear, color: findingLook.Healthy.color },
+    { key: "attention", label: "Attention Required", value: kpis.attention, color: findingLook["Attention Required"].color },
+    { key: "risk", label: "At Risk", value: kpis.atRisk, color: findingLook["At Risk"].color },
+    { key: "none", label: "Not Inspected", value: kpis.notInspected, color: findingLook["Not Inspected"].color },
+  ]
 
   const accessors: Accessors<ReportRow, Column> = {
     id: (r) => r.asset.id,
@@ -287,22 +295,30 @@ function HygieneReport({
         contamination report's job.
       </p>
 
-      {hotspots.length ? (
+      <div className="grid gap-3 lg:grid-cols-2">
         <section className="rounded-lg bg-card p-3 shadow-xs ring-1 ring-foreground/10">
-          <h3 className="mb-2 text-base font-semibold text-brand-navy dark:text-foreground">
-            Points failing most often
+          <h3 className="mb-2 flex items-center gap-2 text-base font-semibold text-brand-navy dark:text-foreground">
+            <Sparkles className="size-5 text-primary" /> Asset Hygiene Status Distribution
           </h3>
-          <ul className="space-y-1.5">
-            {hotspots.map((h) => (
-              <li key={h.check} className="flex items-center gap-2 text-sm">
-                <span className="min-w-52 shrink-0 truncate">{h.check}</span>
-                <span className="h-2 min-w-1 rounded-full bg-attention" style={{ width: `${(h.failing / rows.length) * 100 * 4}%` }} />
-                <span className="shrink-0 text-xs text-muted-foreground tabular-nums">{h.failing} assets</span>
-              </li>
-            ))}
-          </ul>
+          <DonutChart slices={slices} centreLabel="Total Assets" />
         </section>
-      ) : null}
+
+        <section className="rounded-lg bg-card p-3 shadow-xs ring-1 ring-foreground/10">
+          <h3 className="mb-2 flex items-center gap-2 text-base font-semibold text-brand-navy dark:text-foreground">
+            <TrendingUp className="size-5 text-primary" /> Hygiene Trend (Last 6 Months)
+          </h3>
+          <TrendChart
+            data={trend}
+            xKey="month"
+            series={[
+              { key: "Healthy", label: "Healthy", color: findingLook.Healthy.color },
+              { key: "Attention Required", label: "Attention Required", color: findingLook["Attention Required"].color },
+              { key: "At Risk", label: "At Risk", color: findingLook["At Risk"].color },
+              { key: "Not Inspected", label: "Not Inspected", color: findingLook["Not Inspected"].color },
+            ]}
+          />
+        </section>
+      </div>
 
       <ReportTable
         title="Asset Hygiene Details"

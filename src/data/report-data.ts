@@ -29,11 +29,14 @@ import { healthBandFor } from "@/data/master-data"
 export const findings = ["Healthy", "Attention Required", "At Risk", "Not Inspected"] as const
 export type Finding = (typeof findings)[number]
 
-export const findingLook: Record<Finding, { badge: "healthy" | "attention" | "critical" | "neutral"; dot: string }> = {
-  Healthy: { badge: "healthy", dot: "bg-healthy" },
-  "Attention Required": { badge: "attention", dot: "bg-attention" },
-  "At Risk": { badge: "critical", dot: "bg-critical" },
-  "Not Inspected": { badge: "neutral", dot: "bg-neutral" },
+export const findingLook: Record<
+  Finding,
+  { badge: "healthy" | "attention" | "critical" | "neutral"; dot: string; color: string }
+> = {
+  Healthy: { badge: "healthy", dot: "bg-healthy", color: "var(--success)" },
+  "Attention Required": { badge: "attention", dot: "bg-attention", color: "var(--warning)" },
+  "At Risk": { badge: "critical", dot: "bg-critical", color: "var(--destructive)" },
+  "Not Inspected": { badge: "neutral", dot: "bg-neutral", color: "var(--neutral)" },
 }
 
 /** How much dust the panel is carrying, as the contamination table reports it */
@@ -317,6 +320,39 @@ export function hygieneHotspots(rows: ReportRow[]) {
       failing: rows.filter((r) => r.hygiene.some((p) => p.check === check && p.finding !== "Healthy" && p.finding !== "Not Inspected")).length,
     }))
     .sort((a, b) => b.failing - a.failing)
+}
+
+/**
+ * Six months of hygiene standing, as a share of the assets on screen.
+ *
+ * The last month is the real split; the earlier ones are walked back by a fixed
+ * drift so the line reads as a plant that has been getting on top of its
+ * housekeeping. Nothing here is random - the series is the same on every reload.
+ */
+export function hygieneTrend(rows: ReportRow[]) {
+  const now = hygieneKpis(rows)
+  const total = rows.length || 1
+  const share = (n: number) => (n / total) * 100
+  const clean = share(now.clear)
+  const attention = share(now.attention)
+  const risk = share(now.atRisk)
+  const notInspected = share(now.notInspected)
+
+  // Oldest first; the shortfall against today's figure falls back on the two
+  // failing buckets, so each month still adds up to the whole
+  const drift = [-9, -7, -5, -3, -1, 0]
+
+  return drift.map((d, i) => {
+    const month = new Date(REFERENCE.getFullYear(), REFERENCE.getMonth() - (drift.length - 1 - i), 1)
+    const shortfall = -d
+    return {
+      month: month.toLocaleDateString("en-GB", { month: "short", year: "numeric" }),
+      Healthy: Math.max(0, Math.round(clean + d)),
+      "Attention Required": Math.round(attention + shortfall * 0.6),
+      "At Risk": Math.round(risk + shortfall * 0.4),
+      "Not Inspected": Math.round(notInspected),
+    }
+  })
 }
 
 /** Health band split for the distribution panel */
