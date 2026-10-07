@@ -30,11 +30,12 @@ import { categoryFor } from "@/lib/asset-category"
 import { emptyCapture, newId, observationsFrom, resultsFrom, scoreCapture, sectionsDone, thermalReadings } from "@/lib/testing"
 import type { Job } from "@/lib/work"
 
-type Section = "images" | "parameters" | "fps" | "pd"
+type Section = "images" | "thermal" | "parameters" | "fps" | "pd"
 
-/** The four sections in the order the ELPREMAR works through them */
+/** The five sections in the order the ELPREMAR works through them */
 const sections: { key: Section; title: string; icon: LucideIcon; phase2?: boolean }[] = [
   { key: "images", title: "Asset Images", icon: Camera },
+  { key: "thermal", title: "Thermal Images", icon: Thermometer },
   { key: "parameters", title: "Parameters", icon: Gauge },
   { key: "fps", title: "Fire Prevention", icon: Flame },
   { key: "pd", title: "Partial Discharge", icon: Zap, phase2: true },
@@ -48,11 +49,11 @@ type Setter = (p: Partial<InspectionCapture>) => void
 
 /**
  * Testing & Measurements for one inspection task, in the client's Phase-1
- * order: the asset images (the angle views and the thermal images, one per
- * point), then the parameters read from them (ambient and hotspot
- * temperatures, contamination, physical hygiene), then the fire prevention
- * system. Partial Discharge is Phase 2 and stays disabled until the measuring
- * device integration arrives.
+ * order: the asset images (angle views), the thermal images (one per point),
+ * then the parameters read from them (ambient and hotspot temperatures,
+ * contamination, physical hygiene), then the fire prevention system. Partial
+ * Discharge is Phase 2 and stays disabled until the measuring device
+ * integration arrives.
  *
  * Everything saves to the tablet as it is entered (the offline draft); Submit
  * locks the record, scores it and queues it for sync.
@@ -94,7 +95,15 @@ export function InspectionForm({ job, detail }: { job: Job; detail: InspectionDe
   }, [patch, job.id])
 
   const done = sectionsDone(capture, category, ids)
-  const tabDone: Record<Section, boolean> = { images: done.images, parameters: done.thermal && done.contamination, fps: done.fps, pd: false }
+  // The thermal page is about the images; the temperatures read off them count under Parameters
+  const thermalShots = capture.thermal.filter((t) => evidence.some((e) => e.slot === t.id)).length
+  const tabDone: Record<Section, boolean> = {
+    images: done.images,
+    thermal: thermalShots >= MIN_THERMAL_POINTS,
+    parameters: done.thermal && done.contamination,
+    fps: done.fps,
+    pd: false,
+  }
   const preview = scoreCapture(capture)
   const ready = done.images && done.thermal && done.contamination && done.fps
   const set: Setter = (p) => setCapture((c) => ({ ...c, ...p }))
@@ -111,7 +120,7 @@ export function InspectionForm({ job, detail }: { job: Job; detail: InspectionDe
   return (
     <div className="space-y-5">
       {/* ---------- Section tabs ---------- */}
-      <nav aria-label="Testing sections" className="grid grid-cols-2 gap-2 rounded-2xl bg-card p-2 shadow-xs ring-1 ring-foreground/10 md:grid-cols-4">
+      <nav aria-label="Testing sections" className="grid grid-cols-2 gap-2 rounded-2xl bg-card p-2 shadow-xs ring-1 ring-foreground/10 sm:grid-cols-3 lg:grid-cols-5">
         {sections.map((s, i) => {
           const on = section === s.key
           const complete = tabDone[s.key]
@@ -149,13 +158,12 @@ export function InspectionForm({ job, detail }: { job: Job; detail: InspectionDe
       <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_19rem]">
         <div className="min-w-0 space-y-5">
           {section === "images" ? (
-            <>
-              <ImagesSection category={category} capture={capture} evidence={evidence} onCapture={setCapture} onEvidence={setEvidence} onRemove={removeEvidence} />
-              <ThermalImagesSection category={category} capture={capture} evidence={evidence} set={set} onEvidence={setEvidence} onRemove={removeEvidence} />
-            </>
+            <ImagesSection category={category} capture={capture} evidence={evidence} onCapture={setCapture} onEvidence={setEvidence} onRemove={removeEvidence} />
+          ) : section === "thermal" ? (
+            <ThermalImagesSection category={category} capture={capture} evidence={evidence} set={set} onEvidence={setEvidence} onRemove={removeEvidence} />
           ) : section === "parameters" ? (
             <>
-              <ThermalReadingsSection capture={capture} evidence={evidence} set={set} onImages={() => setSection("images")} />
+              <ThermalReadingsSection capture={capture} evidence={evidence} set={set} onImages={() => setSection("thermal")} />
               <ContaminationSection capture={capture} set={set} />
             </>
           ) : (
@@ -316,7 +324,7 @@ function Shot({ item, label, onRemove, badge }: { item: EvidenceItem; label: str
   )
 }
 
-/* ---------- 2. Asset images: the thermal images, one per point ---------- */
+/* ---------- 2. Thermal images, one per point ---------- */
 
 /**
  * Each thermal image is one measurement point. The points usual for the asset
