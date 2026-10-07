@@ -132,7 +132,7 @@ export const hygieneChecks = [
 /* ---------- 5. Fire prevention system ---------- */
 
 /** The client's Fire Prevention Status master, for an installed system */
-export const fpsStatuses = ["Healthy / Normal", "Attention Required", "At Risk", "Not Tested"] as const
+export const fpsStatuses = ["Healthy / Normal", "Alarming", "At Risk", "Not Tested"] as const
 export type FpsStatus = (typeof fpsStatuses)[number]
 
 /* ---------- Phase 2: shown locked so the template already has room ---------- */
@@ -161,7 +161,7 @@ export const thermalScore: Record<ResultStatus, number> = { Pass: 100, Attention
 /** Not installed scores 0: the asset has no protection, which is itself the finding */
 export const fpsScore: Record<FpsStatus | "Not Installed", number> = {
   "Healthy / Normal": 100,
-  "Attention Required": 50,
+  "Alarming": 50,
   "At Risk": 0,
   "Not Tested": 50,
   "Not Installed": 0,

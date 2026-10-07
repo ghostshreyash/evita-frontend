@@ -2,7 +2,7 @@ import { useMemo, useState } from "react"
 import { useNavigate, useSearchParams } from "react-router"
 import type { DateRange } from "react-day-picker"
 import { format, isAfter, isBefore, startOfDay } from "date-fns"
-import { Camera, Check, Clock, CloudCheck, CloudOff, CloudUpload, Flame, Search, Thermometer, Wind, X } from "lucide-react"
+import { Clock, CloudCheck, CloudOff, CloudUpload, Search, X } from "lucide-react"
 import { cn } from "cn"
 
 import { DateRangeFilter, SortHead, TablePager } from "@/components/common/data-table"
@@ -17,11 +17,10 @@ import type { InspectionDetail } from "@/data/inspection-detail"
 import { useInspectionDetails } from "@/data/inspection-store"
 import { healthBands, inspectionTypes } from "@/data/master-data"
 import { slotLabel } from "@/data/occ-tables"
-import { angleSlotsFor, MIN_THERMAL_POINTS } from "@/data/test-template"
 import { categoryLook, shortCategory } from "@/lib/category-icons"
 import { control, nextSort, sortRows, td, th, type Sort } from "@/lib/data-table"
 import { bandLook } from "@/lib/health"
-import { inspectionTypeFor, sectionsDone } from "@/lib/testing"
+import { inspectionTypeFor } from "@/lib/testing"
 import { categoryFor, isOverdue, isToday, parseDay, useMyJobs, when, type FieldStatus, type Job } from "@/lib/work"
 
 /** The statuses an inspection can be in; Approved is a maintenance-only state */
@@ -45,10 +44,6 @@ type Row = Job & {
   detail?: InspectionDetail
   type: string
   category: string
-  /** Phase-1 sections complete, of 4 */
-  progress: { images: boolean; thermal: boolean; contamination: boolean; fps: boolean }
-  views: number
-  points: number
   score?: number
   sync: Sync
 }
@@ -58,7 +53,7 @@ const statusRank: Record<FieldStatus, number> = { overdue: 0, in_progress: 1, op
 
 /**
  * Testing & Measurements: every inspection assigned to the signed-in ELPREMAR,
- * with how far its Phase-1 capture has got, the health score it produced and
+ * with the health score it produced and
  * whether the server has it yet. Opening a row goes to the task, where Start /
  * Continue opens the capture screen and View the Inspection Completed record.
  *
@@ -94,16 +89,11 @@ function TestingMeasurements() {
         .map((j) => {
           const detail = details[j.id]
           const category = categoryFor(j.asset)
-          const ids = new Set((detail?.evidence ?? []).map((e) => e.id))
-          const capture = detail?.capture
           return {
             ...j,
             detail,
             type: inspectionTypeFor(j.activity),
             category,
-            progress: capture ? sectionsDone(capture, category, ids) : { images: false, thermal: false, contamination: false, fps: false },
-            views: capture ? angleSlotsFor(category).filter((s) => ids.has(capture.angles[s.key])).length : 0,
-            points: capture?.thermal.length ?? 0,
             score: detail?.result?.healthScore,
             sync: j.field === "open" || j.field === "overdue" ? "none" : (detail?.sync?.state ?? "synced"),
           }
@@ -208,7 +198,6 @@ function TestingMeasurements() {
                 <SortHead label="Asset" column="asset" sort={sort} onSort={onSort} />
                 <SortHead label="Inspection Type" column="type" sort={sort} onSort={onSort} className="max-lg:hidden" />
                 <SortHead label="Due" column="due" sort={sort} onSort={onSort} />
-                <TableHead className={th}>Captured</TableHead>
                 <SortHead label="Health" column="health" sort={sort} onSort={onSort} />
                 <TableHead className={cn(th, "max-md:hidden")}>Sync</TableHead>
                 <SortHead label="Status" column="status" sort={sort} onSort={onSort} />
@@ -244,9 +233,6 @@ function TestingMeasurements() {
                     </span>
                   </TableCell>
                   <TableCell className={td}>
-                    <Progress row={r} />
-                  </TableCell>
-                  <TableCell className={td}>
                     {r.score !== undefined ? (
                       <span className={cn("inline-flex items-baseline gap-1 rounded-lg px-2.5 py-1", bandLook(r.score).soft)}>
                         <span className="font-mono text-base font-bold">{r.score}</span>
@@ -265,7 +251,7 @@ function TestingMeasurements() {
               ))}
               {sorted.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={9} className="py-12 text-center text-sm text-muted-foreground">No inspections match these filters.</TableCell>
+                  <TableCell colSpan={8} className="py-12 text-center text-sm text-muted-foreground">No inspections match these filters.</TableCell>
                 </TableRow>
               ) : null}
             </TableBody>
@@ -274,34 +260,6 @@ function TestingMeasurements() {
           <TablePager page={current} pages={pages} pageSize={pageSize} total={sorted.length} start={start} onPage={setPage} onPageSize={(n) => { setPageSize(n); setPage(1) }} />
         </div>
       </section>
-    </div>
-  )
-}
-
-/** The four Phase-1 sections as icons: green when complete, with the image and point counts */
-function Progress({ row }: { row: Row }) {
-  if (row.field === "open" || row.field === "overdue") return <span className="text-sm text-muted-foreground">—</span>
-  const items = [
-    { on: row.progress.images, icon: Camera, label: "Asset images", count: row.views },
-    { on: row.progress.thermal, icon: Thermometer, label: `Thermal points (min ${MIN_THERMAL_POINTS})`, count: row.points },
-    { on: row.progress.contamination, icon: Wind, label: "Contamination & hygiene" },
-    { on: row.progress.fps, icon: Flame, label: "Fire prevention system" },
-  ]
-  const done = items.filter((i) => i.on).length
-  return (
-    <div>
-      <div className="flex gap-1">
-        {items.map((i) => (
-          <span key={i.label} title={i.label} className={cn("relative flex size-8 items-center justify-center rounded-lg", i.on ? "bg-healthy-soft text-healthy" : "bg-muted text-muted-foreground")}>
-            <i.icon className="size-4" />
-            {i.count ? <span className="absolute -top-1.5 -right-1.5 min-w-4 rounded-full bg-card px-1 text-[0.625rem] leading-4 font-bold ring-1 ring-foreground/15">{i.count}</span> : null}
-          </span>
-        ))}
-      </div>
-      <span className="mt-1 flex items-center gap-1 text-xs text-muted-foreground">
-        {done === 4 ? <Check className="size-3 text-healthy" strokeWidth={3} /> : null}
-        {done} of 4 sections
-      </span>
     </div>
   )
 }

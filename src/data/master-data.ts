@@ -263,16 +263,16 @@ export type AssetCriticality = (typeof assetCriticality)[number]
 /** Contamination / hygiene status, the wording used on inspection records */
 export const contaminationStatus = [
   "Good",
-  "Attention Required",
+  "Alarming",
   "Poor Condition",
   "Not Inspected / No Data",
 ] as const
 
-export const healthStatusValues = ["Healthy", "Attention Required", "Poor Condition", "Not Inspected"] as const
+export const healthStatusValues = ["Healthy", "Alarming", "Poor Condition", "Not Inspected"] as const
 
 export const firePreventionStatus = [
   "Healthy / Normal",
-  "Attention Required",
+  "Alarming",
   "Abnormal",
   "Not Tested",
   "Not Applicable",
@@ -540,8 +540,8 @@ export const dcVoltageRatings = [
 /** Health score bands from the specification */
 export const healthBands = [
   { min: 70, max: 100, label: "Healthy", tone: "healthy" as const },
-  // Client's Parameters sheet: 50–69 = Attention Required (Orange)
-  { min: 50, max: 69, label: "Attention Required", tone: "attention" as const },
+  // 50–69 = Alarming (Orange)
+  { min: 50, max: 69, label: "Alarming", tone: "attention" as const },
   { min: 0, max: 49, label: "At Risk", tone: "critical" as const },
 ]
 
