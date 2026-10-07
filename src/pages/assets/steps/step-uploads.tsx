@@ -1,6 +1,6 @@
 import { useRef, useState } from "react"
 import type { UseFormReturn } from "react-hook-form"
-import { Camera, Check, Eye, FileText, ImagePlus, Paperclip, Trash2, UploadCloud } from "lucide-react"
+import { Camera, Check, Eye, FilePlus2, FileText, ImagePlus, Paperclip, Trash2, UploadCloud } from "lucide-react"
 import { cn } from "cn"
 import { toast } from "sonner"
 
@@ -18,9 +18,6 @@ const IMAGE_TYPES = "image/png,image/jpeg"
 const DOCUMENT_TYPES = "application/pdf,image/png,image/jpeg"
 const MAX_IMAGE_MB = 5
 const MAX_DOCUMENT_MB = 10
-
-/** Empty slots shown from the start, so it is obvious several can be added */
-const IMAGE_SLOTS = 5
 
 const IMAGE_LIST = "suggested-image-names"
 const DOCUMENT_LIST = "suggested-document-names"
@@ -67,9 +64,6 @@ export function StepUploads({ form }: { form: UseFormReturn<AssetFormValues> }) 
     toast.success(made.length === 1 ? `${made[0].name} added.` : `${made.length} uploads added.`)
   }
 
-  // Always at least one empty slot to add more, five while the asset has none
-  const slots = Math.max(1, IMAGE_SLOTS - images.length)
-
   return (
     <div className="grid gap-3 xl:grid-cols-[minmax(0,1fr)_22rem]">
       <StepCard
@@ -78,7 +72,8 @@ export function StepUploads({ form }: { form: UseFormReturn<AssetFormValues> }) 
       >
         {/* ---------- Photographs ---------- */}
         <Section icon={Camera} title="Asset Images" count={images.length} hint={`JPG or PNG · up to ${MAX_IMAGE_MB} MB each`}>
-          <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
+          {/* One wide drop zone until there is something to show; a grid after */}
+          <div className={cn(images.length && "grid grid-cols-2 gap-2.5 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5")}>
             {images.map((item) => (
               <figure key={item.id} className="overflow-hidden rounded-lg ring-1 ring-foreground/10">
                 <div className="relative h-28 bg-muted/40">
@@ -105,15 +100,13 @@ export function StepUploads({ form }: { form: UseFormReturn<AssetFormValues> }) 
               </figure>
             ))}
 
-            {Array.from({ length: slots }, (_, i) => (
-              <AddSlot
-                key={`slot-${i}`}
-                /* The first empty slot does the inviting; the rest just mark the space */
-                label={i === 0 ? (images.length ? "Add more" : "Add photograph") : undefined}
-                accept={IMAGE_TYPES}
-                onPick={(files) => pick("image", files, MAX_IMAGE_MB)}
-              />
-            ))}
+            <AddSlot
+              className={cn(!images.length && "h-28")}
+              icon={ImagePlus}
+              label={images.length ? "Add more" : "Add photograph"}
+              accept={IMAGE_TYPES}
+              onPick={(files) => pick("image", files, MAX_IMAGE_MB)}
+            />
           </div>
         </Section>
 
@@ -155,6 +148,7 @@ export function StepUploads({ form }: { form: UseFormReturn<AssetFormValues> }) 
 
           <AddSlot
             className={cn("h-20", documents.length && "mt-2")}
+            icon={FilePlus2}
             label={documents.length ? "Add more" : "Add document"}
             accept={DOCUMENT_TYPES}
             onPick={(files) => pick("document", files, MAX_DOCUMENT_MB)}
@@ -338,18 +332,16 @@ function Section({
   )
 }
 
-/**
- * An empty slot. Several are shown from the start so the grid reads as "add as
- * many as the asset has" rather than "add one". Takes a click or a drop.
- */
+/** The dashed zone that takes a click or a drop */
 function AddSlot({
+  icon: Icon,
   label,
   accept,
   onPick,
   className,
 }: {
-  /** Only the first slot is captioned; the others would just repeat it */
-  label?: string
+  icon: React.ComponentType<{ className?: string }>
+  label: string
   accept: string
   onPick: (files: FileList | null) => void
   className?: string
@@ -361,7 +353,7 @@ function AddSlot({
     <button
       type="button"
       onClick={() => input.current?.click()}
-      aria-label={label ?? "Add an upload"}
+      aria-label={label}
       onDragOver={(e) => {
         e.preventDefault()
         setOver(true)
@@ -384,14 +376,10 @@ function AddSlot({
           over ? "text-primary" : "text-muted-foreground"
         )}
       >
-        {over ? <UploadCloud className="size-5" /> : <ImagePlus className="size-5" />}
+        {over ? <UploadCloud className="size-5" /> : <Icon className="size-5" />}
       </span>
-      {label ? (
-        <>
-          <span className="text-sm font-medium">{label}</span>
-          <span className="text-xs text-muted-foreground">or drag here</span>
-        </>
-      ) : null}
+      <span className="text-sm font-medium">{label}</span>
+      <span className="text-xs text-muted-foreground">or drag here</span>
       <input
         ref={input}
         type="file"
