@@ -218,7 +218,7 @@ export function ScoreBreakdown({ breakdown }: { breakdown?: { visual?: number; t
               <span className="font-medium">
                 {r.label} <span className="text-xs text-muted-foreground">· {weight}%</span>
               </span>
-              <span className="font-mono font-semibold tabular-nums">{r.value ?? "—"}</span>
+              <span className="tabular-nums font-semibold">{r.value ?? "—"}</span>
             </div>
             <div className="mt-1 h-2 overflow-hidden rounded-full bg-muted">
               <div
@@ -340,7 +340,7 @@ function ThermalSection({
         <div className="w-40">
           <FieldLabel required>Ambient temperature</FieldLabel>
           <div className="relative">
-            <Input inputMode="decimal" value={capture.ambient} onChange={(e) => set({ ambient: e.target.value.replace(/[^\d.-]/g, "") })} className="bg-card pr-10 font-mono" placeholder="e.g. 34" />
+            <Input inputMode="decimal" value={capture.ambient} onChange={(e) => set({ ambient: e.target.value.replace(/[^\d.-]/g, "") })} className="bg-card pr-10 tabular-nums" placeholder="e.g. 34" />
             <span className="absolute top-1/2 right-3 -translate-y-1/2 text-sm text-muted-foreground">°C</span>
           </div>
         </div>
@@ -355,7 +355,7 @@ function ThermalSection({
           return (
             <div key={r.id} className="grid gap-3 rounded-xl p-3 ring-1 ring-foreground/10 md:grid-cols-[11rem_minmax(0,1fr)]">
               {image ? (
-                <Shot item={image} label="Thermal image" onRemove={() => onRemove(image.id)} badge={r.max !== undefined ? <span className="rounded-md bg-black/70 px-2 py-0.5 font-mono text-xs font-semibold text-white">Max {r.max} °C</span> : null} />
+                <Shot item={image} label="Thermal image" onRemove={() => onRemove(image.id)} badge={r.max !== undefined ? <span className="rounded-md bg-black/70 px-2 py-0.5 tabular-nums text-xs font-semibold text-white">Max {r.max} °C</span> : null} />
               ) : (
                 <CaptureTile
                   kind="thermal"
@@ -373,7 +373,7 @@ function ThermalSection({
                   <div>
                     <FieldLabel required>Max temperature</FieldLabel>
                     <div className="relative">
-                      <Input inputMode="decimal" value={r.maxTemp} onChange={(e) => setPoint(r.id, { maxTemp: e.target.value.replace(/[^\d.-]/g, "") })} className="bg-card pr-10 font-mono" />
+                      <Input inputMode="decimal" value={r.maxTemp} onChange={(e) => setPoint(r.id, { maxTemp: e.target.value.replace(/[^\d.-]/g, "") })} className="bg-card pr-10 tabular-nums" />
                       <span className="absolute top-1/2 right-3 -translate-y-1/2 text-sm text-muted-foreground">°C</span>
                     </div>
                   </div>
@@ -548,7 +548,7 @@ function Phase2Section() {
             <div key={p.label} className="flex items-center justify-between gap-2 rounded-xl bg-muted/50 px-4 py-3 ring-1 ring-foreground/5">
               <span className="text-sm font-medium">{p.label}</span>
               <span className="text-right text-xs text-muted-foreground">
-                <span className="block font-mono">{p.unit}</span>
+                <span className="block tabular-nums">{p.unit}</span>
                 {p.method}
               </span>
             </div>

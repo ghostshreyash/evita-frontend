@@ -108,7 +108,7 @@ export function AppSidebar() {
       <SidebarFooter className="border-t border-sidebar-border px-4 py-3 group-data-[collapsible=icon]:hidden">
         <div className="flex items-center justify-between text-xs text-sidebar-muted-foreground">
           <span>EVITA PWA Client</span>
-          <span className="font-mono">v1.0.0</span>
+          <span className="tabular-nums">v1.0.0</span>
         </div>
       </SidebarFooter>
     </Sidebar>

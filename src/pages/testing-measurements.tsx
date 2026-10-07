@@ -207,7 +207,7 @@ function TestingMeasurements() {
             <TableBody>
               {shown.map((r) => (
                 <TableRow key={r.id} onClick={() => navigate(`/my-tasks/${r.id}`)} className={cn("h-20 cursor-pointer", isOverdue(r) && "bg-critical-soft/40 hover:bg-critical-soft/60")}>
-                  <TableCell className={cn(td, "font-mono font-bold whitespace-nowrap max-xl:hidden")}>{r.id}</TableCell>
+                  <TableCell className={cn(td, "tabular-nums font-bold whitespace-nowrap max-xl:hidden")}>{r.id}</TableCell>
                   <TableCell className={cn(td, "whitespace-normal")}>
                     <span className="block font-semibold text-brand-navy dark:text-foreground">{r.asset}</span>
                     <span className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1">
@@ -215,7 +215,7 @@ function TestingMeasurements() {
                         <CategoryIcon category={r.category} className="size-3.5" />
                         {shortCategory(r.category)}
                       </span>
-                      {r.detail?.assetTag ? <span className="font-mono text-xs text-muted-foreground">{r.detail.assetTag}</span> : null}
+                      {r.detail?.assetTag ? <span className="tabular-nums text-xs text-muted-foreground">{r.detail.assetTag}</span> : null}
                     </span>
                   </TableCell>
                   <TableCell className={cn(td, "max-w-44 whitespace-normal max-lg:hidden")}>
@@ -227,7 +227,7 @@ function TestingMeasurements() {
                       <Clock className="size-4 shrink-0" />
                       {isToday(r.date) ? "Today" : format(parseDay(r.date), "d MMM yyyy")}
                     </span>
-                    <span className={cn("block pl-5.5 font-mono text-xs", isOverdue(r) ? "text-critical" : "text-muted-foreground")}>
+                    <span className={cn("block pl-5.5 tabular-nums text-xs", isOverdue(r) ? "text-critical" : "text-muted-foreground")}>
                       {slotLabel(r.slot)}
                       {isOverdue(r) ? " · Overdue" : ""}
                     </span>
@@ -235,7 +235,7 @@ function TestingMeasurements() {
                   <TableCell className={td}>
                     {r.score !== undefined ? (
                       <span className={cn("inline-flex items-baseline gap-1 rounded-lg px-2.5 py-1", bandLook(r.score).soft)}>
-                        <span className="font-mono text-base font-bold">{r.score}</span>
+                        <span className="tabular-nums text-base font-bold">{r.score}</span>
                         <span className="text-xs font-semibold">{bandLook(r.score).label}</span>
                       </span>
                     ) : (
@@ -271,7 +271,7 @@ function SyncCell({ sync, at }: { sync: Sync; at?: string }) {
       <look.icon className="size-4 shrink-0" />
       <span>
         {look.label}
-        {at && sync !== "none" ? <span className="block font-mono text-xs font-normal text-muted-foreground">{at.split(" ")[1]}</span> : null}
+        {at && sync !== "none" ? <span className="block tabular-nums text-xs font-normal text-muted-foreground">{at.split(" ")[1]}</span> : null}
       </span>
     </span>
   )
