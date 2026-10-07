@@ -79,6 +79,8 @@ export function ReportsPage() {
     )
   }, [query, department, category, status])
 
+  const close = () => setSelected(undefined)
+
   const clear = () => {
     setQuery("")
     setDepartment(ANY)
@@ -149,20 +151,16 @@ export function ReportsPage() {
           </Button>
         </div>
 
-        <div className={cn("mt-3 grid gap-3", selected && "xl:grid-cols-[minmax(0,1fr)_26rem]")}>
-          <div className="min-w-0">
-            <TabsContent value="contamination">
-              <ContaminationReport rows={rows} selected={selected} onSelect={setSelected} onClear={clear} />
-            </TabsContent>
-            <TabsContent value="hygiene">
-              <HygieneReport rows={rows} selected={selected} onSelect={setSelected} onClear={clear} />
-            </TabsContent>
-            <TabsContent value="insights">
-              <AiInsights rows={rows} />
-            </TabsContent>
-          </div>
-
-          {selected ? <AssetReportPanel row={selected} onClose={() => setSelected(undefined)} /> : null}
+        <div className="mt-3">
+          <TabsContent value="contamination" className="mt-0">
+            <ContaminationReport rows={rows} selected={selected} onSelect={setSelected} onClose={close} onClear={clear} />
+          </TabsContent>
+          <TabsContent value="hygiene" className="mt-0">
+            <HygieneReport rows={rows} selected={selected} onSelect={setSelected} onClose={close} onClear={clear} />
+          </TabsContent>
+          <TabsContent value="insights" className="mt-0">
+            <AiInsights rows={rows} />
+          </TabsContent>
         </div>
       </Tabs>
     </div>
@@ -178,11 +176,13 @@ function ContaminationReport({
   rows,
   selected,
   onSelect,
+  onClose,
   onClear,
 }: {
   rows: ReportRow[]
   selected?: ReportRow
   onSelect: (row: ReportRow) => void
+  onClose: () => void
   onClear: () => void
 }) {
   const kpis = contaminationKpis(rows)
@@ -206,6 +206,7 @@ function ContaminationReport({
       accessors={accessors}
       selected={selected}
       onSelect={onSelect}
+      onClose={onClose}
       onClear={onClear}
       kpis={
         <>
@@ -254,11 +255,13 @@ function HygieneReport({
   rows,
   selected,
   onSelect,
+  onClose,
   onClear,
 }: {
   rows: ReportRow[]
   selected?: ReportRow
   onSelect: (row: ReportRow) => void
+  onClose: () => void
   onClear: () => void
 }) {
   const kpis = hygieneKpis(rows)
@@ -307,6 +310,7 @@ function HygieneReport({
         accessors={accessors}
         selected={selected}
         onSelect={onSelect}
+        onClose={onClose}
         onClear={onClear}
         kpis={
           <>
@@ -477,6 +481,7 @@ function ReportTable({
   accessors,
   selected,
   onSelect,
+  onClose,
   onClear,
   kpis,
   head,
@@ -487,6 +492,7 @@ function ReportTable({
   accessors: Accessors<ReportRow, Column>
   selected?: ReportRow
   onSelect: (row: ReportRow) => void
+  onClose: () => void
   onClear: () => void
   kpis: React.ReactNode
   /** The columns that differ between the two reports */
@@ -517,6 +523,13 @@ function ReportTable({
   return (
     <div className="rounded-lg bg-card p-3 shadow-xs ring-1 ring-foreground/10">
       <div className="mb-3 grid grid-cols-2 gap-3 lg:grid-cols-5">{kpis}</div>
+
+      {/* The selected asset's report opens here, directly on top of the table */}
+      {selected ? (
+        <div className="mb-3">
+          <AssetReportPanel row={selected} onClose={onClose} />
+        </div>
+      ) : null}
 
       <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
         <h3 className="text-base font-semibold text-brand-navy dark:text-foreground">{title}</h3>

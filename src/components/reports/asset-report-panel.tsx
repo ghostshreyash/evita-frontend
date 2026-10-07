@@ -25,6 +25,10 @@ import { td, th } from "@/lib/data-table"
  *
  * The mockup's third tab, Trend & Analytics, is not here — trend reporting was
  * dropped from this screen along with the Trend Analysis tab above it.
+ *
+ * It sits above the table at full width rather than in a column beside it, so
+ * the identity, the standing and the record read side by side instead of as one
+ * long narrow stack.
  */
 export function AssetReportPanel({ row, onClose }: { row: ReportRow; onClose: () => void }) {
   const { asset } = row
@@ -32,14 +36,18 @@ export function AssetReportPanel({ row, onClose }: { row: ReportRow; onClose: ()
   const band = row.healthScore === null ? null : healthBandFor(row.healthScore)
 
   return (
-    <aside className="flex flex-col gap-3 rounded-lg bg-card p-3 shadow-xs ring-1 ring-foreground/10">
-      <header className="flex items-start justify-between gap-2">
-        <h3 className="text-base font-semibold text-brand-navy dark:text-foreground">Asset Details &amp; Health Report</h3>
+    <aside className="rounded-lg bg-card p-3 shadow-xs ring-2 ring-primary/30">
+      <header className="mb-3 flex items-start justify-between gap-2 border-b pb-2">
+        <h3 className="flex flex-wrap items-baseline gap-x-2 text-base font-semibold text-brand-navy dark:text-foreground">
+          Asset Details &amp; Health Report
+          <span className="text-sm font-normal text-muted-foreground">{asset.id}</span>
+        </h3>
         <Button type="button" variant="ghost" size="icon-sm" aria-label="Close the report panel" onClick={onClose}>
           <X />
         </Button>
       </header>
 
+      <div className="grid gap-3 lg:grid-cols-[minmax(0,20rem)_minmax(0,15rem)_minmax(0,1fr)]">
       {/* ---------- Which asset this is ---------- */}
       <div className="flex gap-3">
         <div className="relative h-24 w-28 shrink-0 overflow-hidden rounded-md ring-1 ring-foreground/10">
@@ -66,19 +74,9 @@ export function AssetReportPanel({ row, onClose }: { row: ReportRow; onClose: ()
         />
       </div>
 
-      {/* ---------- Its identity on the platform ---------- */}
-      <div className="flex items-center gap-3 rounded-md bg-muted/40 p-2">
-        <div className="shrink-0 rounded bg-white p-1 ring-1 ring-foreground/10">
-          <AssetQrCode asset={asset} size={64} />
-        </div>
-        <div className="min-w-0">
-          <div className="text-xs text-muted-foreground">Asset ID (Unique)</div>
-          <AssetIdChip id={asset.id} className="mt-0.5" />
-        </div>
-      </div>
-
-      {/* ---------- Where it stands ---------- */}
-      <div className="grid grid-cols-3 gap-2">
+      {/* ---------- Where it stands, and its identity on the platform ---------- */}
+      <div className="space-y-2">
+        <div className="grid grid-cols-3 gap-2 lg:grid-cols-1">
         <Stat label="Health Score">
           {band ? (
             <HealthDial score={row.healthScore!} label={band.label} tone={band.tone} className="size-20" />
@@ -102,10 +100,21 @@ export function AssetReportPanel({ row, onClose }: { row: ReportRow; onClose: ()
             {row.hygieneStatus === "Not Inspected" ? "No walk yet" : `${row.hygieneOpen} of 8 points open`}
           </span>
         </Stat>
+        </div>
+
+        <div className="flex items-center gap-3 rounded-md bg-muted/40 p-2">
+          <div className="shrink-0 rounded bg-white p-1 ring-1 ring-foreground/10">
+            <AssetQrCode asset={asset} size={56} />
+          </div>
+          <div className="min-w-0">
+            <div className="text-xs text-muted-foreground">Asset ID (Unique)</div>
+            <AssetIdChip id={asset.id} className="mt-0.5" />
+          </div>
+        </div>
       </div>
 
       {/* ---------- The record behind it ---------- */}
-      <Tabs defaultValue="inspection">
+      <Tabs defaultValue="inspection" className="min-w-0">
         <TabsList className="w-full">
           <TabsTrigger value="inspection" className="flex-1">
             <ClipboardList className="size-4" /> Inspection
@@ -184,9 +193,8 @@ export function AssetReportPanel({ row, onClose }: { row: ReportRow; onClose: ()
             ]}
           />
         </TabsContent>
-      </Tabs>
 
-      <div className="mt-auto flex flex-wrap gap-2 border-t pt-3">
+      <div className="mt-3 flex flex-wrap gap-2 border-t pt-3">
         <Button asChild variant="outline" size="sm" className="flex-1">
           <Link to={`/assets/${asset.id}`}>
             <ExternalLink /> Full asset
@@ -200,6 +208,8 @@ export function AssetReportPanel({ row, onClose }: { row: ReportRow; onClose: ()
         >
           <Download /> Download PDF
         </Button>
+      </div>
+      </Tabs>
       </div>
     </aside>
   )
