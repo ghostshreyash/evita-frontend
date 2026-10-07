@@ -16,7 +16,7 @@ import {
   assetCategoryCode,
   assetConditions,
   assetCriticality,
-  assetLocationsInPlant,
+  assetOperationalStatus,
   commonAssetCategories,
   coolingTypes,
   insulationClasses,
@@ -31,18 +31,6 @@ import { elpremarRecords } from "@/data/elpremar-data"
 import { enterpriseRecords, profileFor, type PlantProfile } from "@/data/occ-tables"
 
 /* ---------- Types ---------- */
-
-/**
- * Whether the record has reached the central server. EVITA is used on a tablet
- * that is often offline in a substation, so an asset can be fully onboarded on
- * the device and still be waiting to sync.
- */
-export type AssetSyncStatus = "onboarded" | "pending_sync"
-
-export const assetSyncMeta: Record<AssetSyncStatus, { label: string; badge: "success" | "warning" }> = {
-  onboarded: { label: "Onboarded", badge: "success" },
-  pending_sync: { label: "Pending Sync", badge: "warning" },
-}
 
 /** One row of the asset register */
 export type AssetRecord = {
@@ -67,12 +55,11 @@ export type AssetRecord = {
   installed: string
   onboarded: string
   /**
-    * 0-100, scored from the last inspection. Null until one has happened - an
-    * asset registered on the tablet and not yet synced has never been inspected,
-    * so it has no score rather than a placeholder one.
-    */
+   * 0-100, scored from the last inspection. Null until one has happened: a
+   * newly onboarded asset has no score rather than a placeholder one, and
+   * reads as "Onboarded" wherever a health status is shown.
+   */
   health: number | null
-  status: AssetSyncStatus
 }
 
 /** Everything the onboarding wizard captured, as the detail screen reads it */
@@ -110,10 +97,10 @@ export type AssetProfile = {
     oilType: string
   }
   operational: {
+    operationalStatus: string
     condition: string
     commissioned: string
     load: string
-    locationInPlant: string
     latitude: string
     longitude: string
     criticality: string
@@ -123,8 +110,9 @@ export type AssetProfile = {
     nextDue: string
     remarks: string
   }
-  documents: { type: string; file: string; uploaded: string }[]
-  images: { slot: string; label: string; caption: string }[]
+  /** Named by the engineer who captured them - there is no fixed set */
+  documents: { id: string; name: string; file: string; uploaded: string }[]
+  images: { id: string; name: string }[]
 }
 
 /* ---------- Seeded helpers ---------- */
@@ -224,7 +212,10 @@ export function assetProfileFor(a: AssetRecord): AssetProfile {
   const oily = a.category.includes("Transformer")
   const site = enterpriseRecords.find((e) => e.name === a.enterprise)
   const plant = site ? profileFor(site).plants.find((p) => p.name === a.plant) : undefined
-  const subDepartment = plant?.departments.find((d) => d.name === a.department)?.subDepartments[s % 2]?.name ?? "Power Distribution"
+  // Drawn from the plant's own tree, so a profile can never name a sub-department
+  // that does not exist under its department; blank when the department has none
+  const subDepts = plant?.departments.find((d) => d.name === a.department)?.subDepartments ?? []
+  const subDepartment = subDepts.length ? subDepts[s % subDepts.length].name : ""
   const commissioned = parseDmy(a.installed)
 
   return {
@@ -263,10 +254,10 @@ export function assetProfileFor(a: AssetRecord): AssetProfile {
       oilType: oily ? pick(oilTypes, s, 6) : "Dry Type / None",
     },
     operational: {
+      operationalStatus: pick(assetOperationalStatus, s, 9),
       condition: pick(assetConditions, s, 7),
       commissioned: a.installed,
       load: String(Math.round(Number(rating.capacity) * (0.4 + (s % 45) / 100))),
-      locationInPlant: pick(assetLocationsInPlant, s, 8),
       latitude: plant?.latitude ?? "0.0000",
       longitude: plant?.longitude ?? "0.0000",
       criticality: a.criticality,
@@ -278,18 +269,18 @@ export function assetProfileFor(a: AssetRecord): AssetProfile {
       remarks: s % 4 === 0 ? "Installed as part of the Phase-2 expansion." : "",
     },
     documents: [
-      { type: "Nameplate Photo (Close-up)", file: `${a.tag}-Nameplate.jpg`, uploaded: a.onboarded },
-      { type: "Manufacturer Datasheet", file: `${a.manufacturer.replace(/\W/g, "")}_${a.tag}_Datasheet.pdf`, uploaded: a.onboarded },
-      { type: "Installation Report", file: `${a.tag}_InstallationReport.pdf`, uploaded: a.onboarded },
-      { type: "Single Line Diagram (SLD)", file: `SLD_${a.area.replace(/\W/g, "")}.pdf`, uploaded: a.onboarded },
-      { type: "Warranty Certificate", file: `Warranty_${a.tag}.pdf`, uploaded: a.onboarded },
+      { id: "d1", name: "Nameplate Photo (Close-up)", file: `${a.tag}-Nameplate.jpg`, uploaded: a.onboarded },
+      { id: "d2", name: "Manufacturer Datasheet", file: `${a.manufacturer.replace(/\W/g, "")}_${a.tag}_Datasheet.pdf`, uploaded: a.onboarded },
+      { id: "d3", name: "Installation Report", file: `${a.tag}_InstallationReport.pdf`, uploaded: a.onboarded },
+      { id: "d4", name: "Single Line Diagram (SLD)", file: `SLD_${a.area.replace(/\W/g, "")}.pdf`, uploaded: a.onboarded },
+      { id: "d5", name: "Warranty Certificate", file: `Warranty_${a.tag}.pdf`, uploaded: a.onboarded },
     ],
     images: [
-      { slot: "front", label: "Front View", caption: `${a.tag} front elevation` },
-      { slot: "side", label: "Side View", caption: `${a.tag} side elevation` },
-      { slot: "nameplate", label: "Nameplate", caption: `${a.manufacturer} rating plate` },
-      { slot: "panel", label: "Panel / Accessories", caption: "Control and metering panel" },
-      { slot: "area", label: "Overall Area", caption: a.area },
+      { id: "i1", name: "Front View" },
+      { id: "i2", name: "Side View" },
+      { id: "i3", name: "Nameplate" },
+      { id: "i4", name: "Panel / Accessories" },
+      { id: "i5", name: "Overall Area" },
     ],
   }
 }
@@ -297,15 +288,18 @@ export function assetProfileFor(a: AssetRecord): AssetProfile {
 /* ---------- Asset ID ---------- */
 
 /**
- * The unique platform id for an asset: enterprise, plant, voltage class,
- * category and a running number within that group — TSL-MUM-11KV-TRF-001.
- * Built here rather than typed, so two assets can never be handed the same one.
+ * The unique platform id for an asset: enterprise, plant, category and a running
+ * number within that group — TSL-MUM-TRF-001. Built here rather than typed, so
+ * two assets can never be handed the same one.
+ *
+ * It deliberately carries no voltage segment. The mockup's id does, but the
+ * ratings are optional and entered on step 2, while the id is shown filled in on
+ * step 1 — an id that changed once a voltage was typed would not be a prefilled
+ * id. Every id now has the same shape whether or not the nameplate was readable.
  */
 export function buildAssetId(parts: {
   enterprise: string
   city: string
-  voltage: string
-  voltageUnit: string
   category: string
   /** Assets already registered, so the running number continues from them */
   existing?: readonly AssetRecord[]
@@ -314,7 +308,6 @@ export function buildAssetId(parts: {
   const prefix = [
     enterprise?.id.slice(0, 3) ?? parts.enterprise.slice(0, 3).toUpperCase(),
     cityCode(parts.city),
-    voltageToken(parts.voltage, parts.voltageUnit),
     assetCategoryCode(parts.category),
   ].join("-")
   const taken = (parts.existing ?? assetRegister).filter((a) => a.id.startsWith(prefix + "-"))
@@ -352,17 +345,12 @@ function buildRegister(elpremarId: string): AssetRecord[] {
     const s = seedOf(`${plant.code}-${category}-${i}`)
     const rating = ratingFor(category, s)
 
-    const prefix = [
-      house,
-      cityCode(plant.city),
-      voltageToken(rating.primary, rating.primaryUnit),
-      assetCategoryCode(category),
-    ].join("-")
+    const prefix = [house, cityCode(plant.city), assetCategoryCode(category)].join("-")
     const n = (counters.get(prefix) ?? 0) + 1
     counters.set(prefix, n)
 
     const code = assetCategoryCode(category)
-    const synced = i % 9 !== 8
+    const inspected = i % 9 !== 8
     const installed = dateOffset(-(400 + ((s + i * 53) % 3200)))
     // Manufactured in the year it was installed or the one before, never after
     const year = parseDmy(installed).getFullYear() - (s % 2)
@@ -383,11 +371,12 @@ function buildRegister(elpremarId: string): AssetRecord[] {
       year,
       installed,
       onboarded: dateOffset(-(5 + ((s + i * 29) % 420))),
-      // Roughly one in nine is still waiting on the tablet to sync
-      status: synced ? "onboarded" : "pending_sync",
-      // Spread across the three health bands by position, so none is ever empty.
-      // An unsynced asset has not been inspected yet, so it carries no score.
-      health: synced ? [88, 92, 74, 61, 55, 44, 96, 68, 38, 81][i % 10] + (s % 4) : null,
+      /*
+       * Spread across the three health bands by position, so none is ever empty.
+       * Roughly one in nine is newly onboarded and not yet inspected, so it has
+       * no score at all - those read as "Onboarded" rather than as a band.
+       */
+      health: inspected ? [88, 92, 74, 61, 55, 44, 96, 68, 38, 81][i % 10] + (s % 4) : null,
     }
   })
 }

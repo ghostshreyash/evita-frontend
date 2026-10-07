@@ -7,7 +7,7 @@ import {
   type AssetProfile,
   type AssetRecord,
 } from "@/data/asset-data"
-import { assetDocumentTypes, assetImageSlots, healthBandFor, type AssetCriticality } from "@/data/master-data"
+import { healthBandFor, type AssetCriticality } from "@/data/master-data"
 import type { AssetFormValues } from "@/pages/assets/schemas"
 
 /**
@@ -77,7 +77,7 @@ export function profileFrom(
       plant: values.plant,
       area: values.area,
       department: values.department,
-      subDepartment: "",
+      subDepartment: values.subDepartment ?? "",
       category: values.category,
       tag: values.tag,
       description: values.description ?? "",
@@ -89,15 +89,17 @@ export function profileFrom(
       criticality: values.criticality,
     },
     technical: {
-      primaryVoltage: values.primaryVoltage,
-      primaryVoltageUnit: values.primaryVoltageUnit,
-      secondaryVoltage: values.secondaryVoltage,
-      secondaryVoltageUnit: values.secondaryVoltageUnit,
-      capacity: values.capacity,
-      capacityUnit: values.capacityUnit,
-      frequency: values.frequency,
-      phase: values.phase,
-      cooling: values.cooling,
+      // Every rating is optional now, so each falls back to blank rather than
+      // undefined - the detail panels drop a blank row instead of printing one
+      primaryVoltage: values.primaryVoltage ?? "",
+      primaryVoltageUnit: values.primaryVoltageUnit ?? "",
+      secondaryVoltage: values.secondaryVoltage ?? "",
+      secondaryVoltageUnit: values.secondaryVoltageUnit ?? "",
+      capacity: values.capacity ?? "",
+      capacityUnit: values.capacityUnit ?? "",
+      frequency: values.frequency ?? "",
+      phase: values.phase ?? "",
+      cooling: values.cooling ?? "",
       vectorGroup: values.vectorGroup ?? "",
       impedance: values.impedance ?? "",
       insulation: values.insulation ?? "",
@@ -105,10 +107,10 @@ export function profileFrom(
       oilType: values.oilType ?? "",
     },
     operational: {
-      condition: values.condition,
+      operationalStatus: values.operationalStatus,
+      condition: values.condition ?? "",
       commissioned: toDmy(values.commissioned),
       load: values.load ?? "",
-      locationInPlant: values.locationInPlant,
       latitude: values.latitude ?? "",
       longitude: values.longitude ?? "",
       criticality: values.criticality,
@@ -118,12 +120,13 @@ export function profileFrom(
       nextDue: toDmy(values.nextDue),
       remarks: values.remarks ?? "",
     },
-    documents: assetDocumentTypes
-      .filter((d) => values.documents?.[d.key])
-      .map((d) => ({ type: d.label, file: values.documents[d.key]!.name, uploaded: dates.onboarded })),
-    images: assetImageSlots
-      .filter((s) => values.images?.[s.key])
-      .map((s) => ({ slot: s.key, label: s.label, caption: `${values.tag} - ${s.label.toLowerCase()}` })),
+    documents: (values.documents ?? []).map((d) => ({
+      id: d.id,
+      name: d.name,
+      file: d.file.name,
+      uploaded: dates.onboarded,
+    })),
+    images: (values.images ?? []).map((i) => ({ id: i.id, name: i.name })),
   }
 }
 
@@ -139,8 +142,6 @@ export function onboardAsset(values: AssetFormValues, site: { city: string }): A
   const id = buildAssetId({
     enterprise: values.enterprise,
     city: site.city,
-    voltage: values.primaryVoltage,
-    voltageUnit: values.primaryVoltageUnit,
     category: values.category,
     existing: rows,
   })
@@ -165,13 +166,17 @@ export function onboardAsset(values: AssetFormValues, site: { city: string }): A
     onboarded,
     // Never inspected, so there is no score to show yet - not a placeholder one
     health: null,
-    // Registered on the tablet; the next sync is what puts it on the server
-    status: "pending_sync",
   }
 
   profiles = { ...profiles, [id]: profileFrom(values, { installed, onboarded }) }
 
-  captures = { ...captures, [id]: { images: { ...values.images }, documents: { ...values.documents } } }
+  captures = {
+    ...captures,
+    [id]: {
+      images: Object.fromEntries((values.images ?? []).map((i) => [i.id, i.file])),
+      documents: Object.fromEntries((values.documents ?? []).map((d) => [d.id, d.file])),
+    },
+  }
   rows = [record, ...rows]
   emit()
   return record
@@ -184,6 +189,5 @@ export const kpisFor = (list: readonly AssetRecord[]) => ({
   healthy: list.filter((a) => a.health !== null && healthBandFor(a.health).tone === "healthy").length,
   attention: list.filter((a) => a.health !== null && healthBandFor(a.health).tone === "attention").length,
   critical: list.filter((a) => a.health !== null && healthBandFor(a.health).tone === "critical").length,
-  pendingSync: list.filter((a) => a.status === "pending_sync").length,
   categories: new Set(list.map((a) => a.category)).size,
 })

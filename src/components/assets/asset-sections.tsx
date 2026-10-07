@@ -22,10 +22,10 @@ export const assetDetailRows = (p: AssetProfile): DetailRow[] => [
 ]
 
 export const assetTechnicalRows = (p: AssetProfile): DetailRow[] => [
-  { label: "Rated Voltage", note: "(Primary)", value: unit(p.technical.primaryVoltage, p.technical.primaryVoltageUnit), always: true },
+  { label: "Rated Voltage", note: "(Primary)", value: unit(p.technical.primaryVoltage, p.technical.primaryVoltageUnit) },
   { label: "Rated Voltage", note: "(Secondary)", value: unit(p.technical.secondaryVoltage, p.technical.secondaryVoltageUnit) },
-  { label: "Rated Power / Capacity", value: unit(p.technical.capacity, p.technical.capacityUnit), always: true },
-  { label: "Frequency", value: unit(p.technical.frequency, "Hz") },
+  { label: "Rated Power / Capacity", value: unit(p.technical.capacity, p.technical.capacityUnit) },
+  { label: "Frequency", value: p.technical.frequency },
   { label: "Phase", value: p.technical.phase },
   { label: "Vector Group", value: skip(p.technical.vectorGroup) },
   { label: "Impedance (%)", value: p.technical.impedance },
@@ -40,11 +40,11 @@ export const assetTechnicalRows = (p: AssetProfile): DetailRow[] => [
 ]
 
 export const assetOperationalRows = (p: AssetProfile): DetailRow[] => [
-  { label: "Asset Condition", value: p.operational.condition, always: true },
+  { label: "Operational Status", value: p.operational.operationalStatus, always: true },
+  { label: "Asset Condition", value: p.operational.condition },
   { label: "Installation Date", value: p.details.installed },
   { label: "Commissioning Date", value: p.operational.commissioned },
   { label: "Current Load (kVA)", value: p.operational.load },
-  { label: "Location in Plant", value: p.operational.locationInPlant, always: true },
   {
     label: "GPS Coordinates",
     value: p.operational.latitude && p.operational.longitude ? `${p.operational.latitude}, ${p.operational.longitude}` : "",
