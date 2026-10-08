@@ -127,7 +127,8 @@ export function StepReview({
           items={[
             { label: "Asset details completed", done: !!values.tag && !!values.category && !!values.area },
             { label: "Technical details completed", done: missingParameters(values.category, values.parameters ?? {}).length === 0 },
-            { label: `Photographs added (${missing.images})`, done: missing.images > 0 },
+            { label: "Front view photograph added", done: missing.front },
+            { label: `Other photographs added (${Math.max(0, missing.images - 1)})`, done: missing.images > 1 },
             { label: `Documents attached (${missing.documents})`, done: missing.documents > 0 },
             { label: "Information reviewed", done: true },
           ]}

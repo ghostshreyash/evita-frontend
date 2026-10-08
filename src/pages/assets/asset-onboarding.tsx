@@ -98,9 +98,7 @@ export function AssetOnboardingPage() {
       const missing = missingUploads(form.getValues())
       if (!missing.complete) {
         toast.error(
-          missing.images === 0
-            ? "Add at least one photograph of the asset."
-            : "Every photograph and document needs a name."
+          missing.front ? "Every photograph and document needs a name." : "Add the front view photograph of the asset."
         )
         return
       }

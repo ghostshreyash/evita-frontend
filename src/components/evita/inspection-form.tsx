@@ -99,6 +99,7 @@ export function InspectionForm({ job, detail }: { job: Job; detail: InspectionDe
     return () => window.clearTimeout(t)
   }, [patch, job.id])
 
+  const readings = inspectionReadingsFor(category)
   const done = sectionsDone(capture, category, ids)
   const tabDone: Record<Section, boolean> = { images: done.images, thermal: done.thermal, parameters: done.readings && done.contamination, fps: done.fps, pd: false }
   const preview = scoreCapture(capture)
@@ -186,7 +187,10 @@ export function InspectionForm({ job, detail }: { job: Job; detail: InspectionDe
               items={[
                 { label: "At least one asset image", done: done.images },
                 { label: `${MIN_THERMAL_POINTS} or more thermal images`, done: done.thermal },
-                { label: "Electrical readings recorded", done: done.readings },
+                {
+                  label: readings.length ? "Electrical readings recorded" : "Electrical readings not applicable",
+                  done: done.readings,
+                },
                 { label: "Contamination and hygiene assessed", done: done.contamination },
                 { label: "Fire prevention system checked", done: done.fps },
               ]}
@@ -463,8 +467,9 @@ function ReadingsSection({ category, capture, set }: { category: string; capture
     >
 {specs.length === 0 ? (
         <p className="rounded-xl bg-info-soft p-3 text-sm text-info-soft-foreground">
-          The inspection parameter sheet has no column for {category}, so no readings are asked for. Record what you see
-          in the remarks and OCC will raise it with OLIVINE.
+          A {category} is inspected without electrical readings: they cannot be measured reliably with the asset
+          energised, and the instruments for them are not held. Images, the thermal scan and the fire prevention system
+          are the whole inspection — carry on to the next section.
         </p>
       ) : (
         <>

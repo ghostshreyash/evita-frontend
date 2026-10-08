@@ -165,7 +165,7 @@ const readingRows: (Omit<ReadingSpec, "required"> & { sheet: string })[] = [
  *
  * A type the sheet has no column for gets no readings at all. Nothing is
  * borrowed from the "Other" column: a reading the sheet does not give for an
- * asset is not taken on that asset - see `typesWithoutReadings`.
+ * asset is not taken on that asset - see `visualOnlyTypes`.
  */
 export function inspectionReadingsFor(category: string): ReadingSpec[] {
   const column = readingTypes.indexOf(category)
@@ -175,8 +175,17 @@ export function inspectionReadingsFor(category: string): ReadingSpec[] {
     .map(({ sheet, ...spec }) => ({ ...spec, required: sheet[column] === "M" }))
 }
 
-/** Master categories the sheet has no column for; they are asked for nothing */
-export const typesWithoutReadings = assetCategories.filter((c) => !readingTypes.includes(c))
+/**
+ * Asset types inspected without electrical readings: images, thermal and the
+ * fire prevention system only.
+ *
+ * Confirmed by the client on 08-10-2026. An HT Panel's parameters cannot be
+ * measured reliably with the panel energised, and the instruments for them are
+ * not held; a Solar Transformer is rare enough that the instruments for it are
+ * not held either. Both still carry their full onboarding specification - it is
+ * the inspection that is limited, not the asset record.
+ */
+export const visualOnlyTypes = assetCategories.filter((c) => !readingTypes.includes(c))
 
 /** Every input key one spec contributes: a per-phase reading contributes three */
 export const readingKeys = (spec: ReadingSpec) =>
