@@ -18,14 +18,14 @@ import type { WorkStatus } from "@/lib/status"
  */
 type Snapshot = { rows: MaintenanceRow[]; details: Record<string, MaintenanceDetail> }
 
-const saved = loadSnapshot<Snapshot>("maintenance")
+const saved = loadSnapshot<Snapshot>("maintenance.v2")
 let rows: MaintenanceRow[] = saved?.rows ?? maintenanceActivities
 let details: Record<string, MaintenanceDetail> =
   saved?.details ?? Object.fromEntries(rows.map((r) => [r.id, maintenanceDetail(r)]))
 
 const listeners = new Set<() => void>()
 const emit = () => {
-  saveSnapshot("maintenance", { rows, details } satisfies Snapshot)
+  saveSnapshot("maintenance.v2", { rows, details } satisfies Snapshot)
   listeners.forEach((listener) => listener())
 }
 
@@ -82,7 +82,7 @@ export function addMaintenanceFromInspection(source: {
     [id]: {
       ...maintenanceDetail(row),
       description: `Raised from inspection ${source.inspectionId} (${source.activity}). ${source.recommendation}`,
-      createdBy: "Admin (OCC)",
+      createdBy: "Admin (EMMS-E)",
       execution: undefined,
       products: [],
       evidence: [],

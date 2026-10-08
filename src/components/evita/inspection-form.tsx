@@ -1,12 +1,11 @@
 import { useEffect, useMemo, useRef, useState } from "react"
-import { Camera, Check, Flame, Gauge, Lock, NotebookPen, Save, Send, Thermometer, Zap, type LucideIcon } from "lucide-react"
+import { Camera, Check, Flame, Gauge, Lock, Save, Send, Thermometer, Zap, type LucideIcon } from "lucide-react"
 import { toast } from "sonner"
 import { format } from "date-fns"
 import { cn } from "cn"
 
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Textarea } from "@/components/ui/textarea"
 import { UploadSection } from "@/components/evita/upload-section"
 import { Checklist, CountPill, FieldLabel, HealthRing, Segmented, StepCard } from "@/components/evita/field-kit"
 import type { EvidenceItem } from "@/data/evidence"
@@ -52,6 +51,9 @@ type Setter = (p: Partial<InspectionCapture>) => void
  * the asset type calls for, then the fire prevention system. Partial Discharge
  * is Phase 2 and stays disabled until the measuring device integration arrives.
  *
+ * There is no free-text remarks card. The fire prevention system has its own
+ * remarks box, and every other finding is a recorded value or a photograph.
+ *
  * Contamination and physical hygiene are not recorded by hand. The Tier I logic
  * document has the AI engine read panel hygiene off the uploaded images after
  * sync, so asking the ELPREMAR for the same judgement would only compete with
@@ -65,7 +67,6 @@ export function InspectionForm({ job, detail }: { job: Job; detail: InspectionDe
   const [section, setSection] = useState<Section>("images")
   const [capture, setCapture] = useState<InspectionCapture>(() => detail.capture ?? emptyCapture())
   const [evidence, setEvidence] = useState<EvidenceItem[]>(detail.evidence)
-  const [remarks, setRemarks] = useState(detail.execution?.remarks ?? "")
   const [savedAt, setSavedAt] = useState<string | null>(null)
   // Held from when the form opened: saving writes a new record, which must not re-trigger the save
   const [execution] = useState(detail.execution)
@@ -77,9 +78,9 @@ export function InspectionForm({ job, detail }: { job: Job; detail: InspectionDe
       evidence,
       measurements: resultsFrom(capture, category, ids),
       observations: observationsFrom(capture),
-      execution: execution && { ...execution, remarks },
+      execution,
     }),
-    [capture, evidence, ids, category, remarks, execution]
+    [capture, evidence, ids, category, execution]
   )
 
   // Autosave a moment after the last change
@@ -161,10 +162,6 @@ export function InspectionForm({ job, detail }: { job: Job; detail: InspectionDe
           ) : (
             <FpsSection capture={capture} set={set} />
           )}
-
-          <StepCard step={5} title="Inspection Remarks" icon={NotebookPen} done={!!remarks.trim()}>
-            <Textarea value={remarks} rows={3} maxLength={500} onChange={(e) => setRemarks(e.target.value)} placeholder="Overall condition, anything OCC should know." />
-          </StepCard>
         </div>
 
         {/* ---------- Score estimate and submit ---------- */}
