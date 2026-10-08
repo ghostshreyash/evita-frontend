@@ -1,10 +1,11 @@
 import { useEffect, useMemo, useRef, useState } from "react"
-import { Camera, Check, Flame, Gauge, Lock, Save, Send, Thermometer, Zap, type LucideIcon } from "lucide-react"
+import { Camera, Check, Flame, Gauge, Lock, NotebookPen, Save, Send, Thermometer, Zap, type LucideIcon } from "lucide-react"
 import { toast } from "sonner"
 import { format } from "date-fns"
 import { cn } from "cn"
 
 import { Button } from "@/components/ui/button"
+import { Textarea } from "@/components/ui/textarea"
 import { Input } from "@/components/ui/input"
 import { UploadSection } from "@/components/evita/upload-section"
 import { Checklist, CountPill, FieldLabel, HealthRing, Segmented, StepCard } from "@/components/evita/field-kit"
@@ -29,13 +30,13 @@ import { urlFor } from "@/lib/object-url"
 import { emptyCapture, newId, observationsFrom, resultsFrom, scoreCapture, sectionsDone } from "@/lib/testing"
 import type { Job } from "@/lib/work"
 
-type Section = "images" | "thermal" | "parameters" | "fps" | "pd"
+type Section = "images" | "thermal" | "technical" | "fps" | "pd"
 
 /** The five sections in the order the ELPREMAR works through them */
 const sections: { key: Section; title: string; icon: LucideIcon; phase2?: boolean }[] = [
   { key: "images", title: "Asset Images", icon: Camera },
   { key: "thermal", title: "Thermal Images", icon: Thermometer },
-  { key: "parameters", title: "Parameters", icon: Gauge },
+  { key: "technical", title: "Technical Details", icon: Gauge },
   { key: "fps", title: "Fire Prevention", icon: Flame },
   { key: "pd", title: "Partial Discharge", icon: Zap, phase2: true },
 ]
@@ -51,8 +52,9 @@ type Setter = (p: Partial<InspectionCapture>) => void
  * the asset type calls for, then the fire prevention system. Partial Discharge
  * is Phase 2 and stays disabled until the measuring device integration arrives.
  *
- * There is no free-text remarks card. The fire prevention system has its own
- * remarks box, and every other finding is a recorded value or a photograph.
+ * The one free-text note sits with the Technical Details readings rather than
+ * under every section: it is there to explain a reading, not to stand in for
+ * one.
  *
  * Contamination and physical hygiene are not recorded by hand. The Tier I logic
  * document has the AI engine read panel hygiene off the uploaded images after
@@ -69,6 +71,7 @@ export function InspectionForm({ job, detail }: { job: Job; detail: InspectionDe
   const [evidence, setEvidence] = useState<EvidenceItem[]>(detail.evidence)
   const [savedAt, setSavedAt] = useState<string | null>(null)
   // Held from when the form opened: saving writes a new record, which must not re-trigger the save
+  const [remarks, setRemarks] = useState(detail.execution?.remarks ?? "")
   const [execution] = useState(detail.execution)
 
   const ids = useMemo(() => new Set(evidence.map((e) => e.id)), [evidence])
@@ -78,9 +81,9 @@ export function InspectionForm({ job, detail }: { job: Job; detail: InspectionDe
       evidence,
       measurements: resultsFrom(capture, category, ids),
       observations: observationsFrom(capture),
-      execution,
+      execution: execution && { ...execution, remarks },
     }),
-    [capture, evidence, ids, category, execution]
+    [capture, evidence, ids, category, remarks, execution]
   )
 
   // Autosave a moment after the last change
@@ -99,7 +102,7 @@ export function InspectionForm({ job, detail }: { job: Job; detail: InspectionDe
 
   const readings = inspectionReadingsFor(category)
   const done = sectionsDone(capture, category, ids)
-  const tabDone: Record<Section, boolean> = { images: done.images, thermal: done.thermal, parameters: done.readings, fps: done.fps, pd: false }
+  const tabDone: Record<Section, boolean> = { images: done.images, thermal: done.thermal, technical: done.readings, fps: done.fps, pd: false }
   const preview = scoreCapture(capture)
   const ready = done.images && done.thermal && done.readings && done.fps
   const set: Setter = (p) => setCapture((c) => ({ ...c, ...p }))
@@ -157,8 +160,20 @@ export function InspectionForm({ job, detail }: { job: Job; detail: InspectionDe
             <ImagesSection category={category} capture={capture} evidence={evidence} onCapture={setCapture} onEvidence={setEvidence} onRemove={removeEvidence} />
           ) : section === "thermal" ? (
             <ThermalImagesSection category={category} capture={capture} evidence={evidence} set={set} onEvidence={setEvidence} onRemove={removeEvidence} />
-          ) : section === "parameters" ? (
-            <ReadingsSection category={category} capture={capture} set={set} />
+          ) : section === "technical" ? (
+            <>
+              <ReadingsSection category={category} capture={capture} set={set} />
+              {/* The one free-text note on the inspection, kept with the readings it explains */}
+              <StepCard step={4} title="Inspection Remarks" icon={NotebookPen} done={!!remarks.trim()}>
+                <Textarea
+                  value={remarks}
+                  rows={3}
+                  maxLength={500}
+                  onChange={(e) => setRemarks(e.target.value)}
+                  placeholder="Anything the readings do not say on their own."
+                />
+              </StepCard>
+            </>
           ) : (
             <FpsSection capture={capture} set={set} />
           )}
@@ -447,7 +462,7 @@ function Reading({
 function FpsSection({ capture, set }: { capture: InspectionCapture; set: Setter }) {
   const fps = capture.fps
   return (
-    <StepCard step={4} title="Fire Prevention System" icon={Flame} done={fps.installed === "No" || (fps.installed === "Yes" && !!fps.status)}>
+    <StepCard step={5} title="Fire Prevention System" icon={Flame} done={fps.installed === "No" || (fps.installed === "Yes" && !!fps.status)}>
       <div className="space-y-4">
         <div>
           <FieldLabel required>Is a fire prevention system installed in the panel?</FieldLabel>
