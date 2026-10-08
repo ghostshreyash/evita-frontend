@@ -22,21 +22,27 @@ import { healthBandFor } from "@/data/master-data"
 /* ---------- Vocabulary ---------- */
 
 /**
- * Contamination / Hygiene Status, as the parameter sheet writes it (page 11).
- * Note this is not the health band: an asset can be contaminated and still score
- * above 70 if the thermal and fire-prevention inputs are clean.
+ * Contamination / Hygiene Status.
+ *
+ * The parameter sheet (page 11) writes the middle band as "Alarming",
+ * but the client settled on **Alarming** at the screen review - see
+ * ELPREMAR-ENTERPRISE-CHANGES, "Health reads Healthy / Alarming / At Risk" -
+ * and the rest of EVITA already says Alarming. One word everywhere beats the
+ * sheet's wording in one screen.
+ *
+ * There is no "Not Inspected" here: a report only covers assets that have been
+ * inspected, so the status cannot arise.
  */
-export const findings = ["Healthy", "Attention Required", "At Risk", "Not Inspected"] as const
+export const findings = ["Healthy", "Alarming", "At Risk"] as const
 export type Finding = (typeof findings)[number]
 
 export const findingLook: Record<
   Finding,
-  { badge: "healthy" | "attention" | "critical" | "neutral"; dot: string; color: string }
+  { badge: "healthy" | "attention" | "critical"; dot: string; color: string }
 > = {
   Healthy: { badge: "healthy", dot: "bg-healthy", color: "var(--success)" },
-  "Attention Required": { badge: "attention", dot: "bg-attention", color: "var(--warning)" },
+  Alarming: { badge: "attention", dot: "bg-attention", color: "var(--warning)" },
   "At Risk": { badge: "critical", dot: "bg-critical", color: "var(--destructive)" },
-  "Not Inspected": { badge: "neutral", dot: "bg-neutral", color: "var(--neutral)" },
 }
 
 /** How much dust the panel is carrying, as the contamination table reports it */
@@ -113,12 +119,12 @@ const maintenanceTypesPool = ["Preventive", "Condition-Based", "Corrective", "Fi
 const hygieneSpread: Finding[] = [
   "Healthy",
   "Healthy",
-  "Attention Required",
+  "Alarming",
   "Healthy",
   "Healthy",
   "At Risk",
   "Healthy",
-  "Attention Required",
+  "Alarming",
   "Healthy",
   "Healthy",
 ]
@@ -186,13 +192,8 @@ function reportFor(asset: AssetRecord, index: number): ReportRow {
         ? "Medium"
         : "High"
 
-  const contaminationStatus: Finding = !inspected
-    ? "Not Inspected"
-    : asset.health! >= 70
-      ? "Healthy"
-      : asset.health! >= 50
-        ? "Attention Required"
-        : "At Risk"
+  const contaminationStatus: Finding =
+    asset.health! >= 70 ? "Healthy" : asset.health! >= 50 ? "Alarming" : "At Risk"
 
   const lastInspection = inspected ? dateOffset(-(5 + (s % 160))) : ""
   const frequency = [3, 6, 6, 12][s % 4]
@@ -205,18 +206,18 @@ function reportFor(asset: AssetRecord, index: number): ReportRow {
    * are then generated to agree with the standing, so the row and the panel
    * cannot contradict each other.
    */
-  const hygieneStatus: Finding = !inspected ? "Not Inspected" : hygieneSpread[index % hygieneSpread.length]
+  const hygieneStatus: Finding = hygieneSpread[index % hygieneSpread.length]
 
   const faults =
     hygieneStatus === "At Risk"
-      ? { [s % hygieneChecks.length]: "At Risk" as Finding, [(s + 4) % hygieneChecks.length]: "Attention Required" as Finding }
-      : hygieneStatus === "Attention Required"
-        ? { [s % hygieneChecks.length]: "Attention Required" as Finding }
+      ? { [s % hygieneChecks.length]: "At Risk" as Finding, [(s + 4) % hygieneChecks.length]: "Alarming" as Finding }
+      : hygieneStatus === "Alarming"
+        ? { [s % hygieneChecks.length]: "Alarming" as Finding }
         : {}
 
   const hygiene = hygieneChecks.map((check, i) => ({
     check,
-    finding: !inspected ? ("Not Inspected" as Finding) : (faults[i] ?? ("Healthy" as Finding)),
+    finding: faults[i] ?? ("Healthy" as Finding),
   }))
 
   const lastCleaned = inspected ? dateOffset(-(10 + (s % 200))) : ""
@@ -232,7 +233,7 @@ function reportFor(asset: AssetRecord, index: number): ReportRow {
     frequency,
     hygiene,
     hygieneStatus,
-    hygieneOpen: hygiene.filter((p) => p.finding === "Attention Required" || p.finding === "At Risk").length,
+    hygieneOpen: hygiene.filter((p) => p.finding === "Alarming" || p.finding === "At Risk").length,
     lastCleaned,
     nextCleaningDue: lastCleaned ? monthsOn(lastCleaned, 3) : "",
     lastMaintenance,
@@ -297,17 +298,15 @@ export function assetReport(row: ReportRow): AssetReport {
 export const contaminationKpis = (rows: ReportRow[]) => ({
   total: rows.length,
   healthy: rows.filter((r) => r.contaminationStatus === "Healthy").length,
-  attention: rows.filter((r) => r.contaminationStatus === "Attention Required").length,
+  attention: rows.filter((r) => r.contaminationStatus === "Alarming").length,
   atRisk: rows.filter((r) => r.contaminationStatus === "At Risk").length,
-  notInspected: rows.filter((r) => r.contaminationStatus === "Not Inspected").length,
 })
 
 export const hygieneKpis = (rows: ReportRow[]) => ({
   total: rows.length,
   clear: rows.filter((r) => r.hygieneStatus === "Healthy").length,
-  attention: rows.filter((r) => r.hygieneStatus === "Attention Required").length,
+  attention: rows.filter((r) => r.hygieneStatus === "Alarming").length,
   atRisk: rows.filter((r) => r.hygieneStatus === "At Risk").length,
-  notInspected: rows.filter((r) => r.hygieneStatus === "Not Inspected").length,
   /** Every failing point across the rows, which is what the crew actually works through */
   openPoints: rows.reduce((n, r) => n + r.hygieneOpen, 0),
 })
@@ -317,7 +316,7 @@ export function hygieneHotspots(rows: ReportRow[]) {
   return hygieneChecks
     .map((check) => ({
       check,
-      failing: rows.filter((r) => r.hygiene.some((p) => p.check === check && p.finding !== "Healthy" && p.finding !== "Not Inspected")).length,
+      failing: rows.filter((r) => r.hygiene.some((p) => p.check === check && p.finding !== "Healthy")).length,
     }))
     .sort((a, b) => b.failing - a.failing)
 }
@@ -336,7 +335,6 @@ export function hygieneTrend(rows: ReportRow[]) {
   const clean = share(now.clear)
   const attention = share(now.attention)
   const risk = share(now.atRisk)
-  const notInspected = share(now.notInspected)
 
   // Oldest first; the shortfall against today's figure falls back on the two
   // failing buckets, so each month still adds up to the whole
@@ -348,21 +346,18 @@ export function hygieneTrend(rows: ReportRow[]) {
     return {
       month: month.toLocaleDateString("en-GB", { month: "short", year: "numeric" }),
       Healthy: Math.max(0, Math.round(clean + d)),
-      "Attention Required": Math.round(attention + shortfall * 0.6),
+      "Alarming": Math.round(attention + shortfall * 0.6),
       "At Risk": Math.round(risk + shortfall * 0.4),
-      "Not Inspected": Math.round(notInspected),
     }
   })
 }
 
 /** Health band split for the distribution panel */
 export function healthSplit(rows: ReportRow[]) {
-  const scored = rows.filter((r) => r.healthScore !== null)
   return {
-    healthy: scored.filter((r) => healthBandFor(r.healthScore!).tone === "healthy").length,
-    attention: scored.filter((r) => healthBandFor(r.healthScore!).tone === "attention").length,
-    critical: scored.filter((r) => healthBandFor(r.healthScore!).tone === "critical").length,
-    notInspected: rows.length - scored.length,
+    healthy: rows.filter((r) => healthBandFor(r.healthScore!).tone === "healthy").length,
+    attention: rows.filter((r) => healthBandFor(r.healthScore!).tone === "attention").length,
+    critical: rows.filter((r) => healthBandFor(r.healthScore!).tone === "critical").length,
   }
 }
 
@@ -374,9 +369,18 @@ export function healthSplit(rows: ReportRow[]) {
  */
 
 /**
- * Both reports for every asset at the engineer's plant, in the default order the
- * client asked for: Asset ID ascending, stable.
+ * Both reports for every **inspected** asset at the engineer's plant, in the
+ * default order the client asked for: Asset ID ascending, stable.
+ *
+ * An asset that has never been inspected is left out rather than carried as a
+ * "Not Inspected" row: a health report has nothing to say about it, and a
+ * column of dashes only dilutes the counts above the table. It is still on the
+ * asset register, where it reads as Onboarded.
  */
 export const reportRows: ReportRow[] = assetRegister
   .map((asset, i) => reportFor(asset, i))
+  .filter((r) => r.healthScore !== null)
   .sort((a, b) => a.asset.id.localeCompare(b.asset.id, undefined, { numeric: true }))
+
+/** How many assets the reports leave out because nobody has inspected them yet */
+export const uninspectedCount = assetRegister.filter((a) => a.health === null).length

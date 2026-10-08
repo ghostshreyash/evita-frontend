@@ -18,10 +18,9 @@ import { td, th } from "@/lib/data-table"
 /**
  * Asset Details & Health Report — the report for the selected row.
  *
- * It floats over the table rather than pushing it aside or sitting above it, as
- * the mockup draws it: the row stays where it was, highlighted, and the report
- * covers the right of the table until the cross is pressed. Below `lg` there is
- * no room to float, so it drops to a full-width block over the table instead.
+ * It opens as a drawer down the full height of the screen on the right. The
+ * drawer is not modal, so the table stays readable and clickable behind it and
+ * another row can be opened without closing this one first.
  *
  * It opens on View rather than preselecting the first result. The parameter
  * sheet suggests preselecting for usability; the client asked at review for it
@@ -36,9 +35,9 @@ export function AssetReportPanel({ row, onClose }: { row: ReportRow; onClose: ()
   const band = row.healthScore === null ? null : healthBandFor(row.healthScore)
 
   return (
-    <aside className="max-h-[36rem] overflow-y-auto rounded-lg bg-card shadow-2xl ring-1 ring-foreground/15">
-      {/* Sticky so the asset being read stays named while the panel scrolls */}
-      <header className="sticky top-0 z-10 flex items-start justify-between gap-2 border-b bg-card px-3 py-2">
+    <div className="flex h-full min-h-0 flex-col bg-card">
+      {/* Fixed head and foot; only the record between them scrolls */}
+      <header className="flex shrink-0 items-start justify-between gap-2 border-b px-3 py-2.5">
         <h3 className="min-w-0 text-base font-semibold text-brand-navy dark:text-foreground">
           Asset Details
           <span className="ml-2 text-sm font-normal text-muted-foreground tabular-nums">{asset.id}</span>
@@ -55,7 +54,7 @@ export function AssetReportPanel({ row, onClose }: { row: ReportRow; onClose: ()
         </div>
       </header>
 
-      <div className="space-y-3 p-3">
+      <div className="min-h-0 flex-1 space-y-3 overflow-y-auto p-3">
         {/* ---------- Which asset this is ---------- */}
         <div className="flex gap-3">
           <figure className="w-28 shrink-0">
@@ -125,7 +124,7 @@ export function AssetReportPanel({ row, onClose }: { row: ReportRow; onClose: ()
               {row.hygieneStatus}
             </Badge>
             <span className="mt-1 block text-[0.65rem] leading-tight text-muted-foreground">
-              {row.hygieneStatus === "Not Inspected" ? "No walk yet" : `${row.hygieneOpen} of 8 points open`}
+              {row.hygieneOpen} of 8 points open
             </span>
           </Stat>
         </div>
@@ -216,6 +215,9 @@ export function AssetReportPanel({ row, onClose }: { row: ReportRow; onClose: ()
           </TabsContent>
         </Tabs>
 
+      </div>
+
+      <div className="shrink-0 border-t p-3">
         <Button
           type="button"
           className="w-full"
@@ -224,7 +226,7 @@ export function AssetReportPanel({ row, onClose }: { row: ReportRow; onClose: ()
           <Download /> Download Report (PDF)
         </Button>
       </div>
-    </aside>
+    </div>
   )
 }
 

@@ -12,17 +12,20 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Sheet, SheetContent, SheetDescription, SheetTitle } from "@/components/ui/sheet"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import {
   contaminationKpis,
   contaminationTone,
   findingLook,
+  findings,
   healthSplit,
   hygieneHotspots,
   hygieneKpis,
   hygieneTrend,
   reportRows,
+  uninspectedCount,
   type Finding,
   type ReportRow,
 } from "@/data/report-data"
@@ -112,7 +115,11 @@ export function ReportsPage() {
         <span className="font-semibold">{site.plant}</span>
         <span className="text-muted-foreground">·</span>
         <span>{site.enterprise}</span>
-        <span className="ml-auto text-xs text-muted-foreground">Your assigned scope</span>
+        <span className="ml-auto text-xs text-muted-foreground">
+          {uninspectedCount
+            ? `Your assigned scope · ${uninspectedCount} not yet inspected, so not reported on`
+            : "Your assigned scope"}
+        </span>
       </p>
 
       <Tabs defaultValue="contamination">
@@ -146,7 +153,7 @@ export function ReportsPage() {
             label="Status"
             value={status}
             onChange={setStatus}
-            options={["Healthy", "Attention Required", "At Risk", "Not Inspected"]}
+            options={findings}
           />
           <Button variant="outline" className={cn(control, "bg-card")} onClick={clear} disabled={!filtersOn}>
             <X /> Clear
@@ -172,7 +179,7 @@ export function ReportsPage() {
 /* ---------- Contamination ---------- */
 
 const contaminationOrder = ["Low", "Medium", "High"]
-const findingOrder: Finding[] = ["Healthy", "Attention Required", "At Risk", "Not Inspected"]
+const findingOrder: Finding[] = ["Healthy", "Alarming", "At Risk"]
 
 function ContaminationReport({
   rows,
@@ -214,9 +221,8 @@ function ContaminationReport({
         <>
           <Kpi label="Total Assets" value={kpis.total} note="In this scope" tone="bg-info-soft text-info" />
           <Kpi label="Healthy" value={kpis.healthy} note="Score 70 and above" tone="bg-healthy-soft text-healthy" />
-          <Kpi label="Attention Required" value={kpis.attention} note="Score 50 – 69" tone="bg-attention-soft text-attention" />
+          <Kpi label="Alarming" value={kpis.attention} note="Score 50 – 69" tone="bg-attention-soft text-attention" />
           <Kpi label="At Risk" value={kpis.atRisk} note="Score below 50" tone="bg-critical-soft text-critical" />
-          <Kpi label="Not Inspected" value={kpis.notInspected} note="No assessment yet" tone="bg-neutral-soft text-neutral-soft-foreground" />
         </>
       }
       head={(sort, onSort) => (
@@ -270,9 +276,8 @@ function HygieneReport({
   const trend = hygieneTrend(rows)
   const slices: Slice[] = [
     { key: "healthy", label: "Healthy", value: kpis.clear, color: findingLook.Healthy.color },
-    { key: "attention", label: "Attention Required", value: kpis.attention, color: findingLook["Attention Required"].color },
+    { key: "attention", label: "Alarming", value: kpis.attention, color: findingLook["Alarming"].color },
     { key: "risk", label: "At Risk", value: kpis.atRisk, color: findingLook["At Risk"].color },
-    { key: "none", label: "Not Inspected", value: kpis.notInspected, color: findingLook["Not Inspected"].color },
   ]
 
   const accessors: Accessors<ReportRow, Column> = {
@@ -312,9 +317,8 @@ function HygieneReport({
             xKey="month"
             series={[
               { key: "Healthy", label: "Healthy", color: findingLook.Healthy.color },
-              { key: "Attention Required", label: "Attention Required", color: findingLook["Attention Required"].color },
+              { key: "Alarming", label: "Alarming", color: findingLook["Alarming"].color },
               { key: "At Risk", label: "At Risk", color: findingLook["At Risk"].color },
-              { key: "Not Inspected", label: "Not Inspected", color: findingLook["Not Inspected"].color },
             ]}
           />
         </section>
@@ -331,9 +335,8 @@ function HygieneReport({
         kpis={
           <>
             <Kpi label="All Points Clear" value={kpis.clear} note="Nothing outstanding" tone="bg-healthy-soft text-healthy" />
-            <Kpi label="Attention Required" value={kpis.attention} note="Minor points open" tone="bg-attention-soft text-attention" />
+            <Kpi label="Alarming" value={kpis.attention} note="Minor points open" tone="bg-attention-soft text-attention" />
             <Kpi label="At Risk" value={kpis.atRisk} note="Needs acting on" tone="bg-critical-soft text-critical" />
-            <Kpi label="Not Inspected" value={kpis.notInspected} note="No walk yet" tone="bg-neutral-soft text-neutral-soft-foreground" />
             <Kpi label="Open Points" value={kpis.openPoints} note="Across this scope" tone="bg-info-soft text-info" />
           </>
         }
@@ -352,9 +355,7 @@ function HygieneReport({
                 {r.hygieneStatus}
               </Badge>
             </TableCell>
-            <TableCell className={cn(td, "tabular-nums")}>
-              {r.hygieneStatus === "Not Inspected" ? "—" : `${r.hygieneOpen} of 8`}
-            </TableCell>
+            <TableCell className={cn(td, "tabular-nums")}>{r.hygieneOpen} of 8</TableCell>
             <TableCell className={cn(td, "whitespace-nowrap tabular-nums")}>{r.lastCleaned || "—"}</TableCell>
             <TableCell className={cn(td, "whitespace-nowrap tabular-nums")}>{r.nextCleaningDue || "—"}</TableCell>
           </>
@@ -436,7 +437,6 @@ function AiInsights({ rows }: { rows: ReportRow[] }) {
                 ["Healthy", split.healthy, "bg-healthy"],
                 [healthStatus.attention.label, split.attention, "bg-attention"],
                 ["At Risk", split.critical, "bg-critical"],
-                ["Not Inspected", split.notInspected, "bg-neutral"],
               ] as const
             ).map(([label, value, tone]) => (
               <li key={label} className="flex items-center gap-2">
@@ -479,7 +479,7 @@ function worstCategories(rows: ReportRow[]) {
   for (const r of rows) {
     const entry = map.get(r.asset.category) ?? { total: 0, failing: 0 }
     entry.total += 1
-    if (r.contaminationStatus === "At Risk" || r.contaminationStatus === "Attention Required") entry.failing += 1
+    if (r.contaminationStatus === "At Risk" || r.contaminationStatus === "Alarming") entry.failing += 1
     map.set(r.asset.category, entry)
   }
   return [...map.entries()]
@@ -552,15 +552,6 @@ function ReportTable({
         </Button>
       </div>
 
-      {/* The report floats over the table rather than displacing it, so the row
-          it belongs to stays exactly where it was */}
-      <div className="relative">
-        {selected ? (
-          <div className="absolute inset-x-0 top-0 z-20 lg:inset-x-auto lg:right-0 lg:w-[30rem]">
-            <AssetReportPanel row={selected} onClose={onClose} />
-          </div>
-        ) : null}
-
       <div className="overflow-x-auto">
         <Table>
           <TableHeader>
@@ -577,9 +568,23 @@ function ReportTable({
             {shown.map((r) => (
               <TableRow
                 key={r.asset.id}
-                className={cn(selected?.asset.id === r.asset.id && "bg-info-soft hover:bg-info-soft")}
+                aria-selected={selected?.asset.id === r.asset.id}
+                /* The whole row opens the report; View stays for keyboard reach */
+                onClick={() => onSelect(r)}
+                className={cn(
+                  "cursor-pointer",
+                  selected?.asset.id === r.asset.id && "bg-info-soft hover:bg-info-soft"
+                )}
               >
-                <TableCell className={cn(td, "font-semibold whitespace-nowrap text-primary tabular-nums")}>
+                {/* Colour alone would not carry the selection, so the row also
+                    takes an accent bar down its left edge */}
+                <TableCell
+                  className={cn(
+                    td,
+                    "border-l-4 font-semibold whitespace-nowrap text-primary tabular-nums",
+                    selected?.asset.id === r.asset.id ? "border-l-primary" : "border-l-transparent"
+                  )}
+                >
                   {r.asset.id}
                 </TableCell>
                 <TableCell className={cn(td, "max-w-56 whitespace-normal")}>
@@ -595,8 +600,13 @@ function ReportTable({
                 <TableCell className={cn(td, "max-w-40 whitespace-normal")}>{r.asset.area}</TableCell>
                 {cells(r)}
                 <TableCell className={cn(td, "text-right")}>
-                  <Button variant="outline" size="sm" className="bg-card" onClick={() => onSelect(r)}>
-                    View
+                  <Button
+                    variant={selected?.asset.id === r.asset.id ? "default" : "outline"}
+                    size="sm"
+                    className={cn(selected?.asset.id !== r.asset.id && "bg-card")}
+                    onClick={() => onSelect(r)}
+                  >
+                    {selected?.asset.id === r.asset.id ? "Viewing" : "View"}
                   </Button>
                 </TableCell>
               </TableRow>
@@ -616,7 +626,6 @@ function ReportTable({
           </TableBody>
         </Table>
       </div>
-      </div>
 
       <TablePager
         page={Math.min(page, pages)}
@@ -627,6 +636,19 @@ function ReportTable({
         onPage={setPage}
         onPageSize={setPageSize}
       />
+
+      {/* The report is a drawer down the full height of the screen. It is not
+          modal: the table stays readable and clickable behind it, so another
+          row can be opened without closing this one first. */}
+      <Sheet open={!!selected} onOpenChange={(open) => !open && onClose()} modal={false}>
+        <SheetContent side="right" className="w-full gap-0 p-0 sm:max-w-[32rem]">
+          <SheetTitle className="sr-only">Asset details and health report</SheetTitle>
+          <SheetDescription className="sr-only">
+            The contamination and hygiene record for the selected asset.
+          </SheetDescription>
+          {selected ? <AssetReportPanel row={selected} onClose={onClose} /> : null}
+        </SheetContent>
+      </Sheet>
     </div>
   )
 }
