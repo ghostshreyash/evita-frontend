@@ -77,7 +77,7 @@ export function ReportsPage() {
           r.asset.id.toLowerCase().includes(q) ||
           r.asset.tag.toLowerCase().includes(q) ||
           r.asset.name.toLowerCase().includes(q) ||
-          r.asset.serial.toLowerCase().includes(q)) &&
+          r.asset.area.toLowerCase().includes(q)) &&
         (department === ANY || r.asset.department === department) &&
         (category === ANY || r.asset.category === category) &&
         (status === ANY || r.contaminationStatus === status || r.hygieneStatus === status)
@@ -142,7 +142,7 @@ export function ReportsPage() {
             <Input
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              placeholder="Search asset ID, tag, name or serial"
+              placeholder="Search asset ID, tag, name or location"
               aria-label="Search assets"
               className={cn(control, "pl-9")}
             />

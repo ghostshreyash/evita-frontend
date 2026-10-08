@@ -64,32 +64,21 @@ export function AssetIdScreen({
           <DetailList
             rows={[
               { label: "Asset Category", value: asset.category, always: true },
-              { label: "Asset Name / Tag ID", value: asset.tag, always: true },
+              { label: "Asset Name", value: asset.tag, always: true },
               { label: "Asset Description", value: profile.details.description },
               { label: "Enterprise", value: asset.enterprise, always: true },
               { label: "Plant", value: asset.plant, always: true },
               { label: "Location / Area", value: asset.area, always: true },
               { label: "Department", value: asset.department },
-              { label: "Manufacturer", value: asset.manufacturer },
-              { label: "Model", value: asset.model },
-              { label: "Serial Number", value: asset.serial },
-              {
-                label: "Rated Capacity",
-                value: profile.technical.capacity ? `${profile.technical.capacity} ${profile.technical.capacityUnit}` : "",
-              },
-              {
-                label: "Rated Voltage",
-                note: "(Primary/Secondary)",
-                value: `${profile.technical.primaryVoltage} ${profile.technical.primaryVoltageUnit} / ${profile.technical.secondaryVoltage} ${profile.technical.secondaryVoltageUnit}`,
-              },
-              { label: "Installation Date", value: asset.installed },
+              { label: "Sub-Department", value: profile.details.subDepartment },
+              { label: "Address", value: profile.details.address },
               { label: "Asset Criticality", value: asset.criticality, always: true },
-              {
-                label: "Warranty Period",
-                value: profile.operational.warranty
-                  ? `${profile.operational.warranty} ${profile.operational.warrantyUnit}`
-                  : "",
-              },
+              /* The specification depends on the asset type, so it is read off
+                 the profile rather than named here */
+              ...profile.parameters.map((p) => ({
+                label: p.label,
+                value: [p.value, p.unit].filter(Boolean).join(" "),
+              })),
             ]}
           />
         </DetailPanel>

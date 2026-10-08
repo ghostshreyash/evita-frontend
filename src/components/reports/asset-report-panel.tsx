@@ -76,9 +76,6 @@ export function AssetReportPanel({ row, onClose }: { row: ReportRow; onClose: ()
               { label: "Enterprise", value: asset.enterprise },
               { label: "Location", value: asset.area },
               { label: "Department", value: asset.department },
-              { label: "Manufacturer", value: asset.manufacturer },
-              { label: "Model", value: asset.model },
-              { label: "Serial Number", value: asset.serial },
             ]}
           />
         </div>

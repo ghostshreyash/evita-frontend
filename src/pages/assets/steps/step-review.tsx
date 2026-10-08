@@ -8,6 +8,7 @@ import { assetDetailRows, assetOperationalRows, assetTechnicalRows } from "@/com
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
+import { missingParameters } from "@/data/asset-parameters"
 import { profileFrom } from "@/data/asset-store"
 import { td, th } from "@/lib/data-table"
 import { missingUploads, type AssetFormValues } from "@/pages/assets/schemas"
@@ -33,8 +34,7 @@ export function StepReview({
   const missing = missingUploads(values)
 
   // form.watch() hands back a fresh object each render, so there is nothing to memoise
-  const profile = profileFrom(values, { installed: values.installed ?? "", onboarded: "" })
-
+  const profile = profileFrom(values, { onboarded: "" })
 
   return (
     <div>
@@ -134,7 +134,7 @@ export function StepReview({
           title="Submission Checklist"
           items={[
             { label: "Asset details completed", done: !!values.tag && !!values.category && !!values.area },
-            { label: "Technical details completed", done: !!values.primaryVoltage && !!values.capacity && !!values.cooling },
+            { label: "Technical details completed", done: missingParameters(values.category, values.parameters ?? {}).length === 0 },
             { label: `Photographs added (${missing.images})`, done: missing.images > 0 },
             { label: `Documents attached (${missing.documents})`, done: missing.documents > 0 },
             { label: "Information reviewed", done: true },

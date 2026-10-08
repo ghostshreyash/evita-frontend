@@ -81,8 +81,7 @@ export function AssetsPage() {
           a.id.toLowerCase().includes(q) ||
           a.tag.toLowerCase().includes(q) ||
           a.name.toLowerCase().includes(q) ||
-          a.serial.toLowerCase().includes(q) ||
-          a.manufacturer.toLowerCase().includes(q)) &&
+          a.area.toLowerCase().includes(q)) &&
         (category === ANY || a.category === category) &&
         (area === ANY || a.area === area) &&
         (criticality === ANY || a.criticality === criticality) &&
@@ -159,7 +158,7 @@ export function AssetsPage() {
             <Input
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              placeholder="Search asset ID, tag, name, serial or make"
+              placeholder="Search asset ID, tag, name or location"
               aria-label="Search assets"
               className={cn(control, "pl-9")}
             />
