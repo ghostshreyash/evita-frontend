@@ -132,7 +132,7 @@ export function TaskPage() {
             <Link to="/my-tasks" className="hover:text-foreground">My Tasks</Link>›
             <span className="font-semibold text-primary">{job.id}</span>
           </nav>
-          <h2 className="mt-1 text-3xl font-bold tracking-tight text-brand-navy dark:text-foreground">{job.asset}</h2>
+          <h2 className="mt-1 text-2xl font-bold text-brand-navy dark:text-foreground">{job.asset}</h2>
           <p className="mt-0.5 text-base text-muted-foreground">{job.activity} · {job.plant}</p>
         </div>
         <div className="flex flex-wrap gap-2">
@@ -159,9 +159,9 @@ export function TaskPage() {
         </span>
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-2">
-            <span className="rounded-md bg-muted px-2 py-1 font-mono text-xs font-semibold">{shortCategory(category)}</span>
+            <span className="rounded-md bg-muted px-2 py-1 tabular-nums text-xs font-semibold">{shortCategory(category)}</span>
             {detail?.assetTag ? (
-              <span className="flex items-center gap-1.5 font-mono text-lg font-bold tracking-wide text-brand-navy dark:text-foreground">
+              <span className="flex items-center gap-1.5 text-lg font-bold tabular-nums text-brand-navy dark:text-foreground">
                 {detail.assetTag} <QrCode className="size-4 text-primary" />
               </span>
             ) : null}
@@ -195,7 +195,7 @@ export function TaskPage() {
             <Field label="Plant">{job.plant}</Field>
             <Field label="Location / Area">{detail?.area || "—"}</Field>
             <Field label="Asset Category">{category}</Field>
-            <Field label="Asset Tag"><span className="font-mono font-semibold text-primary">{detail?.assetTag ?? "—"}</span></Field>
+            <Field label="Asset Tag"><span className="tabular-nums font-semibold text-primary">{detail?.assetTag ?? "—"}</span></Field>
             <Field label="Asset Criticality">
               {detail ? <span className={cn("rounded-md px-2 py-0.5 text-sm font-semibold", criticalityTone[detail.assetCriticality])}>{detail.assetCriticality}</span> : "—"}
             </Field>
@@ -306,7 +306,7 @@ function StartSection({ job, onStart }: { job: Job; onStart: () => void }) {
       </section>
 
       <section className="flex flex-col rounded-2xl bg-card p-5 shadow-xs ring-1 ring-foreground/10">
-        <h3 className="flex items-center gap-2 text-xl font-semibold text-brand-navy dark:text-foreground">
+        <h3 className="flex items-center gap-2 text-lg font-semibold text-brand-navy dark:text-foreground">
           <Rocket className="size-6 text-primary" /> Ready to start?
         </h3>
         <p className="mt-2 text-sm text-muted-foreground">
@@ -316,7 +316,7 @@ function StartSection({ job, onStart }: { job: Job; onStart: () => void }) {
         </p>
         <div className={cn("mt-4 rounded-xl px-4 py-3 text-sm ring-1", isOverdue(job) ? "bg-critical-soft text-critical ring-critical/25" : "bg-muted/50 ring-foreground/10")}>
           {isOverdue(job) ? "Overdue · was booked " : "Booked "}
-          <span className="font-mono font-semibold">{format(parseDay(job.date), "d MMM")}, {slotLabel(job.slot)}</span>
+          <span className="tabular-nums font-semibold">{format(parseDay(job.date), "d MMM")}, {slotLabel(job.slot)}</span>
         </div>
         <Button size="lg" className="mt-auto h-14 w-full text-lg shadow-lg shadow-primary/30 max-lg:mt-5" onClick={onStart}>
           <Play className="fill-current" /> Start Task
@@ -350,7 +350,7 @@ function OutcomeBanner({ job, assetTag }: { job: Job; assetTag?: string }) {
         <div className="text-2xl font-bold">{note.title}</div>
         <p className="text-sm text-white/90">
           {note.body}
-          {assetTag ? <span className="font-mono font-semibold"> · {assetTag}</span> : null}
+          {assetTag ? <span className="tabular-nums font-semibold"> · {assetTag}</span> : null}
         </p>
       </div>
     </section>

@@ -98,7 +98,7 @@ function Counter({
       className="group/stat flex min-h-32 flex-col rounded-2xl bg-card p-4 shadow-xs ring-1 ring-foreground/10 transition-[transform,box-shadow] duration-200 hover:shadow-md motion-safe:hover:-translate-y-0.5 active:translate-y-0"
     >
       <div className="flex items-start justify-between gap-2">
-        <span className="text-xs font-semibold tracking-[0.08em] text-muted-foreground uppercase">{label}</span>
+        <span className="text-xs font-semibold tracking-wide text-muted-foreground uppercase">{label}</span>
         <span className={cn("flex size-12 shrink-0 items-center justify-center rounded-xl", tone)}>
           <Icon className="size-6" />
         </span>
@@ -123,7 +123,7 @@ function TaskRow({ job, onOpen }: { job: Job; onOpen: () => void }) {
         onKeyDown={(e) => e.key === "Enter" && onOpen()}
         className="flex cursor-pointer items-center gap-4 px-5 py-4 transition-colors hover:bg-muted/40 active:bg-muted/60"
       >
-        <span className={cn("shrink-0 rounded-lg px-2.5 py-1.5 text-center font-mono text-sm leading-tight font-semibold", overdue ? "bg-critical-soft text-critical" : "bg-muted text-foreground")}>
+        <span className={cn("shrink-0 rounded-lg px-2.5 py-1.5 text-center tabular-nums text-sm leading-tight font-semibold", overdue ? "bg-critical-soft text-critical" : "bg-muted text-foreground")}>
           {isToday(job.date) ? "Today" : format(parseDay(job.date), "EEE d")}
           <span className="block text-xs font-medium">{startTime(job.slot)}</span>
         </span>
@@ -205,7 +205,7 @@ export function DashboardPage() {
       icon: FileText,
       label: "Log Test Results",
       tone: "bg-healthy-soft text-healthy",
-      run: () => navigate(nextInspection ? `/my-tasks/${nextInspection.id}` : "/testing-measurements"),
+      run: () => navigate(nextInspection ? `/my-tasks/${nextInspection.id}` : "/my-tasks?type=inspection"),
     },
     { icon: TriangleAlert, label: "Report an Issue", tone: "bg-attention-soft text-attention", run: () => openPanel({ kind: "issue" }) },
     { icon: BookOpen, label: "View SOP / Manual", tone: "bg-highlight-soft text-highlight", run: () => openPanel({ kind: "sop", activity: nextInspection?.activity }) },
@@ -311,7 +311,7 @@ export function DashboardPage() {
                     { icon: CalendarDays, label: "Joined", value: me.joined },
                     // The ELPREMAR's own location (their address from onboarding), not the site they are posted to
                     { icon: MapPin, label: "Location", value: `${profile.basic.city}, ${profile.basic.state}` },
-                    { icon: Phone, label: "Phone", value: <a href="tel:+919876543210" className="font-mono text-primary">+91 98765 43210</a> },
+                    { icon: Phone, label: "Phone", value: <a href="tel:+919876543210" className="tabular-nums text-primary">+91 98765 43210</a> },
                     { icon: Mail, label: "Email", value: <a href={`mailto:${email}`} className="text-primary">{email}</a> },
                   ]}
                 />
@@ -346,7 +346,7 @@ export function DashboardPage() {
             </button>
 
             <section className="rounded-2xl bg-card p-4 shadow-xs ring-1 ring-foreground/10">
-              <h3 className="mb-3 text-xs font-bold tracking-[0.08em] text-muted-foreground uppercase">Quick Actions</h3>
+              <h3 className="mb-3 text-xs font-bold tracking-wide text-muted-foreground uppercase">Quick Actions</h3>
               <div className="grid grid-cols-2 gap-2.5 lg:grid-cols-1">
                 {quickActions.map((a) => (
                   <button
@@ -368,7 +368,7 @@ export function DashboardPage() {
 
           <section className="rounded-2xl bg-card p-4 shadow-xs ring-1 ring-foreground/10 md:col-span-2 lg:col-span-1">
             <div className="mb-2 flex items-center justify-between">
-              <h3 className="text-xs font-bold tracking-[0.08em] text-muted-foreground uppercase">Recent Notifications</h3>
+              <h3 className="text-xs font-bold tracking-wide text-muted-foreground uppercase">Recent Notifications</h3>
               <button type="button" onClick={() => openPanel({ kind: "notifications" })} className="-my-2 flex min-h-11 items-center gap-1 px-1 text-sm font-semibold text-primary hover:underline">
                 View All <ChevronRight className="size-4" />
               </button>
@@ -386,7 +386,7 @@ export function DashboardPage() {
                   >
                     <span className={cn("mt-1.5 size-2 shrink-0 rounded-full", n.unread ? "bg-primary" : "bg-foreground/15")} />
                     <span className={cn("min-w-0 flex-1", n.unread && "font-medium")}>{n.title}</span>
-                    <span className="shrink-0 font-mono text-xs text-muted-foreground">{noticeTime(n.at)}</span>
+                    <span className="shrink-0 tabular-nums text-xs text-muted-foreground">{noticeTime(n.at)}</span>
                   </button>
                 </li>
               ))}

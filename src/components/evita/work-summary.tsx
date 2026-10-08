@@ -49,7 +49,7 @@ export function InspectionRecord({ detail, activity }: { detail: InspectionDetai
               label: "Overall Condition",
               value: result ? <span className={cn("rounded-full px-2.5 py-0.5 text-sm font-semibold", bandLook(result.healthScore).soft)}>{bandLook(result.healthScore).label}</span> : "Not Inspected",
             },
-            { label: "Health Score", value: result ? <span className="font-mono font-bold">{result.healthScore} / 100</span> : "—" },
+            { label: "Health Score", value: result ? <span className="tabular-nums font-bold">{result.healthScore} / 100</span> : "—" },
             { label: "Inspected By", value: execution?.performedBy ?? "—" },
             { label: "Remarks", value: execution?.remarks || "—" },
           ]}
@@ -75,7 +75,7 @@ export function InspectionRecord({ detail, activity }: { detail: InspectionDetai
                   <TableRow key={i}>
                     <TableCell className={cn(td, "text-muted-foreground tabular-nums")}>{i + 1}</TableCell>
                     <TableCell className={cn(td, "font-medium whitespace-normal")}>{m.parameter}</TableCell>
-                    <TableCell className={cn(td, "font-mono font-semibold whitespace-nowrap")}>
+                    <TableCell className={cn(td, "tabular-nums font-semibold whitespace-nowrap")}>
                       {m.value} {m.unit !== "—" && m.unit !== "Other" ? m.unit : ""}
                     </TableCell>
                     <TableCell className={cn(td, "whitespace-normal text-muted-foreground max-md:hidden")}>{m.limit ?? "—"}</TableCell>

@@ -13,14 +13,13 @@ import { DashboardPage } from "@/pages/dashboard"
 import { AssetsPage } from "@/pages/assets/assets"
 import { AssetOnboardingPage } from "@/pages/assets/asset-onboarding"
 import { AssetDetailPage } from "@/pages/assets/asset-detail"
-import { TestingMeasurementsPage } from "@/pages/testing-measurements"
 import { ReportsPage } from "@/pages/reports"
 import { MyTasksPage } from "@/pages/my-tasks"
 import { TaskPage } from "@/pages/task"
 import { ComingSoonPage } from "@/pages/coming-soon"
 
 /** Sidebar sections with a real screen; the rest render a placeholder */
-const built = new Set(["/", "/assets", "/my-tasks", "/testing-measurements", "/maintenance-activities", "/reports"])
+const built = new Set(["/", "/assets", "/my-tasks", "/reports"])
 
 /*
  * There is no Register screen: ELPREMAR accounts are created by OLIVINE in the
@@ -49,9 +48,6 @@ export const router = createBrowserRouter([
           { path: "reports", element: <ReportsPage /> },
           { path: "my-tasks", element: <MyTasksPage /> },
           { path: "my-tasks/:id", element: <TaskPage /> },
-          // The two work queues are My Tasks narrowed to one kind of work
-          { path: "testing-measurements", element: <TestingMeasurementsPage /> },
-          { path: "maintenance-activities", element: <MyTasksPage key="maintenance" kind="maintenance" title="Maintenance Activities" /> },
           // Remaining sidebar entries show a placeholder until their screens are built
           ...navigation
             .filter((item) => !built.has(item.path))

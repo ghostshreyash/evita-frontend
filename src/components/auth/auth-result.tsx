@@ -50,7 +50,7 @@ export function AuthResult({
       {reference ? (
         <div className="mt-4 rounded-xl border border-brand-gold/40 bg-brand-gold-soft px-4 py-3">
           <div className="text-xs tracking-wider text-current uppercase opacity-70">{referenceLabel}</div>
-          <div className="font-mono text-lg font-bold tracking-wide text-brand-gold-soft-foreground">{reference}</div>
+          <div className="tabular-nums text-lg font-bold tracking-wide text-brand-gold-soft-foreground">{reference}</div>
         </div>
       ) : null}
 
