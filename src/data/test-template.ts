@@ -1,5 +1,5 @@
 /**
- * The Testing & Measurements template: what an ELPREMAR records for an asset,
+ * The inspection template: what an ELPREMAR records for an asset,
  * how each item is captured, and the limits it is judged against.
  *
  * Scope follows the client's answers (Requirement sheet, Queries 32–35, 40, 59):

@@ -30,7 +30,7 @@ import { healthStatus } from "@/lib/status"
  * Inspection Information, Maintenance Information and Recent Activities are
  * deliberately absent. Inspection and maintenance records are not held yet, and
  * a panel of invented dates against a real asset is worse than no panel — those
- * blocks belong here once Testing & Measurements and Maintenance Activities are
+ * blocks belong here once the inspection and maintenance records are
  * built and have something true to show.
  */
 export function AssetDetailPage() {

@@ -6,20 +6,18 @@ import { toast } from "sonner"
 
 import { StepCard } from "@/components/common/wizard"
 import { AssetPhoto } from "@/components/common/asset-photo"
-import { CheckList, DetailList, DetailPanel } from "@/components/common/detail-list"
+import { DetailList, DetailPanel } from "@/components/common/detail-list"
 import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { parametersFor, unitFor } from "@/data/asset-parameters"
 import { suggestedDocumentNames, suggestedImageNames } from "@/data/master-data"
 import { urlFor } from "@/lib/object-url"
-import { FRONT_VIEW, missingUploads, type AssetFormValues, type AssetUpload } from "@/pages/assets/schemas"
+import { type AssetFormValues, type AssetUpload } from "@/pages/assets/schemas"
 
 const IMAGE_TYPES = "image/png,image/jpeg"
 const DOCUMENT_TYPES = "application/pdf,image/png,image/jpeg"
 const MAX_IMAGE_MB = 5
-/** "Front View" is its own slot now, so it is not offered as a name again */
-const imageSuggestions = suggestedImageNames.filter((n) => n !== "Front View")
 const MAX_DOCUMENT_MB = 10
 
 /** Files picked but not yet named; the dialog below collects the names */
@@ -28,12 +26,11 @@ type Pending = { kind: "image" | "document"; files: File[] }
 /**
  * Step 3 of 4: the photographs and paperwork that back the ratings.
  *
- * One fixed slot, then as many as the asset has. The onboarding sheet asks
- * every type for an Asset Photograph, so the front view is a named mandatory
- * slot and needs no naming. Beyond it the client confirmed on 07-10-2026 that
- * what is available varies from asset to asset and site to site, so the
- * engineer adds what the asset actually has and names each one themselves. The
- * old fixed labels survive as suggestions.
+ * At least one photograph, and no fixed slots beyond that. The onboarding
+ * sheet asks every type for an Asset Photograph, so one is mandatory; what it
+ * shows is the engineer's to decide, because the client confirmed on 07-10-2026
+ * that what is available varies from asset to asset and site to site. The old
+ * fixed labels survive as suggestions.
  *
  * Naming is asked for at the moment of upload rather than left to be filled in
  * afterwards: a name typed while the engineer is still standing at the asset is
@@ -46,13 +43,8 @@ export function StepUploads({ form }: { form: UseFormReturn<AssetFormValues> }) 
   const values = form.watch()
   const images = values.images ?? []
   const documents = values.documents ?? []
-  const missing = missingUploads(values)
 
   const [pending, setPending] = useState<Pending | null>(null)
-
-  /* The mandatory slot, and everything the engineer added beyond it */
-  const front = images.find((i) => i.id === FRONT_VIEW)
-  const extras = images.filter((i) => i.id !== FRONT_VIEW)
 
   const setImages = (next: AssetUpload[]) => form.setValue("images", next, { shouldDirty: true, shouldValidate: true })
   const setDocuments = (next: AssetUpload[]) =>
@@ -62,14 +54,6 @@ export function StepUploads({ form }: { form: UseFormReturn<AssetFormValues> }) 
   const pick = (kind: Pending["kind"], files: FileList | null, limitMb: number) => {
     const accepted = [...(files ?? [])].filter((file) => within(file, limitMb))
     if (accepted.length) setPending({ kind, files: accepted })
-  }
-
-  /** The front view carries its own name, so it skips the naming dialog */
-  const setFront = (files: FileList | null) => {
-    const file = [...(files ?? [])].find((f) => within(f, MAX_IMAGE_MB))
-    if (!file) return
-    setImages([{ id: FRONT_VIEW, name: "Front View", file }, ...extras])
-    toast.success(front ? "Front view replaced." : "Front view added.")
   }
 
   const save = (names: string[]) => {
@@ -88,46 +72,30 @@ export function StepUploads({ form }: { form: UseFormReturn<AssetFormValues> }) 
         description="Add what this asset actually has. You will be asked to name each upload as you add it."
       >
         {/* ---------- Photographs ---------- */}
-        <Section icon={Camera} title="Asset Images" count={images.length} hint={`JPG or PNG · up to ${MAX_IMAGE_MB} MB each`}>
-          {/* The one photograph the sheet asks of every asset type */}
-          <div className="mb-3">
-            <p className="mb-1.5 text-sm font-medium">
-              Front View <span className="text-critical">*</span>
-              <span className="ml-1.5 font-normal text-muted-foreground">the shot the next engineer identifies it by</span>
-            </p>
-            {front ? (
-              <Thumb item={front} onRemove={() => setImages(extras)} className="max-w-56" />
-            ) : (
-              <AddSlot
-                photo
-                single
-                className="h-28 border-critical/40 bg-critical-soft/30 hover:border-critical"
-                icon={Camera}
-                label="Add front view"
-                accept={IMAGE_TYPES}
-                onPick={setFront}
-              />
-            )}
-          </div>
-
-          {/* Anything else the asset has, named as it is added */}
-          <p className="mb-1.5 text-sm font-medium">
-            Other Photographs <span className="font-normal text-muted-foreground">(optional)</span>
-          </p>
-          <div className={cn(extras.length && "grid grid-cols-2 gap-2.5 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5")}>
-            {extras.map((item) => (
+        <Section
+          icon={Camera}
+          title="Asset Images"
+          count={images.length}
+          hint={`JPG or PNG · up to ${MAX_IMAGE_MB} MB each`}
+        >
+          {/* One wide drop zone until there is something to show; a grid after */}
+          <div className={cn(images.length && "grid grid-cols-2 gap-2.5 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5")}>
+            {images.map((item) => (
               <Thumb key={item.id} item={item} onRemove={() => setImages(images.filter((i) => i.id !== item.id))} />
             ))}
 
             <AddSlot
               photo
-              className={cn(!extras.length && "h-28")}
+              className={cn(!images.length && "h-28", !images.length && "border-critical/40 bg-critical-soft/20 hover:border-critical")}
               icon={ImagePlus}
-              label={extras.length ? "Add more" : "Add photograph"}
+              label={images.length ? "Add more" : "Add photograph"}
               accept={IMAGE_TYPES}
               onPick={(files) => pick("image", files, MAX_IMAGE_MB)}
             />
           </div>
+          {images.length ? null : (
+            <p className="mt-2 text-sm text-critical">At least one photograph of the asset is required.</p>
+          )}
         </Section>
 
         {/* ---------- Documents ---------- */}
@@ -180,7 +148,7 @@ export function StepUploads({ form }: { form: UseFormReturn<AssetFormValues> }) 
       <div className="space-y-3">
         <DetailPanel title="Asset Preview" contentClassName="space-y-3">
           <div className="h-40 overflow-hidden rounded-lg ring-1 ring-foreground/10">
-            <AssetPhoto file={front?.file} label={front?.name ?? "Asset"} caption={values.tag} />
+            <AssetPhoto file={images[0]?.file} label={images[0]?.name ?? "Asset"} caption={values.tag} />
           </div>
           <DetailList
             rows={[
@@ -200,15 +168,6 @@ export function StepUploads({ form }: { form: UseFormReturn<AssetFormValues> }) 
             ]}
           />
         </DetailPanel>
-
-        <CheckList
-          title="Upload Checklist"
-          items={[
-            { label: "Front view photograph", done: missing.front },
-            { label: "Supporting documents attached", done: missing.documents > 0 },
-            { label: "Every upload named", done: missing.unnamed === 0 },
-          ]}
-        />
       </div>
 
       <NameUploadsDialog pending={pending} onCancel={() => setPending(null)} onSave={save} />
@@ -284,7 +243,7 @@ function NameUploadsDialog({
                   onChange={(e) => setNames(names.map((n, j) => (j === i ? e.target.value : n)))}
                 />
                 <div className="mt-1.5 flex flex-wrap gap-1">
-                  {(isImage ? imageSuggestions : suggestedDocumentNames).map((suggestion) => (
+                  {(isImage ? suggestedImageNames : suggestedDocumentNames).map((suggestion) => (
                     <Chip
                       key={suggestion}
                       selected={names[i] === suggestion}

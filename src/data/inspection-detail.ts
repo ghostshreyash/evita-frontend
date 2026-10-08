@@ -25,6 +25,7 @@ import {
   type DustThickness,
   type FpsStatus,
 } from "@/data/test-template"
+import { placeInPlant } from "@/data/plant-tree"
 import { categoryFor } from "@/lib/asset-category"
 import { emptyCapture, observationsFrom, resultsFrom, scoreCapture } from "@/lib/testing"
 
@@ -49,7 +50,7 @@ export type ThermalPoint = {
 }
 
 /**
- * EVITA: the structured Testing & Measurements capture (Phase 1), kept beside
+ * EVITA: the structured inspection capture (Phase 1), kept beside
  * the flat `measurements` OCC reads. `measurements` and `observations` are
  * derived from it on every save, so both apps see the same record.
  */
@@ -165,6 +166,7 @@ export function inspectionDetail(row: TaskRow): InspectionDetail {
     description: instructions[row.activity] ?? instructions["Preventive Assessment"],
     createdBy: `${pick(supervisors)} (OCC)`,
     area: pick(areas),
+    ...placeInPlant(row),
     assetTag: `TAG-${row.plant.slice(0, 3).toUpperCase()}-${row.id.slice(-4)}`,
     assetCategory: categoryFor(row.asset),
     assetCriticality: pick(assetCriticality),

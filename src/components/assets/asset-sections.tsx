@@ -9,9 +9,9 @@ import type { AssetProfile } from "@/data/asset-data"
  * keeps a lightly-filled optional section from rendering as a wall of dashes —
  * see `DetailList`.
  *
- * Two groups, not three: everything OLIVINE's documents ask for about how the
- * asset is run is two fields, so they sit with the rest of the asset's details
- * rather than in a panel of their own.
+ * Two groups, not three: an asset is where it is and what it is, and then the
+ * electrical specification its type calls for. Nothing about how it is run is
+ * captured at onboarding - no OLIVINE document asks for it.
  */
 
 export const assetDetailRows = (p: AssetProfile): DetailRow[] => [
@@ -22,13 +22,11 @@ export const assetDetailRows = (p: AssetProfile): DetailRow[] => [
   { label: "Location / Area", value: p.details.area, always: true },
   {
     label: "GPS Coordinates",
-    value: p.operational.latitude && p.operational.longitude ? `${p.operational.latitude}, ${p.operational.longitude}` : "",
+    value: p.details.latitude && p.details.longitude ? `${p.details.latitude}, ${p.details.longitude}` : "",
   },
   { label: "Asset Category", value: p.details.category, always: true },
   { label: "Asset Name", value: p.details.tag, always: true },
   { label: "Asset Description", value: p.details.description },
-  { label: "Operational Status", value: p.operational.operationalStatus, always: true },
-  { label: "Commissioning Date", value: p.operational.commissioned },
 ]
 
 /**

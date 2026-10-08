@@ -1,14 +1,12 @@
 import type { UseFormReturn } from "react-hook-form"
-import { Cog, Info, Zap } from "lucide-react"
+import { Info } from "lucide-react"
 
 import { StepCard } from "@/components/common/wizard"
 import { DetailList, DetailPanel } from "@/components/common/detail-list"
 import { CategoryIcon } from "@/components/common/category-icon"
-import { DateField, SelectField } from "@/components/form/fields"
 import { Field, FieldLabel } from "@/components/ui/field"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { assetOperationalStatus } from "@/data/master-data"
 import { parametersFor, unitFor, unitKeyOf, type ParamSpec } from "@/data/asset-parameters"
 import type { AssetFormValues } from "@/pages/assets/schemas"
 
@@ -25,13 +23,12 @@ import type { AssetFormValues } from "@/pages/assets/schemas"
  * Asset criticality lives here now, as the client asked at review. It is the one
  * parameter every asset type carries, so it arrives with the rest of them.
  *
- * Operational Details is down to the two fields OLIVINE's documents actually
- * ask for. Asset condition, current load, warranty, AMC and the next general
- * check are gone: no sheet or answer asks for them at onboarding, and the
- * asset's own coordinates moved to step 1 with the rest of its location.
+ * There is no operational block any more. Asset condition, current load,
+ * warranty, AMC, the next general check, operational status and the
+ * commissioning date are not asked for by the onboarding sheet, and the asset's
+ * own coordinates moved to step 1 with the rest of its location.
  */
 export function StepTechnical({ form }: { form: UseFormReturn<AssetFormValues> }) {
-  const { control } = form
   const values = form.watch()
   const specs = parametersFor(values.category)
   const answers = values.parameters ?? {}
@@ -43,35 +40,16 @@ export function StepTechnical({ form }: { form: UseFormReturn<AssetFormValues> }
     <div className="grid gap-3 xl:grid-cols-[minmax(0,1fr)_22rem]">
       <StepCard
         title="Step 2 of 4: Technical Details"
-        description="The ratings this kind of asset carries, and how it is run."
+        description="The electrical specification this kind of asset is registered with."
       >
-        <div className="grid gap-3 lg:grid-cols-2">
-          {/* ---------- Electrical specification, per asset type ---------- */}
-          <Group icon={Zap} title="Electrical Specification">
-            <p className="mb-2 flex items-center gap-1.5 text-xs text-muted-foreground">
-              <CategoryIcon category={values.category} className="size-4" />
-              The parameters below are the ones a {values.category || "asset"} is registered with.
-            </p>
-            <div className="grid gap-x-3 gap-y-2 sm:grid-cols-2">
-              {specs.map((spec) => (
-                <ParamField key={spec.key} spec={spec} answers={answers} onChange={set} />
-              ))}
-            </div>
-          </Group>
-
-          {/* ---------- How the asset is run ---------- */}
-          <Group icon={Cog} title="Operational Details">
-            <div className="grid gap-x-3 gap-y-2 sm:grid-cols-2">
-              <SelectField
-                control={control}
-                name="operationalStatus"
-                label="Operational Status"
-                required
-                options={assetOperationalStatus}
-              />
-              <DateField control={control} name="commissioned" label="Commissioning Date" />
-            </div>
-          </Group>
+        <p className="mb-3 flex items-center gap-1.5 text-sm text-muted-foreground">
+          <CategoryIcon category={values.category} className="size-4" />
+          The parameters below are the ones a {values.category || "asset"} is registered with.
+        </p>
+        <div className="grid gap-x-3 gap-y-2 sm:grid-cols-2 xl:grid-cols-3">
+          {specs.map((spec) => (
+            <ParamField key={spec.key} spec={spec} answers={answers} onChange={set} />
+          ))}
         </div>
       </StepCard>
 
@@ -177,26 +155,5 @@ function ParamField({
         ) : null}
       </div>
     </Field>
-  )
-}
-
-/** One titled block of fields inside the step */
-function Group({
-  icon: Icon,
-  title,
-  children,
-}: {
-  icon: React.ComponentType<{ className?: string }>
-  title: string
-  children: React.ReactNode
-}) {
-  return (
-    <section className="rounded-lg ring-1 ring-foreground/10">
-      <h4 className="flex items-center gap-2 rounded-t-lg bg-info-soft px-3 py-2 text-base font-semibold text-brand-navy dark:text-foreground">
-        <Icon className="size-5 text-primary" />
-        {title}
-      </h4>
-      <div className="p-3">{children}</div>
-    </section>
   )
 }

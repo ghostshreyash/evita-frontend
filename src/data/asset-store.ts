@@ -55,13 +55,6 @@ function today() {
   return `${p(d.getDate())}-${p(d.getMonth() + 1)}-${d.getFullYear()}`
 }
 
-/** `yyyy-MM-dd` from a date field back to the `dd-MM-yyyy` the register holds */
-const toDmy = (iso?: string) => {
-  if (!iso) return ""
-  const [y, m, d] = iso.split("-")
-  return y && m && d ? `${d}-${m}-${y}` : iso
-}
-
 /**
  * Everything the wizard collected, in the shape the detail screens read.
  *
@@ -84,16 +77,12 @@ export function profileFrom(values: AssetFormValues, dates: { onboarded: string 
       category: values.category,
       tag: values.tag,
       description: values.description ?? "",
+      latitude: values.latitude ?? "",
+      longitude: values.longitude ?? "",
     },
     parameters: parametersFor(values.category)
       .filter((spec) => answers[spec.key]?.trim())
       .map((spec) => ({ label: spec.label, value: answers[spec.key].trim(), unit: unitFor(spec, answers) })),
-    operational: {
-      operationalStatus: values.operationalStatus,
-      commissioned: toDmy(values.commissioned),
-      latitude: values.latitude ?? "",
-      longitude: values.longitude ?? "",
-    },
     documents: (values.documents ?? []).map((d) => ({
       id: d.id,
       name: d.name,

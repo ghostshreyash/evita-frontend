@@ -15,7 +15,6 @@
 import {
   assetCategoryCode,
   assetCriticality,
-  assetOperationalStatus,
   commonAssetCategories,
   type AssetCriticality,
 } from "@/data/master-data"
@@ -59,6 +58,9 @@ export type AssetProfile = {
       category: string
     tag: string
     description: string
+    /** The asset's own coordinates, defaulting to the plant's */
+    latitude: string
+    longitude: string
   }
   /**
    * The electrical specification, as the asset type defines it. Resolved to
@@ -66,17 +68,6 @@ export type AssetProfile = {
    * parameters this kind of asset carries.
    */
   parameters: { label: string; value: string; unit?: string }[]
-  /**
-   * How the asset is run. Only what an OLIVINE document asks for: asset
-   * condition, current load, warranty, AMC and the next general check are not
-   * in any sheet or answer, so they are not held.
-   */
-  operational: {
-    operationalStatus: string
-    commissioned: string
-    latitude: string
-    longitude: string
-  }
   /** Named by the engineer who captured them - there is no fixed set */
   documents: { id: string; name: string; file: string; uploaded: string }[]
   images: { id: string; name: string }[]
@@ -89,8 +80,6 @@ const seedOf = (s: string) => {
   for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) >>> 0
   return h
 }
-
-const pick = <T,>(pool: readonly T[], seed: number, offset: number) => pool[(seed + offset * 7) % pool.length]
 
 /** Dates count back from a fixed reference so nothing shifts between reloads */
 const REFERENCE = new Date(2026, 8, 28)
@@ -185,14 +174,10 @@ export function assetProfileFor(a: AssetRecord): AssetProfile {
       category: a.category,
       tag: a.tag,
       description: `${a.category} — ${a.tag}`,
-    },
-    parameters: seededParameters(a, s),
-    operational: {
-      operationalStatus: pick(assetOperationalStatus, s, 9),
-      commissioned: a.onboarded,
       latitude: plant?.latitude ?? "0.0000",
       longitude: plant?.longitude ?? "0.0000",
     },
+    parameters: seededParameters(a, s),
     documents: [
       { id: "d1", name: "Nameplate Photo (Close-up)", file: `${a.tag}-Nameplate.jpg`, uploaded: a.onboarded },
       { id: "d2", name: "Manufacturer Datasheet", file: `${a.tag}_Datasheet.pdf`, uploaded: a.onboarded },

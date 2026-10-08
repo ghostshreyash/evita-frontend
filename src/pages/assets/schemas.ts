@@ -25,14 +25,6 @@ const file = z.custom<File>((v) => v instanceof File)
  * asset, so there is no fixed set of slots to fill: an upload is a file plus
  * whatever the engineer calls it.
  */
-/**
- * The one photograph every asset must carry, as the onboarding sheet asks.
- *
- * Held as a reserved id rather than as a name, so it keeps its slot however the
- * engineer names the rest and can never be duplicated or renamed away.
- */
-export const FRONT_VIEW = "front-view"
-
 const upload = z.object({
   id: z.string(),
   name: z.string().trim().min(1, "Give this upload a name").max(60, "Keep the name under 60 characters"),
@@ -66,21 +58,10 @@ export const assetSchema = z.object({
    */
   parameters: z.record(z.string(), z.string()),
 
-  /*
-   * Operational status is mandatory per the client's answer, and the
-   * commissioning date is the one date the parameter sheet keeps. Asset
-   * condition, current load, warranty, AMC and the next general check are gone:
-   * no OLIVINE document asks for them at onboarding.
-   */
-  operationalStatus: required("Operational status"),
-  commissioned: z.string().optional(),
-
   /* ---------- Step 3: Images & Documents ---------- */
-  /* The front view is mandatory, per the onboarding sheet's Asset Photograph.
-     Everything beyond it is as much or as little as the asset has. */
-  images: z.array(upload).refine((list) => list.some((u) => u.id === FRONT_VIEW), {
-    message: "Add the front view photograph of the asset",
-  }),
+  /* At least one photograph, per the onboarding sheet's Asset Photograph. What
+     it shows and what it is called is the engineer's to decide. */
+  images: z.array(upload).min(1, "Add at least one photograph of the asset"),
   documents: z.array(upload),
 })
 
@@ -92,7 +73,7 @@ export const stepFields: (keyof AssetFormValues)[][] = [
     "enterprise", "plant", "department", "subDepartment", "area",
     "category", "tag", "description", "latitude", "longitude",
   ],
-  ["parameters", "operationalStatus", "commissioned"],
+  ["parameters"],
   ["images", "documents"],
   [],
 ]
@@ -102,12 +83,10 @@ export function missingUploads(values: Pick<AssetFormValues, "images" | "documen
   const images = values.images ?? []
   const documents = values.documents ?? []
   const unnamed = [...images, ...documents].filter((u) => !u.name.trim()).length
-  const front = images.some((u) => u.id === FRONT_VIEW)
   return {
-    front,
     images: images.length,
     documents: documents.length,
     unnamed,
-    complete: front && unnamed === 0,
+    complete: images.length > 0 && unnamed === 0,
   }
 }

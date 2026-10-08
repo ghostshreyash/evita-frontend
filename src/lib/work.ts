@@ -1,5 +1,6 @@
 import { useMemo } from "react"
 import { endOfWeek, parse, startOfDay, startOfWeek } from "date-fns"
+import { ClipboardCheck, Wrench, type LucideIcon } from "lucide-react"
 
 import { useInspectionDetails, useInspectionRows } from "@/data/inspection-store"
 import { useMaintenanceDetails, useMaintenanceRows, useStartedMaintenance } from "@/data/maintenance-store"
@@ -13,6 +14,18 @@ import type { WorkStatus } from "@/lib/status"
  * because on site they are simply "my work".
  */
 export type JobKind = "inspection" | "maintenance"
+
+/**
+ * What each kind of work is called on screen.
+ *
+ * "Inspection Task", not "Testing & Measurements": on site the ELPREMAR is sent
+ * to inspect an asset or to maintain one, and that is the word used throughout
+ * the task screens and the book of work.
+ */
+export const jobKindLook: Record<JobKind, { label: string; long: string; icon: LucideIcon; tint: string }> = {
+  inspection: { label: "Inspection", long: "Inspection Task", icon: ClipboardCheck, tint: "bg-info-soft text-primary" },
+  maintenance: { label: "Maintenance", long: "Maintenance Task", icon: Wrench, tint: "bg-highlight-soft text-highlight" },
+}
 
 /**
  * The five statuses an ELPREMAR sees, whichever book the job comes from:

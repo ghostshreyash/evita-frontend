@@ -17,7 +17,7 @@ import {
 } from "@/data/test-template"
 
 /**
- * Testing & Measurements rules: turn the structured capture into the flat test
+ * Inspection rules: turn the structured capture into the flat test
  * results, the observations and the health score.
  *
  * Deterministic on purpose. The client's rule (Query 34) is that measured
@@ -51,7 +51,12 @@ export function thermalReadings(capture: InspectionCapture) {
 const worst = (list: (ResultStatus | undefined)[]): ResultStatus | undefined =>
   list.includes("Fail") ? "Fail" : list.includes("Attention") ? "Attention" : list.includes("Pass") ? "Pass" : undefined
 
-/** Which of the four Phase-1 sections are complete enough to submit */
+/**
+ * Which Phase-1 sections are complete enough to submit.
+ *
+ * Contamination and hygiene are not here: the AI reads them off the images
+ * after sync, so there is nothing for the ELPREMAR to complete.
+ */
 export function sectionsDone(capture: InspectionCapture, category: string, evidenceIds: Set<string>) {
   return {
     // As in asset onboarding: as many named images as the asset has, at least one
@@ -59,7 +64,6 @@ export function sectionsDone(capture: InspectionCapture, category: string, evide
     // Phase 1 records the images; the temperatures are read off them after sync
     thermal: capture.thermal.length >= MIN_THERMAL_POINTS,
     readings: missingReadings(category, capture.readings).length === 0,
-    contamination: !!capture.thickness && hygieneChecks.every((c) => capture.hygiene[c.key]),
     fps: capture.fps.installed === "No" || (capture.fps.installed === "Yes" && !!capture.fps.status),
   }
 }

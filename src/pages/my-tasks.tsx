@@ -16,7 +16,18 @@ import { Input } from "@/components/ui/input"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { priorityTone, slotLabel } from "@/data/occ-tables"
 import { control, nextSort, sortRows, td, th, type Sort } from "@/lib/data-table"
-import { categoryFor, fieldStatuses, fieldStatusLook, isOverdue, isToday, parseDay, thisWeek, useMyJobs, when, type FieldStatus, type Job, type JobKind } from "@/lib/work"
+import { categoryFor, fieldStatuses, fieldStatusLook, isOverdue, isToday, jobKindLook, parseDay, thisWeek, useMyJobs, when, type FieldStatus, type Job, type JobKind } from "@/lib/work"
+
+/** Whether a task is an inspection or a maintenance, as a chip */
+function KindChip({ kind }: { kind: JobKind }) {
+  const look = jobKindLook[kind]
+  const Icon = look.icon
+  return (
+    <span className={cn("inline-flex items-center gap-1.5 rounded-md px-2 py-1 text-xs font-semibold whitespace-nowrap", look.tint)}>
+      <Icon className="size-3.5" /> {look.label}
+    </span>
+  )
+}
 
 /** Tile tint per status, matching the status badges */
 const tileTone: Record<FieldStatus, string> = {
@@ -27,13 +38,14 @@ const tileTone: Record<FieldStatus, string> = {
   approved: "bg-highlight-soft text-highlight",
 }
 
-type SortKey = "id" | "asset" | "activity" | "due" | "priority" | "status"
+type SortKey = "id" | "asset" | "type" | "activity" | "due" | "priority" | "status"
 const priorityRank: Record<string, number> = { Low: 0, Medium: 1, High: 2, Critical: 3 }
 /** Work needing the engineer first (overdue, running, open), then finished */
 const statusRank: Record<FieldStatus, number> = { overdue: 0, in_progress: 1, open: 2, completed: 3, approved: 4 }
 const sortValue: Record<SortKey, (j: Job) => string | number> = {
   id: (j) => j.id,
   asset: (j) => j.asset,
+  type: (j) => jobKindLook[j.kind].label,
   activity: (j) => j.activity,
   due: when,
   priority: (j) => priorityRank[j.priority],
@@ -43,8 +55,8 @@ const sortValue: Record<SortKey, (j: Job) => string | number> = {
 const kinds: JobKind[] = ["inspection", "maintenance"]
 
 /**
- * The ELPREMAR's book of work from both OCC queues: inspections (Testing &
- * Measurements) and maintenance activities, told apart by the Work filter.
+ * The ELPREMAR's book of work from both OCC queues: inspection tasks and
+ * maintenance tasks, told apart by the Type column and the Type filter.
  *
  * The dashboard links here with `?status=` (Open, Overdue, In Progress,
  * Completed, Approved), `?type=` (inspection, maintenance) or `?date=today`,
@@ -115,7 +127,7 @@ function MyTasks() {
     <div>
       <PageHeader
         title="My Tasks"
-        description="Everything OCC has assigned to you. Filter by Work for Testing & Measurements (inspections) or Maintenance Activities."
+        description="Everything OCC has assigned to you. Filter by Type for inspection tasks or maintenance tasks."
         breadcrumbs={[{ label: "My Tasks" }]}
       />
 
@@ -146,13 +158,10 @@ function MyTasks() {
             options={fieldStatuses.map((s) => ({ value: s, label: fieldStatusLook[s].label }))}
           />
           <FilterSelect
-            label="Work"
+            label="Type"
             value={type}
             onChange={(v) => reset(() => setType(v as typeof type))}
-            options={[
-              { value: "inspection", label: "Testing & Measurements" },
-              { value: "maintenance", label: "Maintenance Activities" },
-            ]}
+            options={kinds.map((k) => ({ value: k, label: jobKindLook[k].long }))}
           />
           <DateRangeFilter label="Due" range={range} onApply={(r) => reset(() => setRange(r))} />
           <Button
@@ -171,6 +180,7 @@ function MyTasks() {
               <TableRow className="bg-muted/60 hover:bg-muted/60">
                 <SortHead label="Task" column="id" sort={sort} onSort={onSort} className="max-lg:hidden" />
                 <SortHead label="Asset / Location" column="asset" sort={sort} onSort={onSort} />
+                <SortHead label="Type" column="type" sort={sort} onSort={onSort} />
                 <SortHead label="Activity" column="activity" sort={sort} onSort={onSort} />
                 <SortHead label="Due" column="due" sort={sort} onSort={onSort} />
                 <SortHead label="Priority" column="priority" sort={sort} onSort={onSort} className="max-md:hidden" />
@@ -194,6 +204,9 @@ function MyTasks() {
                       </span>
                     </span>
                   </TableCell>
+                  <TableCell className={td}>
+                    <KindChip kind={j.kind} />
+                  </TableCell>
                   <TableCell className={cn(td, "max-w-44 whitespace-normal")}>{j.activity}</TableCell>
                   <TableCell className={cn(td, "whitespace-nowrap", isOverdue(j) && "font-semibold text-critical")}>
                     <span className="flex items-center gap-1.5">
@@ -214,7 +227,7 @@ function MyTasks() {
               ))}
               {sorted.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={7} className="py-12 text-center text-sm text-muted-foreground">No tasks match these filters.</TableCell>
+                  <TableCell colSpan={8} className="py-12 text-center text-sm text-muted-foreground">No tasks match these filters.</TableCell>
                 </TableRow>
               ) : null}
             </TableBody>

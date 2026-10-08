@@ -16,9 +16,8 @@ export type NavItem = {
  * EVITA sidebar — the field engineer's app, not the command centre.
  *
  * Mirrors `evitaNavigation` in occ-frontend's `src/config/navigation.ts`, minus
- * the Testing & Measurements and Maintenance Activities queues: on the tablet
- * both are My Tasks narrowed by work type, so My Tasks carries them through its
- * Work filter. There the sections sit under `/evita` because OCC and EVITA share
+ * the inspection and maintenance queues: on the tablet both are My Tasks
+ * narrowed by task type, so My Tasks carries them through its Type filter. There the sections sit under `/evita` because OCC and EVITA share
  * one deployment; here EVITA is the whole app, so they sit at the root.
  */
 export const navigation: NavItem[] = [
