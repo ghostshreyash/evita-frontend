@@ -13,6 +13,7 @@ import { onboardAsset } from "@/data/asset-store"
 import type { AssetRecord } from "@/data/asset-data"
 import { useCurrentElpremar } from "@/lib/me"
 import { assetSchema, missingUploads, stepFields, type AssetFormValues } from "@/pages/assets/schemas"
+import { missingParameters } from "@/data/asset-parameters"
 import { StepDetails } from "@/pages/assets/steps/step-details"
 import { StepTechnical } from "@/pages/assets/steps/step-technical"
 import { StepUploads } from "@/pages/assets/steps/step-uploads"
@@ -58,40 +59,12 @@ export function AssetOnboardingPage() {
       category: "",
       tag: "",
       description: "",
-      manufacturer: "",
-      model: "",
-      serial: "",
-      year: "",
-      installed: "",
-      criticality: "",
+      /* Filled in per asset type on step 2 - see data/asset-parameters.ts */
+      parameters: {},
 
-      primaryVoltage: "",
-      primaryVoltageUnit: "kV",
-      secondaryVoltage: "",
-      secondaryVoltageUnit: "V",
-      capacity: "",
-      capacityUnit: "kVA",
-      frequency: "50 Hz",
-      phase: "Three Phase (3Ø)",
-      cooling: "",
-      vectorGroup: "",
-      impedance: "",
-      insulation: "",
-      tapChanger: "",
-      oilType: "",
-
-      operationalStatus: "",
-      condition: "New",
-      commissioned: "",
-      load: "",
       // Pre-filled from the plant's own registered location, and editable on site
       latitude: site.plant.latitude,
       longitude: site.plant.longitude,
-      warranty: "",
-      warrantyUnit: "Years",
-      amc: "",
-      nextDue: "",
-      remarks: "",
 
       images: [],
       documents: [],
@@ -109,6 +82,14 @@ export function AssetOnboardingPage() {
     if (!ok) {
       toast.error("Check the highlighted fields before continuing.")
       return
+    }
+    if (current === 1) {
+      const values = form.getValues()
+      const owed = missingParameters(values.category, values.parameters ?? {})
+      if (owed.length) {
+        toast.error(`Still needed: ${owed.map((p) => p.label).join(", ")}.`)
+        return
+      }
     }
     if (current === 2) {
       const missing = missingUploads(form.getValues())

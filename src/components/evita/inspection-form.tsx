@@ -1,12 +1,12 @@
 import { useEffect, useMemo, useRef, useState } from "react"
-import { Camera, Check, Flame, Gauge, Lock, NotebookPen, Save, Send, Sparkles, Thermometer, Wind, Zap, type LucideIcon } from "lucide-react"
+import { Camera, Check, Flame, Gauge, Lock, Save, Send, Thermometer, Zap, type LucideIcon } from "lucide-react"
 import { toast } from "sonner"
 import { format } from "date-fns"
 import { cn } from "cn"
 
 import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
+import { Input } from "@/components/ui/input"
 import { UploadSection } from "@/components/evita/upload-section"
 import { Checklist, CountPill, FieldLabel, HealthRing, Segmented, StepCard } from "@/components/evita/field-kit"
 import type { EvidenceItem } from "@/data/evidence"
@@ -16,44 +16,50 @@ import type { InspectionCapture, InspectionDetail } from "@/data/inspection-deta
 import { healthScoreWeights } from "@/data/master-data"
 import {
   angleSlotsFor,
-  contaminationLevel,
-  dustThickness,
-  dustTypes,
   fpsStatuses,
-  hygieneChecks,
+  inspectionReadingsFor,
   MIN_THERMAL_POINTS,
-  resultPill,
+  missingReadings,
+  readingKeys,
+  readingPhases,
   thermalPointsFor,
+  type ReadingSpec,
 } from "@/data/test-template"
 import { categoryFor } from "@/lib/asset-category"
 import { urlFor } from "@/lib/object-url"
 import { emptyCapture, newId, observationsFrom, resultsFrom, scoreCapture, sectionsDone } from "@/lib/testing"
 import type { Job } from "@/lib/work"
 
-type Section = "images" | "thermal" | "parameters" | "fps" | "pd"
+type Section = "images" | "thermal" | "technical" | "fps" | "pd"
 
 /** The five sections in the order the ELPREMAR works through them */
 const sections: { key: Section; title: string; icon: LucideIcon; phase2?: boolean }[] = [
   { key: "images", title: "Asset Images", icon: Camera },
   { key: "thermal", title: "Thermal Images", icon: Thermometer },
-  { key: "parameters", title: "Parameters", icon: Gauge },
+  { key: "technical", title: "Technical Details", icon: Gauge },
   { key: "fps", title: "Fire Prevention", icon: Flame },
   { key: "pd", title: "Partial Discharge", icon: Zap, phase2: true },
 ]
 
-const levelPill = { Low: resultPill.Pass, Medium: resultPill.Attention, High: resultPill.Fail } as const
 
 const yesNoTone = (v: "Yes" | "No") => (v === "Yes" ? "bg-healthy text-healthy-foreground ring-healthy" : "bg-attention text-attention-foreground ring-attention")
 
 type Setter = (p: Partial<InspectionCapture>) => void
 
 /**
- * Testing & Measurements for one inspection task, in the client's Phase-1
- * order: the asset images (angle views), the thermal images (one per point),
- * then the parameters (contamination, physical hygiene), then the fire
- * prevention system. Partial
- * Discharge is Phase 2 and stays disabled until the measuring device
- * integration arrives.
+ * The inspection task capture, in the client's Phase-1 order: the asset images
+ * (angle views), the thermal images (one per point), the electrical readings
+ * the asset type calls for, then the fire prevention system. Partial Discharge
+ * is Phase 2 and stays disabled until the measuring device integration arrives.
+ *
+ * The one free-text note sits with the Technical Details readings rather than
+ * under every section: it is there to explain a reading, not to stand in for
+ * one.
+ *
+ * Contamination and physical hygiene are not recorded by hand. The Tier I logic
+ * document has the AI engine read panel hygiene off the uploaded images after
+ * sync, so asking the ELPREMAR for the same judgement would only compete with
+ * it. Both still reach the reports - from the AI, not from this form.
  *
  * Everything saves to the tablet as it is entered (the offline draft); Submit
  * locks the record, scores it and queues it for sync.
@@ -63,9 +69,9 @@ export function InspectionForm({ job, detail }: { job: Job; detail: InspectionDe
   const [section, setSection] = useState<Section>("images")
   const [capture, setCapture] = useState<InspectionCapture>(() => detail.capture ?? emptyCapture())
   const [evidence, setEvidence] = useState<EvidenceItem[]>(detail.evidence)
-  const [remarks, setRemarks] = useState(detail.execution?.remarks ?? "")
   const [savedAt, setSavedAt] = useState<string | null>(null)
   // Held from when the form opened: saving writes a new record, which must not re-trigger the save
+  const [remarks, setRemarks] = useState(detail.execution?.remarks ?? "")
   const [execution] = useState(detail.execution)
 
   const ids = useMemo(() => new Set(evidence.map((e) => e.id)), [evidence])
@@ -94,17 +100,18 @@ export function InspectionForm({ job, detail }: { job: Job; detail: InspectionDe
     return () => window.clearTimeout(t)
   }, [patch, job.id])
 
+  const readings = inspectionReadingsFor(category)
   const done = sectionsDone(capture, category, ids)
-  const tabDone: Record<Section, boolean> = { images: done.images, thermal: done.thermal, parameters: done.contamination, fps: done.fps, pd: false }
+  const tabDone: Record<Section, boolean> = { images: done.images, thermal: done.thermal, technical: done.readings, fps: done.fps, pd: false }
   const preview = scoreCapture(capture)
-  const ready = done.images && done.thermal && done.contamination && done.fps
+  const ready = done.images && done.thermal && done.readings && done.fps
   const set: Setter = (p) => setCapture((c) => ({ ...c, ...p }))
   const removeEvidence = (id: string) => setEvidence((ev) => ev.filter((e) => e.id !== id))
 
   const submit = () => {
     const result = scoreCapture(capture)
     completeInspection(job.id, { ...patch, result })
-    toast.success("Testing & Measurements submitted", {
+    toast.success("Inspection submitted", {
       description: navigator.onLine ? `${job.asset} scored ${result.healthScore}/100` : "Saved on this tablet; it will sync when you are back online",
     })
   }
@@ -153,15 +160,11 @@ export function InspectionForm({ job, detail }: { job: Job; detail: InspectionDe
             <ImagesSection category={category} capture={capture} evidence={evidence} onCapture={setCapture} onEvidence={setEvidence} onRemove={removeEvidence} />
           ) : section === "thermal" ? (
             <ThermalImagesSection category={category} capture={capture} evidence={evidence} set={set} onEvidence={setEvidence} onRemove={removeEvidence} />
-          ) : section === "parameters" ? (
-            <ContaminationSection capture={capture} set={set} />
+          ) : section === "technical" ? (
+            <TechnicalSection category={category} capture={capture} set={set} remarks={remarks} onRemarks={setRemarks} />
           ) : (
             <FpsSection capture={capture} set={set} />
           )}
-
-          <StepCard step={6} title="Inspection Remarks" icon={NotebookPen} done={!!remarks.trim()}>
-            <Textarea value={remarks} rows={3} maxLength={500} onChange={(e) => setRemarks(e.target.value)} placeholder="Overall condition, anything OCC should know." />
-          </StepCard>
         </div>
 
         {/* ---------- Score estimate and submit ---------- */}
@@ -169,19 +172,23 @@ export function InspectionForm({ job, detail }: { job: Job; detail: InspectionDe
           <section className="space-y-4 rounded-2xl bg-card p-4 shadow-xs ring-1 ring-foreground/10">
             <h3 className="text-lg font-semibold text-brand-navy dark:text-foreground">Inspection Health Summary</h3>
             <div className="rounded-xl bg-muted/50 p-3">
-              {/* Visual contamination carries 70% of the score, so there is no fair estimate without it */}
-              {preview.breakdown?.visual !== undefined ? (
-                <HealthRing score={preview.healthScore} caption="Estimate · updates as you record" />
-              ) : (
-                <p className="py-6 text-center text-sm text-muted-foreground">Record the contamination assessment to see the score estimate. It carries 70% of the score.</p>
-              )}
+              {/* Contamination and hygiene are read off the images by AI after sync, so the
+                  field estimate stands on the thermal scan and the fire prevention system */}
+              <HealthRing score={preview.healthScore} caption="Estimate · updates as you record" />
             </div>
+            <p className="rounded-lg bg-info-soft/50 px-3 py-2 text-xs text-muted-foreground">
+              Contamination and physical hygiene are scored by AI from the images after sync. The estimate here covers
+              what you record on site.
+            </p>
             <ScoreBreakdown breakdown={preview.breakdown} />
             <Checklist
               items={[
                 { label: "At least one asset image", done: done.images },
                 { label: `${MIN_THERMAL_POINTS} or more thermal images`, done: done.thermal },
-                { label: "Contamination and hygiene assessed", done: done.contamination },
+                {
+                  label: readings.length ? "Electrical readings recorded" : "Electrical readings not applicable",
+                  done: done.readings,
+                },
                 { label: "Fire prevention system checked", done: done.fps },
               ]}
             />
@@ -333,93 +340,141 @@ function ThermalImagesSection({
   return (
     <div className="rounded-2xl bg-card p-4 shadow-xs ring-1 ring-foreground/10">
       <p className="mb-3 text-sm text-muted-foreground">Add a thermal image for each joint or termination you scan, at least {MIN_THERMAL_POINTS}.</p>
+      {/* Every point is judged on its rise over ambient, so the reading is taken once for the whole scan */}
+      <label className="mb-4 flex max-w-xs items-center gap-3">
+        <span className="shrink-0 text-sm font-medium">Ambient temperature (°C)</span>
+        <Input
+          value={capture.ambient}
+          inputMode="decimal"
+          onChange={(e) => set({ ambient: e.target.value })}
+          className="h-12 bg-card text-base tabular-nums"
+          placeholder="32"
+        />
+      </label>
       <UploadSection icon={Thermometer} title="Thermal Images" noun="thermal image" thermal items={items} suggestions={thermalPointsFor(category)} onAdd={add} onRemove={remove} />
       <OfflineNote thermal />
     </div>
   )
 }
 
-/* ---------- 3–4. Parameters: contamination & hygiene ---------- */
+/**
+ * The Technical Details tab: the electrical readings for this asset type, and
+ * the one free-text note on the inspection.
+ *
+ * Which readings apply, and which of them are mandatory, come from the client's
+ * inspection parameter sheet: a Network Switch is read for voltage alone, a
+ * transformer for voltage, per-phase load current, frequency and neutral
+ * current. Nothing not applicable to the type is asked for, so the ELPREMAR is
+ * never shown a box there is no meter reading for.
+ */
+function TechnicalSection({
+  category,
+  capture,
+  set,
+  remarks,
+  onRemarks,
+}: {
+  category: string
+  capture: InspectionCapture
+  set: Setter
+  remarks: string
+  onRemarks: (value: string) => void
+}) {
+  const specs = inspectionReadingsFor(category)
+  const missing = missingReadings(category, capture.readings)
+  const write = (key: string, value: string) => set({ readings: { ...capture.readings, [key]: value } })
 
-function ContaminationSection({ capture, set }: { capture: InspectionCapture; set: Setter }) {
-  const level = contaminationLevel(capture.thickness, capture.dustTypes)
-  const checked = hygieneChecks.filter((c) => capture.hygiene[c.key]).length
   return (
-    <>
-      <StepCard step={3} title="Contamination Assessment" icon={Wind} done={!!capture.thickness} actions={level ? <span className={cn("rounded-full px-3 py-1 text-sm font-bold", levelPill[level])}>{level}</span> : null}>
-        <div className="space-y-4">
-          <div>
-            <FieldLabel required>Dust accumulation thickness</FieldLabel>
-            <Segmented label="Dust thickness" value={capture.thickness} options={dustThickness} onChange={(v) => set({ thickness: v })} />
+    <StepCard
+      title="Technical Details"
+      icon={Gauge}
+      done={missing.length === 0}
+      actions={
+        specs.length ? (
+          <CountPill done={missing.length === 0}>
+            {specs.length - missing.length} / {specs.length}
+          </CountPill>
+        ) : null
+      }
+    >
+      {specs.length === 0 ? (
+        <p className="rounded-xl bg-info-soft p-3 text-sm text-info-soft-foreground">
+          A {category} is inspected without electrical readings: they cannot be measured reliably with the asset
+          energised, and the instruments for them are not held. Images, the thermal scan and the fire prevention system
+          are the whole inspection — carry on to the next section.
+        </p>
+      ) : (
+        <>
+          <p className="mb-3 text-sm text-muted-foreground">
+            The readings a {category} is inspected for. Take them at the asset, under load where the asset is live.
+          </p>
+          <div className="grid gap-4 sm:grid-cols-2">
+            {specs.map((spec) => (
+              <Reading key={spec.key} spec={spec} readings={capture.readings} onChange={write} />
+            ))}
           </div>
-          <div>
-            <FieldLabel>Type of deposit (select all that apply)</FieldLabel>
-            <div className="flex flex-wrap gap-2">
-              {dustTypes.map((t) => {
-                const on = capture.dustTypes.includes(t)
-                return (
-                  <button
-                    key={t}
-                    type="button"
-                    aria-pressed={on}
-                    onClick={() => set({ dustTypes: on ? capture.dustTypes.filter((x) => x !== t) : [...capture.dustTypes, t] })}
-                    className={cn("flex h-11 items-center gap-1.5 rounded-full px-4 text-sm font-medium ring-1 transition-colors", on ? "bg-primary text-primary-foreground ring-primary" : "bg-card ring-foreground/15 hover:bg-muted")}
-                  >
-                    {on ? <Check className="size-4" strokeWidth={3} /> : null}
-                    {t}
-                  </button>
-                )
-              })}
-            </div>
-          </div>
-          <div className="flex items-start gap-3 rounded-xl bg-info-soft/50 p-3 text-sm ring-1 ring-info/15">
-            <Sparkles className="mt-0.5 size-4 shrink-0 text-primary" />
-            <span>
-              Level is set by thickness; a conductive, damp or corrosive deposit raises it one step. After sync, AI reviews the images and may suggest a different level for review. It never changes what you record.
-            </span>
-          </div>
-        </div>
-      </StepCard>
+        </>
+      )}
 
-      <StepCard step={4} title="Physical Hygiene Checks" icon={Check} done={checked === hygieneChecks.length} actions={<CountPill done={checked === hygieneChecks.length}>{checked} / {hygieneChecks.length}</CountPill>}>
-        <ul className="divide-y">
-          {hygieneChecks.map((c) => {
-            const h = capture.hygiene[c.key]
-            return (
-              <li key={c.key} className="py-3 first:pt-0 last:pb-0">
-                <div className="flex flex-wrap items-center justify-between gap-3">
-                  <span className="text-sm font-medium">{c.label}</span>
-                  <Segmented
-                    label={c.label}
-                    value={h ? (h.ok ? "OK" : "Issue") : undefined}
-                    options={["OK", "Issue"] as const}
-                    tone={(v) => (v === "OK" ? "bg-healthy text-healthy-foreground ring-healthy" : "bg-attention text-attention-foreground ring-attention")}
-                    onChange={(v) => set({ hygiene: { ...capture.hygiene, [c.key]: { ok: v === "OK", note: h?.note ?? "" } } })}
-                  />
-                </div>
-                {h && !h.ok ? (
-                  <Input
-                    value={h.note}
-                    onChange={(e) => set({ hygiene: { ...capture.hygiene, [c.key]: { ...h, note: e.target.value } } })}
-                    className="mt-2 bg-card"
-                    placeholder="What is wrong, e.g. two loose lugs on the outgoing feeder"
-                  />
-                ) : null}
-              </li>
-            )
-          })}
-        </ul>
-      </StepCard>
-    </>
+      {/* The one free-text note on the inspection, inside the card it explains */}
+      <div className={cn(specs.length && "mt-5 border-t pt-4")}>
+        <FieldLabel>Remarks</FieldLabel>
+        <Textarea
+          value={remarks}
+          rows={3}
+          maxLength={500}
+          onChange={(e) => onRemarks(e.target.value)}
+          placeholder="Anything the readings do not say on their own."
+        />
+      </div>
+    </StepCard>
   )
 }
 
-/* ---------- 5. Fire prevention ---------- */
+/** One reading: a single box, or three side by side when it is taken per phase */
+function Reading({
+  spec,
+  readings,
+  onChange,
+}: {
+  spec: ReadingSpec
+  readings: Record<string, string>
+  onChange: (key: string, value: string) => void
+}) {
+  return (
+    <div className={cn(spec.phases && "sm:col-span-2")}>
+      <FieldLabel required={spec.required}>
+        {spec.label} <span className="font-normal text-muted-foreground">({spec.unit})</span>
+      </FieldLabel>
+      <div className={cn("gap-2", spec.phases ? "grid grid-cols-3" : "flex")}>
+        {readingKeys(spec).map((key, i) => (
+          <label key={key} className="flex min-w-0 flex-1 items-center gap-2">
+            {spec.phases ? (
+              <span className="w-5 shrink-0 text-center text-sm font-semibold text-muted-foreground">{readingPhases[i]}</span>
+            ) : null}
+            <span className="sr-only">
+              {spec.label}
+              {spec.phases ? ` ${readingPhases[i]} phase` : ""} in {spec.unit}
+            </span>
+            <Input
+              value={readings[key] ?? ""}
+              inputMode="decimal"
+              onChange={(e) => onChange(key, e.target.value)}
+              className="h-12 min-w-0 bg-card text-base tabular-nums"
+            />
+          </label>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+/* ---------- 6. Fire prevention ---------- */
 
 function FpsSection({ capture, set }: { capture: InspectionCapture; set: Setter }) {
   const fps = capture.fps
   return (
-    <StepCard step={5} title="Fire Prevention System" icon={Flame} done={fps.installed === "No" || (fps.installed === "Yes" && !!fps.status)}>
+    <StepCard title="Fire Prevention System" icon={Flame} done={fps.installed === "No" || (fps.installed === "Yes" && !!fps.status)}>
       <div className="space-y-4">
         <div>
           <FieldLabel required>Is a fire prevention system installed in the panel?</FieldLabel>

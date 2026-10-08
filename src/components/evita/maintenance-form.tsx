@@ -98,17 +98,17 @@ export function MaintenanceForm({ job, detail }: { job: Job; detail: Maintenance
     <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_19rem]">
       <div className="min-w-0 space-y-5">
         {/* ---------- 1. Real-time log ---------- */}
-        <StepCard step={1} title="Real Time Maintenance Log" icon={Timer} done={timeLog.length > 0 && !running}>
+        <StepCard title="Real Time Maintenance Log" icon={Timer} done={timeLog.length > 0 && !running}>
           <TimeLog entries={timeLog} onStop={() => stopMaintenanceClock(job.id)} onResume={() => resumeMaintenanceClock(job.id)} />
         </StepCard>
 
         {/* ---------- 2. Notes ---------- */}
-        <StepCard step={2} title="Work Notes" icon={NotebookPen} done={!!notes.trim()}>
+        <StepCard title="Work Notes" icon={NotebookPen} done={!!notes.trim()}>
           <Textarea value={notes} rows={3} onChange={(e) => setNotes(e.target.value)} placeholder="What was done, e.g. Busbar chamber de-dusted, terminations re-torqued." />
         </StepCard>
 
         {/* ---------- 3. Consumables ---------- */}
-        <StepCard step={3} title="Fluids & Consumables" icon={Droplets} done={usedProducts.length > 0 && cleaned.length === cleaningSteps.length} actions={<CountPill done={usedProducts.length > 0}>{usedProducts.length} Used</CountPill>}>
+        <StepCard title="Fluids & Consumables" icon={Droplets} done={usedProducts.length > 0 && cleaned.length === cleaningSteps.length} actions={<CountPill done={usedProducts.length > 0}>{usedProducts.length} Used</CountPill>}>
           <div className="space-y-3">
             {/* INSTA products as cards: tap to add, then enter the quantity used */}
             <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
@@ -162,7 +162,7 @@ export function MaintenanceForm({ job, detail }: { job: Job; detail: Maintenance
         </StepCard>
 
         {/* ---------- 4. Evidence ---------- */}
-        <StepCard step={4} title="Maintenance Images" icon={Camera} done={after.length > 0} actions={<CountPill done={after.length > 0}>{before.length + after.length + thermal.length} Captured</CountPill>}>
+        <StepCard title="Maintenance Images" icon={Camera} done={after.length > 0} actions={<CountPill done={after.length > 0}>{before.length + after.length + thermal.length} Captured</CountPill>}>
           <div className="space-y-4">
             <div>
               <FieldLabel>Before maintenance ({before.length})</FieldLabel>
@@ -187,7 +187,7 @@ export function MaintenanceForm({ job, detail }: { job: Job; detail: Maintenance
 
         {/* ---------- 5 & 6. Add-ons ---------- */}
         <div className="grid gap-4 lg:grid-cols-2">
-          <StepCard step={5} title="Fire Prevention System" icon={Flame} done={!!fire.done && (fire.done === "No" || !!fire.system)}>
+          <StepCard title="Fire Prevention System" icon={Flame} done={!!fire.done && (fire.done === "No" || !!fire.system)}>
             <div className="space-y-3">
               <div>
                 <FieldLabel required>Installed or serviced on this job?</FieldLabel>
@@ -211,7 +211,7 @@ export function MaintenanceForm({ job, detail }: { job: Job; detail: Maintenance
             </div>
           </StepCard>
 
-          <StepCard step={6} title="Partial Discharge Mitigation" icon={Activity} done={!!pd.done && (pd.done === "No" || !!pd.method)}>
+          <StepCard title="Partial Discharge Mitigation" icon={Activity} done={!!pd.done && (pd.done === "No" || !!pd.method)}>
             <div className="space-y-3">
               <div>
                 <FieldLabel required>PD reduction activity performed?</FieldLabel>

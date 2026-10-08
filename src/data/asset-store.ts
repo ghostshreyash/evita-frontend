@@ -8,6 +8,7 @@ import {
   type AssetRecord,
 } from "@/data/asset-data"
 import { healthBandFor, type AssetCriticality } from "@/data/master-data"
+import { parametersFor, unitFor } from "@/data/asset-parameters"
 import type { AssetFormValues } from "@/pages/assets/schemas"
 
 /**
@@ -54,72 +55,34 @@ function today() {
   return `${p(d.getDate())}-${p(d.getMonth() + 1)}-${d.getFullYear()}`
 }
 
-/** `yyyy-MM-dd` from a date field back to the `dd-MM-yyyy` the register holds */
-const toDmy = (iso?: string) => {
-  if (!iso) return ""
-  const [y, m, d] = iso.split("-")
-  return y && m && d ? `${d}-${m}-${y}` : iso
-}
-
 /**
  * Everything the wizard collected, in the shape the detail screens read.
  *
  * Built before the asset exists so the review step can render exactly what the
  * detail screen will, and reused by `onboardAsset` so the two can never drift.
+ *
+ * The specification is resolved against the asset type's own parameter list, so
+ * only the parameters that type actually asks for are stored, each with the
+ * label and unit the sheet gives it.
  */
-export function profileFrom(
-  values: AssetFormValues,
-  dates: { installed: string; onboarded: string }
-): AssetProfile {
+export function profileFrom(values: AssetFormValues, dates: { onboarded: string }): AssetProfile {
+  const answers = values.parameters ?? {}
   return {
     details: {
       enterprise: values.enterprise,
       plant: values.plant,
       area: values.area,
-      department: values.department,
+      department: values.department ?? "",
       subDepartment: values.subDepartment ?? "",
       category: values.category,
       tag: values.tag,
       description: values.description ?? "",
-      manufacturer: values.manufacturer ?? "",
-      model: values.model ?? "",
-      serial: values.serial ?? "",
-      year: values.year ?? "",
-      installed: dates.installed,
-      criticality: values.criticality,
-    },
-    technical: {
-      // Every rating is optional now, so each falls back to blank rather than
-      // undefined - the detail panels drop a blank row instead of printing one
-      primaryVoltage: values.primaryVoltage ?? "",
-      primaryVoltageUnit: values.primaryVoltageUnit ?? "",
-      secondaryVoltage: values.secondaryVoltage ?? "",
-      secondaryVoltageUnit: values.secondaryVoltageUnit ?? "",
-      capacity: values.capacity ?? "",
-      capacityUnit: values.capacityUnit ?? "",
-      frequency: values.frequency ?? "",
-      phase: values.phase ?? "",
-      cooling: values.cooling ?? "",
-      vectorGroup: values.vectorGroup ?? "",
-      impedance: values.impedance ?? "",
-      insulation: values.insulation ?? "",
-      tapChanger: values.tapChanger ?? "",
-      oilType: values.oilType ?? "",
-    },
-    operational: {
-      operationalStatus: values.operationalStatus,
-      condition: values.condition ?? "",
-      commissioned: toDmy(values.commissioned),
-      load: values.load ?? "",
       latitude: values.latitude ?? "",
       longitude: values.longitude ?? "",
-      criticality: values.criticality,
-      warranty: values.warranty ?? "",
-      warrantyUnit: values.warrantyUnit ?? "",
-      amc: values.amc ?? "",
-      nextDue: toDmy(values.nextDue),
-      remarks: values.remarks ?? "",
     },
+    parameters: parametersFor(values.category)
+      .filter((spec) => answers[spec.key]?.trim())
+      .map((spec) => ({ label: spec.label, value: answers[spec.key].trim(), unit: unitFor(spec, answers) })),
     documents: (values.documents ?? []).map((d) => ({
       id: d.id,
       name: d.name,
@@ -146,7 +109,6 @@ export function onboardAsset(values: AssetFormValues, site: { city: string }): A
     existing: rows,
   })
   const onboarded = today()
-  const installed = toDmy(values.installed) || onboarded
 
   const record: AssetRecord = {
     id,
@@ -156,19 +118,15 @@ export function onboardAsset(values: AssetFormValues, site: { city: string }): A
     area: values.area,
     plant: values.plant,
     enterprise: values.enterprise,
-    department: values.department,
-    criticality: values.criticality as AssetCriticality,
-    manufacturer: values.manufacturer || "",
-    model: values.model || "",
-    serial: values.serial || "",
-    year: Number(values.year) || new Date(Date.parse(values.installed || "") || Date.now()).getFullYear(),
-    installed,
+    department: values.department ?? "",
+    // Criticality is the one parameter every asset type carries
+    criticality: (values.parameters?.criticality ?? "Medium") as AssetCriticality,
     onboarded,
     // Never inspected, so there is no score to show yet - not a placeholder one
     health: null,
   }
 
-  profiles = { ...profiles, [id]: profileFrom(values, { installed, onboarded }) }
+  profiles = { ...profiles, [id]: profileFrom(values, { onboarded }) }
 
   captures = {
     ...captures,

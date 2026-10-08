@@ -1,7 +1,7 @@
 import { ArrowLeft, Check, CircleCheckBig, Cog, Lightbulb, QrCode } from "lucide-react"
 
 import { PageHeader } from "@/components/common/page-header"
-import { CheckList, DetailList, DetailPanel } from "@/components/common/detail-list"
+import { DetailList, DetailPanel } from "@/components/common/detail-list"
 import { AssetIdChip, AssetQrPanel, QrLabelPreview } from "@/components/assets/asset-qr"
 import { Button } from "@/components/ui/button"
 import { profileOf } from "@/data/asset-store"
@@ -14,8 +14,7 @@ import type { AssetRecord } from "@/data/asset-data"
  * Maintenance Information and Recent Activities. None of them belong on this
  * screen: the asset was registered seconds ago, so it has never been inspected,
  * never been maintained, and has no history beyond its own creation. Those four
- * panels would read as data when they are in fact placeholders. The submission
- * checklist takes their place, carrying the new Asset ID as its first line.
+ * panels would read as data when they are in fact placeholders.
  *
  * Everything they would have shown lives on the asset detail screen, which is
  * where an asset with a history is read.
@@ -64,32 +63,20 @@ export function AssetIdScreen({
           <DetailList
             rows={[
               { label: "Asset Category", value: asset.category, always: true },
-              { label: "Asset Name / Tag ID", value: asset.tag, always: true },
+              { label: "Asset Name", value: asset.tag, always: true },
               { label: "Asset Description", value: profile.details.description },
               { label: "Enterprise", value: asset.enterprise, always: true },
               { label: "Plant", value: asset.plant, always: true },
               { label: "Location / Area", value: asset.area, always: true },
               { label: "Department", value: asset.department },
-              { label: "Manufacturer", value: asset.manufacturer },
-              { label: "Model", value: asset.model },
-              { label: "Serial Number", value: asset.serial },
-              {
-                label: "Rated Capacity",
-                value: profile.technical.capacity ? `${profile.technical.capacity} ${profile.technical.capacityUnit}` : "",
-              },
-              {
-                label: "Rated Voltage",
-                note: "(Primary/Secondary)",
-                value: `${profile.technical.primaryVoltage} ${profile.technical.primaryVoltageUnit} / ${profile.technical.secondaryVoltage} ${profile.technical.secondaryVoltageUnit}`,
-              },
-              { label: "Installation Date", value: asset.installed },
+              { label: "Sub-Department", value: profile.details.subDepartment },
               { label: "Asset Criticality", value: asset.criticality, always: true },
-              {
-                label: "Warranty Period",
-                value: profile.operational.warranty
-                  ? `${profile.operational.warranty} ${profile.operational.warrantyUnit}`
-                  : "",
-              },
+              /* The specification depends on the asset type, so it is read off
+                 the profile rather than named here */
+              ...profile.parameters.map((p) => ({
+                label: p.label,
+                value: [p.value, p.unit].filter(Boolean).join(" "),
+              })),
             ]}
           />
         </DetailPanel>
@@ -116,18 +103,6 @@ export function AssetIdScreen({
           <DetailPanel title="QR Code Label Preview">
             <QrLabelPreview asset={asset} />
           </DetailPanel>
-
-          <CheckList
-            title="Submission Checklist"
-            items={[
-              { label: <>Asset ID generated — <strong className="font-semibold">{asset.id}</strong></>, done: true },
-              { label: "Asset details completed", done: true },
-              { label: "Technical details completed", done: true },
-              { label: "Images uploaded", done: profile.images.length > 0 },
-              { label: "Required documents uploaded", done: profile.documents.length > 0 },
-              { label: "Information reviewed and submitted", done: true },
-            ]}
-          />
         </div>
       </div>
 

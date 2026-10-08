@@ -13,12 +13,13 @@ import { DashboardPage } from "@/pages/dashboard"
 import { AssetsPage } from "@/pages/assets/assets"
 import { AssetOnboardingPage } from "@/pages/assets/asset-onboarding"
 import { AssetDetailPage } from "@/pages/assets/asset-detail"
+import { ReportsPage } from "@/pages/reports"
 import { MyTasksPage } from "@/pages/my-tasks"
 import { TaskPage } from "@/pages/task"
 import { ComingSoonPage } from "@/pages/coming-soon"
 
 /** Sidebar sections with a real screen; the rest render a placeholder */
-const built = new Set(["/", "/assets", "/my-tasks"])
+const built = new Set(["/", "/assets", "/my-tasks", "/reports"])
 
 /*
  * There is no Register screen: ELPREMAR accounts are created by OLIVINE in the
@@ -44,6 +45,7 @@ export const router = createBrowserRouter([
           /* Onboarding sits above ":id" so the literal path is never read as an asset id */
           { path: "assets/onboarding", element: <AssetOnboardingPage /> },
           { path: "assets/:id", element: <AssetDetailPage /> },
+          { path: "reports", element: <ReportsPage /> },
           { path: "my-tasks", element: <MyTasksPage /> },
           { path: "my-tasks/:id", element: <TaskPage /> },
           // Remaining sidebar entries show a placeholder until their screens are built

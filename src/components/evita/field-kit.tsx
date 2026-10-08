@@ -65,7 +65,6 @@ export function FieldLabel({ children, required }: { children: React.ReactNode; 
  * numbered title, and a slot on the right for a count pill or an action.
  */
 export function StepCard({
-  step,
   title,
   icon: Icon,
   done,
@@ -73,7 +72,6 @@ export function StepCard({
   children,
   className,
 }: {
-  step?: number
   title: string
   icon: React.ComponentType<{ className?: string }>
   done?: boolean
@@ -87,10 +85,7 @@ export function StepCard({
         <span className={cn("flex size-9 shrink-0 items-center justify-center rounded-full", done ? "bg-healthy-soft text-healthy" : "bg-info-soft text-primary")}>
           {done ? <Check className="size-5" strokeWidth={3} aria-label="Done" /> : <Icon className="size-5" />}
         </span>
-        <h3 className="flex-1 text-lg font-semibold text-brand-navy dark:text-foreground">
-          {step !== undefined ? <span className="tabular-nums">{step}. </span> : null}
-          {title}
-        </h3>
+        <h3 className="flex-1 text-lg font-semibold text-brand-navy dark:text-foreground">{title}</h3>
         {actions}
       </header>
       <div className="p-5">{children}</div>
@@ -104,45 +99,6 @@ export function CountPill({ children, done }: { children: React.ReactNode; done?
     <span className={cn("rounded-full px-3 py-1 text-sm font-semibold ring-1", done ? "bg-healthy-soft text-healthy-soft-foreground ring-healthy/25" : "bg-info-soft text-info-soft-foreground ring-info/20")}>
       {children}
     </span>
-  )
-}
-
-/**
- * Where a task stands, as a horizontal tracker: done steps get a green tick,
- * the current step a solid blue disc in a highlighted box, later steps grey.
- */
-export function TaskStepper({ steps, current }: { steps: { title: string; note?: string }[]; current: number }) {
-  return (
-    <ol className="flex items-center gap-2 overflow-x-auto rounded-2xl bg-card px-4 py-3 shadow-xs ring-1 ring-foreground/10">
-      {steps.map((step, i) => {
-        const state = i < current ? "done" : i === current ? "current" : "upcoming"
-        return (
-          <li key={step.title} className="flex min-w-fit flex-1 items-center gap-2 last:flex-none">
-            <div className={cn("flex items-center gap-2.5 rounded-xl px-2.5 py-1.5", state === "current" && "bg-info-soft/60 ring-2 ring-primary/40")}>
-              <span
-                className={cn(
-                  "flex size-10 shrink-0 items-center justify-center rounded-full text-sm font-bold",
-                  state === "done" && "bg-healthy-soft text-healthy ring-2 ring-healthy",
-                  state === "current" && "bg-primary text-primary-foreground",
-                  state === "upcoming" && "bg-muted text-muted-foreground ring-1 ring-foreground/15"
-                )}
-              >
-                {state === "done" ? <Check className="size-5" strokeWidth={3} /> : i + 1}
-              </span>
-              <span className="leading-tight">
-                <span className={cn("block text-sm font-semibold whitespace-nowrap", state === "current" ? "text-primary" : state === "done" ? "text-foreground" : "text-muted-foreground")}>
-                  {i + 1}. {step.title}
-                </span>
-                <span className={cn("block text-xs whitespace-nowrap", state === "done" ? "text-healthy" : state === "current" ? "text-primary" : "text-muted-foreground")}>
-                  {step.note ?? (state === "done" ? "Completed" : state === "current" ? "Current" : "Pending")}
-                </span>
-              </span>
-            </div>
-            {i < steps.length - 1 ? <span className={cn("h-0.5 min-w-6 flex-1 rounded", i < current ? "bg-healthy" : "bg-border")} /> : null}
-          </li>
-        )
-      })}
-    </ol>
   )
 }
 

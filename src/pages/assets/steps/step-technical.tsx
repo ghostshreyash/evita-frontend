@@ -1,136 +1,55 @@
-import { useState } from "react"
 import type { UseFormReturn } from "react-hook-form"
-import { Cog, Info, LocateFixed, Zap } from "lucide-react"
-import { toast } from "sonner"
+import { Info } from "lucide-react"
 
 import { StepCard } from "@/components/common/wizard"
-import { Button } from "@/components/ui/button"
 import { DetailList, DetailPanel } from "@/components/common/detail-list"
-import { DateField, MeasureField, SelectField, TextareaField, TextField } from "@/components/form/fields"
-import {
-  assetConditions,
-  assetOperationalStatus,
-  coolingTypes,
-  frequencyValues,
-  insulationClasses,
-  oilTypes,
-  phaseTypes,
-  powerUnits,
-  tapChangerTypes,
-  vectorGroups,
-  voltageUnits,
-  warrantyUnits,
-  yesNo,
-} from "@/data/master-data"
+import { CategoryIcon } from "@/components/common/category-icon"
+import { Field, FieldLabel } from "@/components/ui/field"
+import { Input } from "@/components/ui/input"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { parametersFor, unitFor, unitKeyOf, type ParamSpec } from "@/data/asset-parameters"
 import type { AssetFormValues } from "@/pages/assets/schemas"
 
 /**
- * Step 2 of 4: the ratings off the nameplate and how the asset is run.
+ * Step 2 of 4: the ratings off the nameplate, and how the asset is run.
  *
- * The mockup shows an "Asset Preview" panel on the right, built around a
- * photograph. Photographs are not taken until step 3, so there is nothing to
- * preview here — the panel shows the asset details entered in step 1 instead,
- * which is what the ratings being typed have to be checked against.
+ * The electrical specification is built from the asset type rather than being
+ * one fixed form. An ACB is asked for a breaking capacity and a pole
+ * configuration; a battery bank for its cell count and Ah rating; a solar
+ * inverter for its DC input power. The parameters, their units, their option
+ * lists and which of them are mandatory all come from the client's onboarding
+ * sheet — see data/asset-parameters.ts.
  *
- * Asset Criticality and Year of Manufacture appear on this step in the mockup as
- * well as on step 1. They are asked once, on step 1, and shown here read-only.
+ * Asset criticality lives here now, as the client asked at review. It is the one
+ * parameter every asset type carries, so it arrives with the rest of them.
  *
- * "Location in Plant" is gone: the client confirmed it duplicated Location /
- * Area on step 1, which is the physical zone the asset is installed in.
+ * There is no operational block any more. Asset condition, current load,
+ * warranty, AMC, the next general check, operational status and the
+ * commissioning date are not asked for by the onboarding sheet, and the asset's
+ * own coordinates moved to step 1 with the rest of its location.
  */
 export function StepTechnical({ form }: { form: UseFormReturn<AssetFormValues> }) {
-  const { control } = form
   const values = form.watch()
+  const specs = parametersFor(values.category)
+  const answers = values.parameters ?? {}
+
+  const set = (key: string, value: string) =>
+    form.setValue("parameters", { ...answers, [key]: value }, { shouldDirty: true })
 
   return (
     <div className="grid gap-3 xl:grid-cols-[minmax(0,1fr)_22rem]">
       <StepCard
         title="Step 2 of 4: Technical Details"
-        description="Enter the technical specifications and operational details of the asset."
+        description="The electrical specification this kind of asset is registered with."
       >
-        <div className="grid gap-3 lg:grid-cols-2">
-          {/* ---------- Electrical specifications ---------- */}
-          <Group icon={Zap} title="Electrical Specifications">
-            <div className="grid gap-x-3 gap-y-2 sm:grid-cols-2">
-              <MeasureField
-                control={control}
-                name="primaryVoltage"
-                required
-                unitName="primaryVoltageUnit"
-                label="Rated Voltage (Primary)"
-                units={voltageUnits}
-                placeholder="11"
-              />
-              <MeasureField
-                control={control}
-                name="secondaryVoltage"
-                required
-                unitName="secondaryVoltageUnit"
-                label="Rated Voltage (Secondary)"
-                units={voltageUnits}
-                placeholder="415"
-              />
-              <MeasureField
-                control={control}
-                name="capacity"
-                required
-                unitName="capacityUnit"
-                label="Rated Power / Capacity"
-                units={powerUnits}
-                placeholder="1600"
-              />
-              <SelectField control={control} name="frequency" label="Frequency" required options={frequencyValues} />
-              <SelectField control={control} name="phase" label="Phase" required options={phaseTypes} />
-              <SelectField control={control} name="cooling" label="Cooling Type" required options={coolingTypes} />
-              <SelectField control={control} name="vectorGroup" label="Vector Group" options={vectorGroups} />
-              <TextField control={control} name="impedance" label="Impedance (%)" inputMode="decimal" placeholder="6.25" />
-              <SelectField control={control} name="insulation" label="Insulation Class" options={insulationClasses} />
-              <SelectField control={control} name="tapChanger" label="Tap Changer" options={tapChangerTypes} />
-              <SelectField control={control} name="oilType" label="Oil Type (if applicable)" options={oilTypes} className="sm:col-span-2" />
-            </div>
-          </Group>
-
-          {/* ---------- Operational details ---------- */}
-          <Group icon={Cog} title="Operational Details">
-            <div className="grid gap-x-3 gap-y-2 sm:grid-cols-2">
-              <SelectField
-                control={control}
-                name="operationalStatus"
-                label="Operational Status"
-                required
-                options={assetOperationalStatus}
-              />
-              <SelectField control={control} name="condition" label="Asset Condition" required options={assetConditions} />
-
-              <TextField control={control} name="load" label="Current Load (kVA)" inputMode="decimal" placeholder="950" />
-              <DateField control={control} name="commissioned" label="Commissioning Date" />
-
-              <GpsCoordinates form={form} className="sm:col-span-2" />
-
-              <MeasureField
-                control={control}
-                name="warranty"
-                unitName="warrantyUnit"
-                label="Warranty Period"
-                units={warrantyUnits}
-                placeholder="5"
-              />
-              <SelectField control={control} name="amc" label="AMC / Maintenance Contract" options={yesNo} />
-
-              <DateField control={control} name="nextDue" label="Next Due Date (General Check)" fromYear={new Date().getFullYear()} toYear={new Date().getFullYear() + 10} />
-              <div className="hidden sm:block" />
-
-              <TextareaField
-                control={control}
-                name="remarks"
-                label="Remarks"
-                rows={2}
-                maxLength={200}
-                placeholder="Installed as part of the Phase-2 expansion."
-                className="sm:col-span-2"
-              />
-            </div>
-          </Group>
+        <p className="mb-3 flex items-center gap-1.5 text-sm text-muted-foreground">
+          <CategoryIcon category={values.category} className="size-4" />
+          The parameters below are the ones a {values.category || "asset"} is registered with.
+        </p>
+        <div className="grid gap-x-3 gap-y-2 sm:grid-cols-2 xl:grid-cols-3">
+          {specs.map((spec) => (
+            <ParamField key={spec.key} spec={spec} answers={answers} onChange={set} />
+          ))}
         </div>
       </StepCard>
 
@@ -139,100 +58,102 @@ export function StepTechnical({ form }: { form: UseFormReturn<AssetFormValues> }
         <DetailPanel title="Asset Details">
           <DetailList
             rows={[
-              { label: "Asset Name / Tag ID", value: values.tag, always: true },
+              { label: "Asset Name", value: values.tag, always: true },
               { label: "Category", value: values.category, always: true },
               { label: "Location / Area", value: values.area, always: true },
               { label: "Department", value: values.department },
+              { label: "Sub-Department", value: values.subDepartment },
               { label: "Plant", value: values.plant },
               { label: "Enterprise", value: values.enterprise },
-              { label: "Manufacturer", value: values.manufacturer },
-              { label: "Model", value: values.model },
-              { label: "Serial Number", value: values.serial },
-              { label: "Year of Manufacture", value: values.year },
-              { label: "Asset Criticality", value: values.criticality, always: true },
             ]}
           />
         </DetailPanel>
 
         <p className="flex items-start gap-2 rounded-lg bg-info-soft p-3 text-sm">
           <Info className="mt-0.5 size-5 shrink-0 text-primary" />
-          Verify every technical detail against the asset nameplate and the site documents before continuing. Photographs
-          are captured in the next step.
+          Verify every rating against the asset nameplate before continuing. Photographs are captured in the next step.
         </p>
       </div>
     </div>
   )
 }
 
-/**
- * The asset's own coordinates.
- *
- * Optional, and pre-filled from the plant's registered location: every asset on
- * one site shares that pair until someone stands at the asset and captures a
- * reading, which is what Capture does. GPS is unreliable indoors, so a failed
- * read leaves the plant's figures in place rather than clearing the fields.
- */
-function GpsCoordinates({ form, className }: { form: UseFormReturn<AssetFormValues>; className?: string }) {
-  const [capturing, setCapturing] = useState(false)
+/* ---------- Pieces ---------- */
 
-  const capture = () => {
-    if (!navigator.geolocation) {
-      toast.error("This device cannot report its location.")
-      return
-    }
-    setCapturing(true)
-    navigator.geolocation.getCurrentPosition(
-      ({ coords }) => {
-        form.setValue("latitude", coords.latitude.toFixed(4), { shouldDirty: true })
-        form.setValue("longitude", coords.longitude.toFixed(4), { shouldDirty: true })
-        setCapturing(false)
-        toast.success("Coordinates captured at this asset.")
-      },
-      () => {
-        setCapturing(false)
-        toast.error("Could not get a fix. Indoors this often fails — the plant's coordinates have been kept.")
-      },
-      { enableHighAccuracy: true, timeout: 10_000 }
+/**
+ * One parameter from the sheet.
+ *
+ * A Choice the sheet gives no option list for falls back to a text box rather
+ * than to invented options — see `missingOptionLists` in data/asset-parameters.
+ * Units are always picked, never typed: the sheet writes several of them as
+ * alternatives, so the engineer says which one the nameplate uses.
+ *
+ * These are not react-hook-form fields: the answers live in one `parameters`
+ * map, so the form's shape does not have to change with the asset type.
+ */
+function ParamField({
+  spec,
+  answers,
+  onChange,
+}: {
+  spec: ParamSpec
+  answers: Record<string, string>
+  onChange: (key: string, value: string) => void
+}) {
+  const value = answers[spec.key] ?? ""
+  const label = (
+    <FieldLabel htmlFor={spec.key} className="gap-1">
+      {spec.label}
+      {spec.required ? <span className="text-critical">*</span> : null}
+    </FieldLabel>
+  )
+
+  if (spec.kind === "choice" && spec.options) {
+    return (
+      <Field>
+        {label}
+        <Select value={value} onValueChange={(v) => onChange(spec.key, v)}>
+          <SelectTrigger id={spec.key} className="w-full">
+            <SelectValue placeholder="Select" />
+          </SelectTrigger>
+          <SelectContent>
+            {spec.options.map((o) => (
+              <SelectItem key={o} value={o}>
+                {o}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </Field>
     )
   }
 
   return (
-    <div className={className}>
-      <div className="mb-1 flex flex-wrap items-center justify-between gap-2">
-        <span className="text-sm font-medium">
-          GPS Coordinates <span className="text-muted-foreground">(optional)</span>
-        </span>
-        <Button type="button" variant="outline" size="sm" onClick={capture} disabled={capturing}>
-          <LocateFixed className={capturing ? "animate-pulse" : undefined} />
-          {capturing ? "Capturing…" : "Capture at asset"}
-        </Button>
+    <Field>
+      {label}
+      <div className="flex gap-1.5">
+        <Input
+          id={spec.key}
+          value={value}
+          inputMode={spec.kind === "number" ? "decimal" : undefined}
+          onChange={(e) => onChange(spec.key, e.target.value)}
+          className="min-w-0 flex-1"
+        />
+        {spec.units ? (
+          <Select value={unitFor(spec, answers)} onValueChange={(v) => onChange(unitKeyOf(spec), v)}>
+            <SelectTrigger aria-label={`${spec.label} unit`} className="w-auto shrink-0 gap-1 bg-muted">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {spec.units.map((u) => (
+                <SelectItem key={u} value={u}>
+                  {u}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        ) : null}
       </div>
-      <div className="grid gap-x-3 gap-y-2 sm:grid-cols-2">
-        <TextField control={form.control} name="latitude" label="Latitude" />
-        <TextField control={form.control} name="longitude" label="Longitude" />
-      </div>
-      <p className="mt-1 text-xs text-muted-foreground">Defaults to the plant's location until captured at the asset.</p>
-    </div>
-  )
-}
-
-/** One titled block of fields inside the step */
-function Group({
-  icon: Icon,
-  title,
-  children,
-}: {
-  icon: React.ComponentType<{ className?: string }>
-  title: string
-  children: React.ReactNode
-}) {
-  return (
-    <section className="rounded-lg ring-1 ring-foreground/10">
-      <h4 className="flex items-center gap-2 rounded-t-lg bg-info-soft px-3 py-2 text-base font-semibold text-brand-navy dark:text-foreground">
-        <Icon className="size-5 text-primary" />
-        {title}
-      </h4>
-      <div className="p-3">{children}</div>
-    </section>
+    </Field>
   )
 }

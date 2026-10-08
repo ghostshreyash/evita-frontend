@@ -14,7 +14,18 @@ import type { EvidenceItem, TimelineStep } from "@/data/evidence"
 import { areas, commissionDate } from "@/data/mock"
 import { assetCriticality, type AssetCriticality } from "@/data/master-data"
 import type { TaskRow } from "@/data/occ-tables"
-import { angleSlotsFor, dustThickness, dustTypes, hygieneChecks, thermalPointsFor, type DustThickness, type FpsStatus } from "@/data/test-template"
+import {
+  angleSlotsFor,
+  dustThickness,
+  dustTypes,
+  hygieneChecks,
+  inspectionReadingsFor,
+  readingKeys,
+  thermalPointsFor,
+  type DustThickness,
+  type FpsStatus,
+} from "@/data/test-template"
+import { placeInPlant } from "@/data/plant-tree"
 import { categoryFor } from "@/lib/asset-category"
 import { emptyCapture, observationsFrom, resultsFrom, scoreCapture } from "@/lib/testing"
 
@@ -39,7 +50,7 @@ export type ThermalPoint = {
 }
 
 /**
- * EVITA: the structured Testing & Measurements capture (Phase 1), kept beside
+ * EVITA: the structured inspection capture (Phase 1), kept beside
  * the flat `measurements` OCC reads. `measurements` and `observations` are
  * derived from it on every save, so both apps see the same record.
  */
@@ -49,6 +60,8 @@ export type InspectionCapture = {
   thermal: ThermalPoint[]
   /** Ambient temperature, °C, as typed */
   ambient: string
+  /** Reading key → value as typed; which keys apply depends on the asset type */
+  readings: Record<string, string>
   thickness?: DustThickness
   dustTypes: string[]
   /** Hygiene check key → OK or an issue, with a note when it is an issue */
@@ -93,10 +106,13 @@ export type InspectionResult = {
 }
 
 export type InspectionDetail = {
-  /* --- what OCC assigned --- */
+  /* --- what EMMS-E assigned --- */
   description: string
   createdBy: string
   area: string
+  /** Owning department and sub-department, from the plant's own tree */
+  department: string
+  subDepartment: string
   assetTag: string
   assetCategory: string
   /** How badly a failure here would hurt: High / Medium / Low */
@@ -151,8 +167,9 @@ export function inspectionDetail(row: TaskRow): InspectionDetail {
 
   const detail: InspectionDetail = {
     description: instructions[row.activity] ?? instructions["Preventive Assessment"],
-    createdBy: `${pick(supervisors)} (OCC)`,
+    createdBy: `${pick(supervisors)} (EMMS-E)`,
     area: pick(areas),
+    ...placeInPlant(row),
     assetTag: `TAG-${row.plant.slice(0, 3).toUpperCase()}-${row.id.slice(-4)}`,
     assetCategory: categoryFor(row.asset),
     assetCriticality: pick(assetCriticality),
@@ -193,6 +210,21 @@ export function inspectionDetail(row: TaskRow): InspectionDetail {
     capture.thermal.push({ id, point, maxTemp: String(Number(capture.ambient) + rise) })
     detail.evidence.push({ id: `${id}-img`, kind: "thermal", label: `${point} (thermal)`, caption: `Max ${Number(capture.ambient) + rise} °C`, meta: stamp(20 + i * 3), slot: id })
   }
+  /*
+   * The electrical readings the asset type is inspected for. Values are
+   * plausible rather than meaningful: a voltage reads near 415 or 11000
+   * depending on the unit, a current in the low hundreds. The mandatory ones
+   * are always filled, so a completed record never looks half-taken.
+   */
+  for (const spec of inspectionReadingsFor(category)) {
+    if (!done && !spec.required) continue
+    for (const key of readingKeys(spec)) {
+      const base =
+        spec.unit === "Hz" ? 50 : spec.unit === "A" ? 120 + Math.floor(random() * 180) : spec.key.includes("Earth") ? Math.floor(random() * 4) : 415
+      capture.readings[key] = spec.unit === "Hz" ? (49.8 + random() * 0.4).toFixed(1) : String(base + Math.floor(random() * 6))
+    }
+  }
+
   if (done) {
     capture.thickness = pick(dustThickness)
     capture.dustTypes = random() < 0.7 ? [pick(dustTypes)] : []

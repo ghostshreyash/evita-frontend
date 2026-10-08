@@ -408,29 +408,12 @@ export const assetOperationalStatus = [
   "Decommissioned",
 ] as const
 
-/** Condition of the asset at the moment it is onboarded */
-export const assetConditions = ["New", "Refurbished", "In Service", "Relocated"] as const
-
-export const phaseTypes = ["Single Phase (1Ø)", "Two Phase (2Ø)", "Three Phase (3Ø)", "DC", "Not Applicable"] as const
-
-export const coolingTypes = ["ONAN", "ONAF", "OFAF", "ODAF", "AN (Air Natural)", "AF (Air Forced)", "Dry Type", "Not Applicable"] as const
-
-export const insulationClasses = ["Class A", "Class B", "Class E", "Class F", "Class H", "Class C", "Not Applicable"] as const
-
-export const tapChangerTypes = ["Yes (OLTC)", "Yes (OCTC)", "No", "Not Applicable"] as const
-
-export const oilTypes = ["Mineral Oil", "Silicone Oil", "Ester (Natural)", "Ester (Synthetic)", "Dry Type / None"] as const
-
-export const vectorGroups = ["Dyn11", "Dyn1", "Ynd11", "YNyn0", "Dd0", "Yy0", "Not Applicable"] as const
-
-/** Units offered beside a numeric rating */
-export const voltageUnits = ["V", "kV"] as const
-export const powerUnits = ["kVA", "MVA", "kW", "MW", "A"] as const
-/** Frequency is a choice on the parameter sheet, not a number with a unit */
-export const frequencyValues = ["DC", "50 Hz", "60 Hz", "Variable Frequency", "Not Applicable"] as const
-export const warrantyUnits = ["Months", "Years"] as const
-
-export const yesNo = ["Yes", "No"] as const
+/*
+ * The electrical specification's own lists - phase, cooling type, vector group,
+ * tap changer, the rating units - are not held here. They vary by asset type
+ * and come from the Drop Down List tab of the client's onboarding sheet, which
+ * data/asset-parameters.ts transcribes alongside the parameters that use them.
+ */
 
 /**
  * Suggested names for the photographs and documents captured at onboarding.

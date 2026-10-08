@@ -1,18 +1,19 @@
 import { useRef, useState } from "react"
 import type { UseFormReturn } from "react-hook-form"
-import { Camera, Check, Eye, FilePlus2, FileText, ImagePlus, Paperclip, Trash2, UploadCloud } from "lucide-react"
+import { Camera, Check, Eye, FilePlus2, FileText, Images, ImagePlus, Paperclip, Trash2, UploadCloud } from "lucide-react"
 import { cn } from "cn"
 import { toast } from "sonner"
 
 import { StepCard } from "@/components/common/wizard"
 import { AssetPhoto } from "@/components/common/asset-photo"
-import { CheckList, DetailList, DetailPanel } from "@/components/common/detail-list"
+import { DetailList, DetailPanel } from "@/components/common/detail-list"
 import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
+import { parametersFor, unitFor } from "@/data/asset-parameters"
 import { suggestedDocumentNames, suggestedImageNames } from "@/data/master-data"
 import { urlFor } from "@/lib/object-url"
-import { missingUploads, type AssetFormValues, type AssetUpload } from "@/pages/assets/schemas"
+import { type AssetFormValues, type AssetUpload } from "@/pages/assets/schemas"
 
 const IMAGE_TYPES = "image/png,image/jpeg"
 const DOCUMENT_TYPES = "application/pdf,image/png,image/jpeg"
@@ -25,20 +26,23 @@ type Pending = { kind: "image" | "document"; files: File[] }
 /**
  * Step 3 of 4: the photographs and paperwork that back the ratings.
  *
- * There is no fixed set of slots to fill. The client confirmed on 07-10-2026
- * that what is available varies from asset to asset and site to site, so the
- * engineer adds as many photographs and documents as the asset actually has and
- * names each one themselves. The old fixed labels survive as suggestions.
+ * At least one photograph, and no fixed slots beyond that. The onboarding
+ * sheet asks every type for an Asset Photograph, so one is mandatory; what it
+ * shows is the engineer's to decide, because the client confirmed on 07-10-2026
+ * that what is available varies from asset to asset and site to site. The old
+ * fixed labels survive as suggestions.
  *
  * Naming is asked for at the moment of upload rather than left to be filled in
  * afterwards: a name typed while the engineer is still standing at the asset is
  * the one that describes it, and nothing can reach the register unnamed.
+ *
+ * A photograph comes from the tablet's camera or from a file already on it, so
+ * tapping to add one asks which - see `AddSlot`.
  */
 export function StepUploads({ form }: { form: UseFormReturn<AssetFormValues> }) {
   const values = form.watch()
   const images = values.images ?? []
   const documents = values.documents ?? []
-  const missing = missingUploads(values)
 
   const [pending, setPending] = useState<Pending | null>(null)
 
@@ -68,43 +72,30 @@ export function StepUploads({ form }: { form: UseFormReturn<AssetFormValues> }) 
         description="Add what this asset actually has. You will be asked to name each upload as you add it."
       >
         {/* ---------- Photographs ---------- */}
-        <Section icon={Camera} title="Asset Images" count={images.length} hint={`JPG or PNG · up to ${MAX_IMAGE_MB} MB each`}>
+        <Section
+          icon={Camera}
+          title="Asset Images"
+          count={images.length}
+          hint={`JPG or PNG · up to ${MAX_IMAGE_MB} MB each`}
+        >
           {/* One wide drop zone until there is something to show; a grid after */}
           <div className={cn(images.length && "grid grid-cols-2 gap-2.5 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5")}>
             {images.map((item) => (
-              <figure key={item.id} className="overflow-hidden rounded-lg ring-1 ring-foreground/10">
-                <div className="relative h-28 bg-muted/40">
-                  <AssetPhoto file={item.file} label={item.name} />
-                  <div className="absolute top-1 right-1 flex gap-1">
-                    <IconAction label={`Preview ${item.name}`} onClick={() => preview(item)}>
-                      <Eye />
-                    </IconAction>
-                    <IconAction
-                      label={`Remove ${item.name}`}
-                      destructive
-                      onClick={() => setImages(images.filter((i) => i.id !== item.id))}
-                    >
-                      <Trash2 />
-                    </IconAction>
-                  </div>
-                </div>
-                <figcaption className="px-2 py-1.5">
-                  <span className="line-clamp-2 text-sm leading-tight font-medium">{item.name}</span>
-                  <span className="mt-0.5 block truncate text-xs text-muted-foreground" title={item.file.name}>
-                    {item.file.name}
-                  </span>
-                </figcaption>
-              </figure>
+              <Thumb key={item.id} item={item} onRemove={() => setImages(images.filter((i) => i.id !== item.id))} />
             ))}
 
             <AddSlot
-              className={cn(!images.length && "h-28")}
+              photo
+              className={cn(!images.length && "h-28", !images.length && "border-critical/40 bg-critical-soft/20 hover:border-critical")}
               icon={ImagePlus}
               label={images.length ? "Add more" : "Add photograph"}
               accept={IMAGE_TYPES}
               onPick={(files) => pick("image", files, MAX_IMAGE_MB)}
             />
           </div>
+          {images.length ? null : (
+            <p className="mt-2 text-sm text-critical">At least one photograph of the asset is required.</p>
+          )}
         </Section>
 
         {/* ---------- Documents ---------- */}
@@ -166,28 +157,17 @@ export function StepUploads({ form }: { form: UseFormReturn<AssetFormValues> }) 
               { label: "Location / Area", value: values.area },
               { label: "Plant", value: values.plant },
               { label: "Enterprise", value: values.enterprise },
-              { label: "Manufacturer", value: values.manufacturer },
-              { label: "Model", value: values.model },
-              { label: "Capacity", value: values.capacity ? `${values.capacity} ${values.capacityUnit}` : "" },
-              {
-                label: "Voltage",
-                value: values.primaryVoltage
-                  ? `${values.primaryVoltage} ${values.primaryVoltageUnit} / ${values.secondaryVoltage} ${values.secondaryVoltageUnit}`
+              /* Which ratings an asset carries depends on its type, so the
+                 preview lists whatever step 2 asked for */
+              ...parametersFor(values.category).map((spec) => ({
+                label: spec.label,
+                value: values.parameters?.[spec.key]
+                  ? [values.parameters[spec.key], unitFor(spec, values.parameters)].filter(Boolean).join(" ")
                   : "",
-              },
-              { label: "Serial Number", value: values.serial },
+              })),
             ]}
           />
         </DetailPanel>
-
-        <CheckList
-          title="Upload Checklist"
-          items={[
-            { label: "At least one photograph", done: missing.images > 0 },
-            { label: "Supporting documents attached", done: missing.documents > 0 },
-            { label: "Every upload named", done: missing.unnamed === 0 },
-          ]}
-        />
       </div>
 
       <NameUploadsDialog pending={pending} onCancel={() => setPending(null)} onSave={save} />
@@ -323,6 +303,31 @@ function Chip({
 
 /* ---------- Pieces ---------- */
 
+/** One uploaded photograph, with preview and remove over the image */
+function Thumb({ item, onRemove, className }: { item: AssetUpload; onRemove: () => void; className?: string }) {
+  return (
+    <figure className={cn("overflow-hidden rounded-lg ring-1 ring-foreground/10", className)}>
+      <div className="relative h-28 bg-muted/40">
+        <AssetPhoto file={item.file} label={item.name} />
+        <div className="absolute top-1 right-1 flex gap-1">
+          <IconAction label={`Preview ${item.name}`} onClick={() => preview(item)}>
+            <Eye />
+          </IconAction>
+          <IconAction label={`Remove ${item.name}`} destructive onClick={onRemove}>
+            <Trash2 />
+          </IconAction>
+        </div>
+      </div>
+      <figcaption className="px-2 py-1.5">
+        <span className="line-clamp-2 text-sm leading-tight font-medium">{item.name}</span>
+        <span className="mt-0.5 block truncate text-xs text-muted-foreground" title={item.file.name}>
+          {item.file.name}
+        </span>
+      </figcaption>
+    </figure>
+  )
+}
+
 /** A titled block with a count and the format note, matching the other steps */
 function Section({
   icon: Icon,
@@ -354,66 +359,139 @@ function Section({
   )
 }
 
-/** The dashed zone that takes a click or a drop */
+/**
+ * The dashed zone that takes a click or a drop.
+ *
+ * `photo` makes the click ask where the picture comes from: the tablet's camera,
+ * which opens straight into capture, or a file already on the device. A drop
+ * skips the question - the file is already chosen.
+ */
 function AddSlot({
   icon: Icon,
   label,
   accept,
   onPick,
   className,
+  photo,
+  single,
 }: {
   icon: React.ComponentType<{ className?: string }>
   label: string
   accept: string
   onPick: (files: FileList | null) => void
   className?: string
+  /** Offer the camera as well as the file picker */
+  photo?: boolean
+  /** One file at a time, for a slot that holds exactly one */
+  single?: boolean
 }) {
-  const input = useRef<HTMLInputElement>(null)
+  const file = useRef<HTMLInputElement>(null)
+  const camera = useRef<HTMLInputElement>(null)
   const [over, setOver] = useState(false)
+  const [asking, setAsking] = useState(false)
 
+  const take = (e: React.ChangeEvent<HTMLInputElement>) => {
+    onPick(e.target.files)
+    // Reset, so picking the same file twice still fires a change
+    e.target.value = ""
+  }
+
+  return (
+    <>
+      <button
+        type="button"
+        onClick={() => (photo ? setAsking(true) : file.current?.click())}
+        aria-label={label}
+        onDragOver={(e) => {
+          e.preventDefault()
+          setOver(true)
+        }}
+        onDragLeave={() => setOver(false)}
+        onDrop={(e) => {
+          e.preventDefault()
+          setOver(false)
+          onPick(e.dataTransfer.files)
+        }}
+        className={cn(
+          "flex min-h-28 w-full flex-col items-center justify-center gap-1 rounded-lg border-2 border-dashed px-2 text-center transition-colors",
+          over ? "border-primary bg-info-soft" : "border-input bg-muted/30 hover:border-primary hover:bg-accent",
+          className
+        )}
+      >
+        <span
+          className={cn(
+            "flex size-9 items-center justify-center rounded-full bg-background",
+            over ? "text-primary" : "text-muted-foreground"
+          )}
+        >
+          {over ? <UploadCloud className="size-5" /> : <Icon className="size-5" />}
+        </span>
+        <span className="text-sm font-medium">{label}</span>
+        <span className="text-xs text-muted-foreground">or drag here</span>
+      </button>
+
+      <input ref={file} type="file" multiple={!single} accept={accept} className="sr-only" onChange={take} />
+      {photo ? (
+        <input ref={camera} type="file" accept="image/*" capture="environment" className="sr-only" onChange={take} />
+      ) : null}
+
+      {photo ? (
+        <Dialog open={asking} onOpenChange={setAsking}>
+          <DialogContent className="sm:max-w-sm!">
+            <DialogHeader>
+              <DialogTitle>{label}</DialogTitle>
+              <DialogDescription>Photograph it now, or pick a picture already on this tablet.</DialogDescription>
+            </DialogHeader>
+            <div className="grid grid-cols-2 gap-3">
+              <SourceButton
+                icon={Camera}
+                label="Camera"
+                hint="Take it now"
+                onClick={() => {
+                  setAsking(false)
+                  camera.current?.click()
+                }}
+              />
+              <SourceButton
+                icon={Images}
+                label="Gallery"
+                hint="Pick a file"
+                onClick={() => {
+                  setAsking(false)
+                  file.current?.click()
+                }}
+              />
+            </div>
+          </DialogContent>
+        </Dialog>
+      ) : null}
+    </>
+  )
+}
+
+/** One of the two ways a photograph gets in, sized for a thumb on a tablet */
+function SourceButton({
+  icon: Icon,
+  label,
+  hint,
+  onClick,
+}: {
+  icon: React.ComponentType<{ className?: string }>
+  label: string
+  hint: string
+  onClick: () => void
+}) {
   return (
     <button
       type="button"
-      onClick={() => input.current?.click()}
-      aria-label={label}
-      onDragOver={(e) => {
-        e.preventDefault()
-        setOver(true)
-      }}
-      onDragLeave={() => setOver(false)}
-      onDrop={(e) => {
-        e.preventDefault()
-        setOver(false)
-        onPick(e.dataTransfer.files)
-      }}
-      className={cn(
-        "flex min-h-28 w-full flex-col items-center justify-center gap-1 rounded-lg border-2 border-dashed px-2 text-center transition-colors",
-        over ? "border-primary bg-info-soft" : "border-input bg-muted/30 hover:border-primary hover:bg-accent",
-        className
-      )}
+      onClick={onClick}
+      className="flex min-h-28 flex-col items-center justify-center gap-1.5 rounded-xl ring-1 ring-foreground/15 transition-colors hover:bg-accent"
     >
-      <span
-        className={cn(
-          "flex size-9 items-center justify-center rounded-full bg-background",
-          over ? "text-primary" : "text-muted-foreground"
-        )}
-      >
-        {over ? <UploadCloud className="size-5" /> : <Icon className="size-5" />}
+      <span className="flex size-11 items-center justify-center rounded-full bg-info-soft text-primary">
+        <Icon className="size-6" />
       </span>
-      <span className="text-sm font-medium">{label}</span>
-      <span className="text-xs text-muted-foreground">or drag here</span>
-      <input
-        ref={input}
-        type="file"
-        multiple
-        accept={accept}
-        className="sr-only"
-        onChange={(e) => {
-          onPick(e.target.files)
-          // Reset, so picking the same file twice still fires a change
-          e.target.value = ""
-        }}
-      />
+      <span className="text-sm font-semibold">{label}</span>
+      <span className="text-xs text-muted-foreground">{hint}</span>
     </button>
   )
 }

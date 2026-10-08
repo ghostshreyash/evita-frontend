@@ -11,6 +11,7 @@ import { areas, assetCategories, commissionDate, priorities } from "@/data/mock"
 import { assetCriticality, type AssetCriticality } from "@/data/master-data"
 import type { MaintenanceRow } from "@/data/occ-tables"
 import { slotLabel } from "@/data/occ-tables"
+import { placeInPlant } from "@/data/plant-tree"
 
 type Priority = (typeof priorities)[number]
 
@@ -36,11 +37,14 @@ export type Execution = {
 }
 
 export type MaintenanceDetail = {
-  /* --- what OCC assigned --- */
+  /* --- what EMMS-E assigned --- */
   priority: Priority
   description: string
   createdBy: string
   area: string
+  /** Owning department and sub-department, from the plant's own tree */
+  department: string
+  subDepartment: string
   assetTag: string
   assetCategory: string
   /** How badly a failure here would hurt: High / Medium / Low */
@@ -120,8 +124,9 @@ export function maintenanceDetail(row: MaintenanceRow): MaintenanceDetail {
   const detail: MaintenanceDetail = {
     priority: pick(priorities),
     description: pick(descriptions),
-    createdBy: `${pick(supervisors)} (OCC)`,
+    createdBy: `${pick(supervisors)} (EMMS-E)`,
     area: pick(areas),
+    ...placeInPlant(row),
     assetTag: `TAG-${row.plant.slice(0, 3).toUpperCase()}-${row.id.slice(-4)}`,
     assetCategory: pick(assetCategories),
     assetCriticality: pick(assetCriticality),

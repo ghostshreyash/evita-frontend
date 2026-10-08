@@ -1,12 +1,13 @@
 import { useMemo } from "react"
 import { Link, useNavigate, useParams } from "react-router"
-import { Activity, ArrowLeft, Building2, CircleDashed, Cog, FileText, Images, QrCode, Settings, TriangleAlert } from "lucide-react"
+import { Activity, ArrowLeft, Building2, CircleDashed, FileText, Images, QrCode, Settings, TriangleAlert } from "lucide-react"
 import { cn } from "cn"
 
 import { PageHeader } from "@/components/common/page-header"
 import { AssetPhoto } from "@/components/common/asset-photo"
+import { HealthDial } from "@/components/common/health-dial"
 import { DetailList, DetailPanel } from "@/components/common/detail-list"
-import { assetDetailRows, assetOperationalRows, assetTechnicalRows } from "@/components/assets/asset-sections"
+import { assetDetailRows, assetTechnicalRows } from "@/components/assets/asset-sections"
 import { AssetIdChip, AssetQrPanel, QrLabelPreview } from "@/components/assets/asset-qr"
 import { CategoryIcon } from "@/components/common/category-icon"
 import { Badge } from "@/components/ui/badge"
@@ -29,7 +30,7 @@ import { healthStatus } from "@/lib/status"
  * Inspection Information, Maintenance Information and Recent Activities are
  * deliberately absent. Inspection and maintenance records are not held yet, and
  * a panel of invented dates against a real asset is worse than no panel — those
- * blocks belong here once Testing & Measurements and Maintenance Activities are
+ * blocks belong here once the inspection and maintenance records are
  * built and have something true to show.
  */
 export function AssetDetailPage() {
@@ -107,14 +108,6 @@ function AssetDetail({ asset, onBack }: { asset: AssetRecord; onBack: () => void
                 Not inspected yet. A health score appears once the first inspection report is in.
               </p>
             )}
-            <DetailList
-              className="mt-3"
-              rows={[
-                { label: "Asset Condition", value: profile.operational.condition, always: true },
-                { label: "Current Load", value: profile.operational.load ? `${profile.operational.load} kVA` : "" },
-                { label: "Next Due Date", value: profile.operational.nextDue },
-              ]}
-            />
           </DetailPanel>
 
           <DetailPanel title="QR Code Label Preview">
@@ -146,10 +139,6 @@ function AssetDetail({ asset, onBack }: { asset: AssetRecord; onBack: () => void
 
         <DetailPanel icon={Settings} title="Technical Details">
           <DetailList rows={assetTechnicalRows(profile)} />
-        </DetailPanel>
-
-        <DetailPanel icon={Cog} title="Operational Details">
-          <DetailList rows={assetOperationalRows(profile)} />
         </DetailPanel>
 
         {/* ---------- The paperwork behind the ratings ---------- */}
@@ -185,41 +174,6 @@ function AssetDetail({ asset, onBack }: { asset: AssetRecord; onBack: () => void
           )}
         </DetailPanel>
       </div>
-    </div>
-  )
-}
-
-/** Health score as a ring, in the band's own colour */
-function HealthDial({ score, label, tone }: { score: number; label: string; tone: "healthy" | "attention" | "critical" }) {
-  const radius = 42
-  const circumference = 2 * Math.PI * radius
-  const filled = (Math.max(0, Math.min(100, score)) / 100) * circumference
-
-  return (
-    <div className="flex flex-col items-center">
-      <svg viewBox="0 0 100 100" className="size-28" role="img" aria-label={`Health score ${score} out of 100, ${label}`}>
-        <circle cx="50" cy="50" r={radius} fill="none" stroke="currentColor" strokeWidth="8" className="text-foreground/10" />
-        <circle
-          cx="50"
-          cy="50"
-          r={radius}
-          fill="none"
-          stroke={healthStatus[tone].color}
-          strokeWidth="8"
-          strokeLinecap="round"
-          strokeDasharray={`${filled} ${circumference}`}
-          transform="rotate(-90 50 50)"
-        />
-        <text x="50" y="50" textAnchor="middle" className="fill-foreground text-2xl font-bold tabular-nums">
-          {score}
-        </text>
-        <text x="50" y="66" textAnchor="middle" className="fill-muted-foreground text-xs">
-          / 100
-        </text>
-      </svg>
-      <Badge variant={healthStatus[tone].badge} className="mt-1 h-auto rounded px-2.5 py-1 text-sm">
-        {label}
-      </Badge>
     </div>
   )
 }

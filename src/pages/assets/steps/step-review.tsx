@@ -1,16 +1,16 @@
 import type { UseFormReturn } from "react-hook-form"
-import { Building2, Cog, FileText, Images, Pencil, Settings } from "lucide-react"
+import { Building2, FileText, Images, Pencil, Settings } from "lucide-react"
 import { cn } from "cn"
 
 import { AssetPhoto } from "@/components/common/asset-photo"
-import { CheckList, DetailList, DetailPanel } from "@/components/common/detail-list"
-import { assetDetailRows, assetOperationalRows, assetTechnicalRows } from "@/components/assets/asset-sections"
+import { DetailList, DetailPanel } from "@/components/common/detail-list"
+import { assetDetailRows, assetTechnicalRows } from "@/components/assets/asset-sections"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { profileFrom } from "@/data/asset-store"
 import { td, th } from "@/lib/data-table"
-import { missingUploads, type AssetFormValues } from "@/pages/assets/schemas"
+import type { AssetFormValues } from "@/pages/assets/schemas"
 
 /**
  * Step 4 of 4: everything the engineer entered, grouped the way the detail
@@ -30,11 +30,9 @@ export function StepReview({
   const values = form.watch()
   const images = values.images ?? []
   const documents = values.documents ?? []
-  const missing = missingUploads(values)
 
   // form.watch() hands back a fresh object each render, so there is nothing to memoise
-  const profile = profileFrom(values, { installed: values.installed ?? "", onboarded: "" })
-
+  const profile = profileFrom(values, { onboarded: "" })
 
   return (
     <div>
@@ -47,10 +45,10 @@ export function StepReview({
         </div>
       </div>
 
-      <div className="grid gap-3 lg:grid-cols-2 xl:grid-cols-3">
+      <div className="grid items-start gap-3 lg:grid-cols-2">
         <DetailPanel
           icon={Building2}
-          title="1. Asset Details"
+          title="Asset Details"
           action={<EditButton onClick={() => onEdit(0)} />}
         >
           <DetailList rows={assetDetailRows(profile)} />
@@ -58,7 +56,7 @@ export function StepReview({
 
         <DetailPanel
           icon={Settings}
-          title="2. Technical Details"
+          title="Technical Details"
           action={<EditButton onClick={() => onEdit(1)} />}
         >
           <DetailList rows={assetTechnicalRows(profile)} />
@@ -68,7 +66,6 @@ export function StepReview({
           icon={Images}
           title={`Asset Images (${images.length})`}
           action={<EditButton onClick={() => onEdit(2)} />}
-          className="lg:col-span-2 xl:col-span-1"
         >
           {images.length ? (
             <div className="grid grid-cols-3 gap-2">
@@ -88,7 +85,7 @@ export function StepReview({
 
         <DetailPanel
           icon={FileText}
-          title={`3. Documents (${documents.length})`}
+          title={`Documents (${documents.length})`}
           action={<EditButton onClick={() => onEdit(2)} />}
           contentClassName="px-1"
         >
@@ -121,26 +118,6 @@ export function StepReview({
             <p className="px-2 py-3 text-center text-sm text-muted-foreground">No documents attached.</p>
           )}
         </DetailPanel>
-
-        <DetailPanel
-          icon={Cog}
-          title="4. Operational Details"
-          action={<EditButton onClick={() => onEdit(1)} />}
-        >
-          <DetailList rows={assetOperationalRows(profile)} />
-        </DetailPanel>
-
-        <CheckList
-          title="Submission Checklist"
-          items={[
-            { label: "Asset details completed", done: !!values.tag && !!values.category && !!values.area },
-            { label: "Technical details completed", done: !!values.primaryVoltage && !!values.capacity && !!values.cooling },
-            { label: `Photographs added (${missing.images})`, done: missing.images > 0 },
-            { label: `Documents attached (${missing.documents})`, done: missing.documents > 0 },
-            { label: "Information reviewed", done: true },
-          ]}
-          className="self-start"
-        />
       </div>
     </div>
   )

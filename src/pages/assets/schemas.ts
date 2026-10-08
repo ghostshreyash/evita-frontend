@@ -3,15 +3,17 @@ import { z } from "zod"
 import { required } from "@/lib/validation"
 
 /**
- * Asset onboarding, as the four mockup steps capture it.
+ * Asset onboarding, as the four steps capture it.
  *
  * One schema for the whole wizard rather than four: the values live in a single
  * form so a step can be reopened without the later ones losing what was typed.
  * Each step validates only its own fields, through `stepFields` below.
  *
- * Two fields appear twice in the mockups — Year of Manufacture and Asset
- * Criticality are on both step 1 and step 2. They are asked once here, on step
- * 1, and step 2 shows what was chosen rather than asking again.
+ * The electrical specification is NOT declared here. What an asset is asked for
+ * depends on what it is - see data/asset-parameters.ts, transcribed from the
+ * client's onboarding sheet - so step 2 stores its answers in `parameters`,
+ * keyed by parameter, and validates them against that type's specification
+ * through `missingParameters` rather than against a fixed list of fields.
  */
 
 const file = z.custom<File>((v) => v instanceof File)
@@ -31,77 +33,34 @@ const upload = z.object({
 
 export type AssetUpload = z.infer<typeof upload>
 
-/** A number typed into a ratings box: digits with an optional decimal part */
-const numeric = (label: string) =>
-  z
-    .string()
-    .trim()
-    .regex(/^\d+(\.\d+)?$/, `${label} must be a number`)
-
-const optionalNumeric = (label: string) => z.union([z.literal(""), numeric(label)]).optional()
-
 export const assetSchema = z.object({
   /* ---------- Step 1: Asset Details ---------- */
   enterprise: required("Enterprise"),
   plant: required("Plant"),
-  area: required("Location / Area"),
-  department: required("Department"),
-  /* Optional: retail enterprises are not organised into sub-departments */
+  /* Both optional: a retail enterprise has no such tree */
+  department: z.string().optional(),
   subDepartment: z.string().optional(),
+  /* Free text, not a list: whatever gets the next engineer to the asset */
+  area: required("Location / Area").max(200, "Keep the location under 200 characters"),
   category: required("Asset Category"),
-  tag: required("Asset Name / Tag ID").max(40, "Keep the tag under 40 characters"),
+  tag: required("Asset Name").max(40, "Keep the name under 40 characters"),
   description: z.string().trim().max(200, "Keep the description under 200 characters").optional(),
-  manufacturer: z.string().optional(),
-  model: z.string().trim().max(60).optional(),
-  serial: z.string().trim().max(60).optional(),
-  year: z.union([z.literal(""), z.string().regex(/^(19|20)\d{2}$/, "Enter a four-digit year")]).optional(),
-  installed: z.string().optional(),
-  criticality: required("Asset Criticality"),
+  /* Defaults to the plant's coordinates; capturing them at the asset is optional */
+  latitude: z.string().optional(),
+  longitude: z.string().optional(),
 
   /*
    * Step 2: Technical Details.
    *
-   * Which fields carry a * follows the approved mockup: the ratings a nameplate
-   * always shows are mandatory, and the ones that only apply to some asset types
-   * - vector group, impedance, insulation class, tap changer, oil type - are not.
-   *
-   * Note this is wider than the client's written answer, which named only eight
-   * mandatory fields across the whole wizard and no rating among them. The
-   * mockup is being followed here; if the answer governs instead, the six
-   * ratings below and Asset Condition drop back to optional.
+   * The electrical specification, keyed by parameter. Which parameters apply and
+   * which are mandatory comes from the asset type, so the shape cannot be fixed
+   * here; `missingParameters` checks it against the type when the step is left.
    */
-  primaryVoltage: numeric("Rated voltage (primary)"),
-  primaryVoltageUnit: required("Unit"),
-  secondaryVoltage: numeric("Rated voltage (secondary)"),
-  secondaryVoltageUnit: required("Unit"),
-  capacity: numeric("Rated power / capacity"),
-  capacityUnit: required("Unit"),
-  frequency: required("Frequency"),
-  phase: required("Phase"),
-  cooling: required("Cooling type"),
-  vectorGroup: z.string().optional(),
-  impedance: optionalNumeric("Impedance"),
-  insulation: z.string().optional(),
-  tapChanger: z.string().optional(),
-  oilType: z.string().optional(),
-
-  /** Mandatory, per the client's answer */
-  operationalStatus: required("Operational status"),
-  condition: required("Asset condition"),
-  commissioned: z.string().optional(),
-  load: optionalNumeric("Current load"),
-  /* Defaults to the plant's coordinates; capturing them at the asset is optional */
-  latitude: z.string().optional(),
-  longitude: z.string().optional(),
-  warranty: optionalNumeric("Warranty period"),
-  warrantyUnit: z.string().optional(),
-  amc: z.string().optional(),
-  nextDue: z.string().optional(),
-  remarks: z.string().trim().max(200, "Keep remarks under 200 characters").optional(),
+  parameters: z.record(z.string(), z.string()),
 
   /* ---------- Step 3: Images & Documents ---------- */
-  /* At least one photograph: an asset record with no picture of the asset is
-     of little use to the next engineer who has to find it. Documents are free. */
+  /* At least one photograph, per the onboarding sheet's Asset Photograph. What
+     it shows and what it is called is the engineer's to decide. */
   images: z.array(upload).min(1, "Add at least one photograph of the asset"),
   documents: z.array(upload),
 })
@@ -111,16 +70,10 @@ export type AssetFormValues = z.infer<typeof assetSchema>
 /** Which fields each step owns, so a step validates only what it asked for */
 export const stepFields: (keyof AssetFormValues)[][] = [
   [
-    "enterprise", "plant", "area", "department", "subDepartment", "category", "tag",
-    "description", "manufacturer", "model", "serial", "year", "installed", "criticality",
+    "enterprise", "plant", "department", "subDepartment", "area",
+    "category", "tag", "description", "latitude", "longitude",
   ],
-  [
-    "primaryVoltage", "primaryVoltageUnit", "secondaryVoltage", "secondaryVoltageUnit",
-    "capacity", "capacityUnit", "frequency", "phase", "cooling", "vectorGroup",
-    "impedance", "insulation", "tapChanger", "oilType",
-    "operationalStatus", "condition", "commissioned", "load", "latitude", "longitude",
-    "warranty", "warrantyUnit", "amc", "nextDue", "remarks",
-  ],
+  ["parameters"],
   ["images", "documents"],
   [],
 ]

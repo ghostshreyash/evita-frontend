@@ -18,7 +18,13 @@ export type DetailRow = {
   always?: boolean
 }
 
-/** Colon-aligned label/value list. Empty rows drop out unless marked `always`. */
+/**
+ * Colon-aligned label/value list. Empty rows drop out unless marked `always`.
+ *
+ * The label column is sized to the longest label rather than to a fixed width:
+ * a fixed 10rem left almost nothing for the value inside a narrow panel, and
+ * values broke one character per line.
+ */
 export function DetailList({ rows, className }: { rows: DetailRow[]; className?: string }) {
   const shown = rows.filter((r) => r.always || (r.value !== undefined && r.value !== null && r.value !== ""))
 
@@ -34,7 +40,7 @@ export function DetailList({ rows, className }: { rows: DetailRow[]; className?:
   return (
     <dl className={cn("space-y-1.5 text-sm", className)}>
       {shown.map((r) => (
-        <div key={r.label} className="grid grid-cols-[minmax(0,10rem)_0.5rem_minmax(0,1fr)] items-baseline gap-x-1">
+        <div key={r.label} className="grid grid-cols-[max-content_0.5rem_minmax(0,1fr)] items-baseline gap-x-1">
           <dt className="text-muted-foreground">
             {r.label}
             {r.note ? <span className="block text-xs leading-tight">{r.note}</span> : null}
