@@ -1,19 +1,15 @@
-import { useState } from "react"
 import type { UseFormReturn } from "react-hook-form"
-import { Cog, Info, LocateFixed, Zap } from "lucide-react"
-import { cn } from "cn"
-import { toast } from "sonner"
+import { Cog, Info, Zap } from "lucide-react"
 
 import { StepCard } from "@/components/common/wizard"
 import { DetailList, DetailPanel } from "@/components/common/detail-list"
 import { CategoryIcon } from "@/components/common/category-icon"
-import { DateField, MeasureField, SelectField, TextareaField, TextField } from "@/components/form/fields"
+import { DateField, SelectField } from "@/components/form/fields"
 import { Field, FieldLabel } from "@/components/ui/field"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Button } from "@/components/ui/button"
-import { assetConditions, assetOperationalStatus, warrantyUnits, yesNo } from "@/data/master-data"
-import { parametersFor, type ParamSpec } from "@/data/asset-parameters"
+import { assetOperationalStatus } from "@/data/master-data"
+import { parametersFor, unitFor, unitKeyOf, type ParamSpec } from "@/data/asset-parameters"
 import type { AssetFormValues } from "@/pages/assets/schemas"
 
 /**
@@ -28,6 +24,11 @@ import type { AssetFormValues } from "@/pages/assets/schemas"
  *
  * Asset criticality lives here now, as the client asked at review. It is the one
  * parameter every asset type carries, so it arrives with the rest of them.
+ *
+ * Operational Details is down to the two fields OLIVINE's documents actually
+ * ask for. Asset condition, current load, warranty, AMC and the next general
+ * check are gone: no sheet or answer asks for them at onboarding, and the
+ * asset's own coordinates moved to step 1 with the rest of its location.
  */
 export function StepTechnical({ form }: { form: UseFormReturn<AssetFormValues> }) {
   const { control } = form
@@ -53,12 +54,12 @@ export function StepTechnical({ form }: { form: UseFormReturn<AssetFormValues> }
             </p>
             <div className="grid gap-x-3 gap-y-2 sm:grid-cols-2">
               {specs.map((spec) => (
-                <ParamField key={spec.key} spec={spec} value={answers[spec.key] ?? ""} onChange={set} />
+                <ParamField key={spec.key} spec={spec} answers={answers} onChange={set} />
               ))}
             </div>
           </Group>
 
-          {/* ---------- Operational details ---------- */}
+          {/* ---------- How the asset is run ---------- */}
           <Group icon={Cog} title="Operational Details">
             <div className="grid gap-x-3 gap-y-2 sm:grid-cols-2">
               <SelectField
@@ -68,41 +69,7 @@ export function StepTechnical({ form }: { form: UseFormReturn<AssetFormValues> }
                 required
                 options={assetOperationalStatus}
               />
-              <SelectField control={control} name="condition" label="Asset Condition" required options={assetConditions} />
-
-              <TextField control={control} name="load" label="Current Load (kVA)" inputMode="decimal" placeholder="950" />
               <DateField control={control} name="commissioned" label="Commissioning Date" />
-
-              <GpsCoordinates form={form} className="sm:col-span-2" />
-
-              <MeasureField
-                control={control}
-                name="warranty"
-                unitName="warrantyUnit"
-                label="Warranty Period"
-                units={warrantyUnits}
-                placeholder="5"
-              />
-              <SelectField control={control} name="amc" label="AMC / Maintenance Contract" options={yesNo} />
-
-              <DateField
-                control={control}
-                name="nextDue"
-                label="Next Due Date (General Check)"
-                fromYear={new Date().getFullYear()}
-                toYear={new Date().getFullYear() + 10}
-              />
-              <div className="hidden sm:block" />
-
-              <TextareaField
-                control={control}
-                name="remarks"
-                label="Remarks"
-                rows={2}
-                maxLength={200}
-                placeholder="Installed as part of the Phase-2 expansion."
-                className="sm:col-span-2"
-              />
             </div>
           </Group>
         </div>
@@ -118,7 +85,6 @@ export function StepTechnical({ form }: { form: UseFormReturn<AssetFormValues> }
               { label: "Location / Area", value: values.area, always: true },
               { label: "Department", value: values.department },
               { label: "Sub-Department", value: values.subDepartment },
-              { label: "Address", value: values.address },
               { label: "Plant", value: values.plant },
               { label: "Enterprise", value: values.enterprise },
             ]}
@@ -141,18 +107,22 @@ export function StepTechnical({ form }: { form: UseFormReturn<AssetFormValues> }
  *
  * A Choice the sheet gives no option list for falls back to a text box rather
  * than to invented options — see `missingOptionLists` in data/asset-parameters.
+ * Units are always picked, never typed: the sheet writes several of them as
+ * alternatives, so the engineer says which one the nameplate uses.
+ *
  * These are not react-hook-form fields: the answers live in one `parameters`
  * map, so the form's shape does not have to change with the asset type.
  */
 function ParamField({
   spec,
-  value,
+  answers,
   onChange,
 }: {
   spec: ParamSpec
-  value: string
+  answers: Record<string, string>
   onChange: (key: string, value: string) => void
 }) {
+  const value = answers[spec.key] ?? ""
   const label = (
     <FieldLabel htmlFor={spec.key} className="gap-1">
       {spec.label}
@@ -191,10 +161,19 @@ function ParamField({
           onChange={(e) => onChange(spec.key, e.target.value)}
           className="min-w-0 flex-1"
         />
-        {spec.unit ? (
-          <span className="flex h-11 shrink-0 items-center rounded-md border border-input bg-muted px-3 text-sm whitespace-nowrap text-muted-foreground">
-            {spec.unit}
-          </span>
+        {spec.units ? (
+          <Select value={unitFor(spec, answers)} onValueChange={(v) => onChange(unitKeyOf(spec), v)}>
+            <SelectTrigger aria-label={`${spec.label} unit`} className="w-auto shrink-0 gap-1 bg-muted">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {spec.units.map((u) => (
+                <SelectItem key={u} value={u}>
+                  {u}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         ) : null}
       </div>
     </Field>
@@ -219,57 +198,5 @@ function Group({
       </h4>
       <div className="p-3">{children}</div>
     </section>
-  )
-}
-
-/**
- * The asset's own coordinates.
- *
- * Optional, and pre-filled from the plant's registered location: every asset on
- * one site shares that pair until someone stands at the asset and captures a
- * reading. GPS is unreliable indoors, so a failed read leaves the plant's
- * figures in place rather than clearing the fields.
- */
-function GpsCoordinates({ form, className }: { form: UseFormReturn<AssetFormValues>; className?: string }) {
-  const [capturing, setCapturing] = useState(false)
-
-  const capture = () => {
-    if (!navigator.geolocation) {
-      toast.error("This device cannot report its location.")
-      return
-    }
-    setCapturing(true)
-    navigator.geolocation.getCurrentPosition(
-      ({ coords }) => {
-        form.setValue("latitude", coords.latitude.toFixed(4), { shouldDirty: true })
-        form.setValue("longitude", coords.longitude.toFixed(4), { shouldDirty: true })
-        setCapturing(false)
-        toast.success("Coordinates captured at this asset.")
-      },
-      () => {
-        setCapturing(false)
-        toast.error("Could not get a fix. Indoors this often fails — the plant's coordinates have been kept.")
-      },
-      { enableHighAccuracy: true, timeout: 10_000 }
-    )
-  }
-
-  return (
-    <div className={className}>
-      <div className="mb-1 flex flex-wrap items-center justify-between gap-2">
-        <span className="text-sm font-medium">
-          GPS Coordinates <span className="text-muted-foreground">(optional)</span>
-        </span>
-        <Button type="button" variant="outline" size="sm" onClick={capture} disabled={capturing}>
-          <LocateFixed className={cn(capturing && "animate-pulse")} />
-          {capturing ? "Capturing…" : "Capture at asset"}
-        </Button>
-      </div>
-      <div className="grid gap-x-3 gap-y-2 sm:grid-cols-2">
-        <TextField control={form.control} name="latitude" label="Latitude" />
-        <TextField control={form.control} name="longitude" label="Longitude" />
-      </div>
-      <p className="mt-1 text-xs text-muted-foreground">Defaults to the plant's location until captured at the asset.</p>
-    </div>
   )
 }

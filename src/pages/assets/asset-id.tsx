@@ -71,7 +71,7 @@ export function AssetIdScreen({
               { label: "Location / Area", value: asset.area, always: true },
               { label: "Department", value: asset.department },
               { label: "Sub-Department", value: profile.details.subDepartment },
-              { label: "Address", value: profile.details.address },
+              { label: "Operational Status", value: profile.operational.operationalStatus, always: true },
               { label: "Asset Criticality", value: asset.criticality, always: true },
               /* The specification depends on the asset type, so it is read off
                  the profile rather than named here */

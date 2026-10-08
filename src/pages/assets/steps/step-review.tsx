@@ -1,10 +1,10 @@
 import type { UseFormReturn } from "react-hook-form"
-import { Building2, Cog, FileText, Images, Pencil, Settings } from "lucide-react"
+import { Building2, FileText, Images, Pencil, Settings } from "lucide-react"
 import { cn } from "cn"
 
 import { AssetPhoto } from "@/components/common/asset-photo"
 import { CheckList, DetailList, DetailPanel } from "@/components/common/detail-list"
-import { assetDetailRows, assetOperationalRows, assetTechnicalRows } from "@/components/assets/asset-sections"
+import { assetDetailRows, assetTechnicalRows } from "@/components/assets/asset-sections"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
@@ -66,7 +66,7 @@ export function StepReview({
 
         <DetailPanel
           icon={Images}
-          title={`Asset Images (${images.length})`}
+          title={`3. Asset Images (${images.length})`}
           action={<EditButton onClick={() => onEdit(2)} />}
           className="lg:col-span-2 xl:col-span-1"
         >
@@ -88,7 +88,7 @@ export function StepReview({
 
         <DetailPanel
           icon={FileText}
-          title={`3. Documents (${documents.length})`}
+          title={`4. Documents (${documents.length})`}
           action={<EditButton onClick={() => onEdit(2)} />}
           contentClassName="px-1"
         >
@@ -120,14 +120,6 @@ export function StepReview({
           ) : (
             <p className="px-2 py-3 text-center text-sm text-muted-foreground">No documents attached.</p>
           )}
-        </DetailPanel>
-
-        <DetailPanel
-          icon={Cog}
-          title="4. Operational Details"
-          action={<EditButton onClick={() => onEdit(1)} />}
-        >
-          <DetailList rows={assetOperationalRows(profile)} />
         </DetailPanel>
 
         <CheckList

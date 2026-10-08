@@ -55,7 +55,6 @@ export function AssetOnboardingPage() {
       plant: site.plant.name,
       department: site.department,
       subDepartment: "",
-      address: "",
       area: "",
       category: "",
       tag: "",
@@ -63,18 +62,12 @@ export function AssetOnboardingPage() {
       /* Filled in per asset type on step 2 - see data/asset-parameters.ts */
       parameters: {},
 
-      operationalStatus: "",
-      condition: "New",
-      commissioned: "",
-      load: "",
       // Pre-filled from the plant's own registered location, and editable on site
       latitude: site.plant.latitude,
       longitude: site.plant.longitude,
-      warranty: "",
-      warrantyUnit: "Years",
-      amc: "",
-      nextDue: "",
-      remarks: "",
+
+      operationalStatus: "",
+      commissioned: "",
 
       images: [],
       documents: [],

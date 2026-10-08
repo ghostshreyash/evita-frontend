@@ -33,15 +33,6 @@ const upload = z.object({
 
 export type AssetUpload = z.infer<typeof upload>
 
-/** A number typed into a ratings box: digits with an optional decimal part */
-const numeric = (label: string) =>
-  z
-    .string()
-    .trim()
-    .regex(/^\d+(\.\d+)?$/, `${label} must be a number`)
-
-const optionalNumeric = (label: string) => z.union([z.literal(""), numeric(label)]).optional()
-
 export const assetSchema = z.object({
   /* ---------- Step 1: Asset Details ---------- */
   enterprise: required("Enterprise"),
@@ -49,12 +40,14 @@ export const assetSchema = z.object({
   /* Both optional: a retail enterprise has no such tree */
   department: z.string().optional(),
   subDepartment: z.string().optional(),
-  /* Free text - where in the plant to go and find it */
-  address: z.string().trim().max(200, "Keep the address under 200 characters").optional(),
-  area: required("Location / Area"),
+  /* Free text, not a list: whatever gets the next engineer to the asset */
+  area: required("Location / Area").max(200, "Keep the location under 200 characters"),
   category: required("Asset Category"),
   tag: required("Asset Name").max(40, "Keep the name under 40 characters"),
   description: z.string().trim().max(200, "Keep the description under 200 characters").optional(),
+  /* Defaults to the plant's coordinates; capturing them at the asset is optional */
+  latitude: z.string().optional(),
+  longitude: z.string().optional(),
 
   /*
    * Step 2: Technical Details.
@@ -65,19 +58,14 @@ export const assetSchema = z.object({
    */
   parameters: z.record(z.string(), z.string()),
 
-  /** Mandatory, per the client's answer */
+  /*
+   * Operational status is mandatory per the client's answer, and the
+   * commissioning date is the one date the parameter sheet keeps. Asset
+   * condition, current load, warranty, AMC and the next general check are gone:
+   * no OLIVINE document asks for them at onboarding.
+   */
   operationalStatus: required("Operational status"),
-  condition: required("Asset condition"),
   commissioned: z.string().optional(),
-  load: optionalNumeric("Current load"),
-  /* Defaults to the plant's coordinates; capturing them at the asset is optional */
-  latitude: z.string().optional(),
-  longitude: z.string().optional(),
-  warranty: optionalNumeric("Warranty period"),
-  warrantyUnit: z.string().optional(),
-  amc: z.string().optional(),
-  nextDue: z.string().optional(),
-  remarks: z.string().trim().max(200, "Keep remarks under 200 characters").optional(),
 
   /* ---------- Step 3: Images & Documents ---------- */
   /* At least one photograph: an asset record with no picture of the asset is
@@ -91,14 +79,10 @@ export type AssetFormValues = z.infer<typeof assetSchema>
 /** Which fields each step owns, so a step validates only what it asked for */
 export const stepFields: (keyof AssetFormValues)[][] = [
   [
-    "enterprise", "plant", "department", "subDepartment", "address", "area",
-    "category", "tag", "description",
+    "enterprise", "plant", "department", "subDepartment", "area",
+    "category", "tag", "description", "latitude", "longitude",
   ],
-  [
-    "parameters",
-    "operationalStatus", "condition", "commissioned", "load", "latitude", "longitude",
-    "warranty", "warrantyUnit", "amc", "nextDue", "remarks",
-  ],
+  ["parameters", "operationalStatus", "commissioned"],
   ["images", "documents"],
   [],
 ]

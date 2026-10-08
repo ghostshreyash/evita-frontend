@@ -12,7 +12,7 @@
  * mockups. Where it gives no option list for a Choice parameter, the field
  * falls back to free text - see `missingOptionLists` at the bottom.
  */
-import { assetCriticality, manufacturers } from "@/data/master-data"
+import { assetCategories, assetCriticality, manufacturers } from "@/data/master-data"
 
 /* ---------- Option lists, from the Drop Down List tab ---------- */
 
@@ -43,10 +43,32 @@ export type ParamSpec = {
   label: string
   required: boolean
   kind: ParamKind
+  /** The sheet's unit text as written, e.g. "kVA/MVA" */
   unit?: string
+  /**
+   * The unit as choices. The sheet writes a unit as one cell, but several are
+   * alternatives - "kVA/MVA", "A or kV", "V DC/AC" - so the engineer picks
+   * which one the nameplate uses rather than typing it into the value.
+   */
+  units?: readonly string[]
   /** Absent on a Choice the sheet gives no list for; the field becomes text */
   options?: readonly string[]
 }
+
+/**
+ * The sheet's unit cell as a list of units.
+ *
+ * "kW/kVA/A" and "A or kV" split cleanly. "V DC/AC" does not - the second
+ * alternative drops the V - so cells that need a hand are written out.
+ */
+const unitSpellings: Record<string, readonly string[]> = { "V DC/AC": ["V DC", "V AC"] }
+
+const splitUnits = (unit: string) =>
+  unitSpellings[unit] ??
+  unit
+    .split(/\s+or\s+|\//)
+    .map((u) => u.trim())
+    .filter(Boolean)
 
 /**
  * One parameter, written as `Label|M or O|kind|unit or #list`.
@@ -68,7 +90,10 @@ const parse = (entry: string): ParamSpec => {
     kind: kind as ParamKind,
   }
   if (extra?.startsWith("#")) spec.options = lists[extra.slice(1) as ListName]
-  else if (extra) spec.unit = extra
+  else if (extra) {
+    spec.unit = extra
+    spec.units = splitUnits(extra)
+  }
   return spec
 }
 
@@ -339,13 +364,30 @@ export const parameterisedTypes = Object.keys(byType)
 
 /**
  * What to ask for this asset type: its own specification, then the criticality
- * every type carries. A type the sheet does not cover falls back to "Other",
- * which asks only for the loosest set rather than nothing at all.
+ * every type carries.
+ *
+ * A type the sheet has no row for is asked only for the common parameters.
+ * Nothing is borrowed from another type: a parameter the sheet does not give
+ * for an asset is not asked of that asset - see `typesWithoutParameters`.
  */
 export function parametersFor(category: string): ParamSpec[] {
-  const entries = byType[category] ?? byType.Other
-  return [...entries, ...common].map(parse)
+  return [...(byType[category] ?? []), ...common].map(parse)
 }
+
+/** Whether the sheet has a row for this asset type at all */
+export const sheetCoversType = (category: string) => category in byType
+
+/**
+ * Where a parameter's chosen unit is stored in the answers map.
+ *
+ * Beside the value rather than inside it, so "1600" and "kVA" stay separate
+ * numbers and text the way the sheet asks for them.
+ */
+export const unitKeyOf = (spec: ParamSpec) => `${spec.key}Unit`
+
+/** The unit in force: what was picked, or the first the sheet offers */
+export const unitFor = (spec: ParamSpec, answers: Record<string, string | undefined>) =>
+  spec.units ? (answers[unitKeyOf(spec)] ?? spec.units[0]) : undefined
 
 /** Which of them must be answered before the step can be left */
 export const requiredParameters = (category: string) => parametersFor(category).filter((p) => p.required)
@@ -354,6 +396,9 @@ export const requiredParameters = (category: string) => parametersFor(category).
 export function missingParameters(category: string, answers: Record<string, string | undefined>) {
   return requiredParameters(category).filter((p) => !answers[p.key]?.trim())
 }
+
+/** Master categories the sheet has no row for; they carry the common set only */
+export const typesWithoutParameters = assetCategories.filter((c) => !(c in byType))
 
 /**
  * Choice parameters the sheet names but gives no option list for. They render

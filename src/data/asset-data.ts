@@ -14,7 +14,6 @@
  */
 import {
   assetCategoryCode,
-  assetConditions,
   assetCriticality,
   assetOperationalStatus,
   commonAssetCategories,
@@ -57,8 +56,7 @@ export type AssetProfile = {
     area: string
     department: string
     subDepartment: string
-    address: string
-    category: string
+      category: string
     tag: string
     description: string
   }
@@ -68,19 +66,16 @@ export type AssetProfile = {
    * parameters this kind of asset carries.
    */
   parameters: { label: string; value: string; unit?: string }[]
+  /**
+   * How the asset is run. Only what an OLIVINE document asks for: asset
+   * condition, current load, warranty, AMC and the next general check are not
+   * in any sheet or answer, so they are not held.
+   */
   operational: {
     operationalStatus: string
-    condition: string
     commissioned: string
-    load: string
     latitude: string
     longitude: string
-    criticality: string
-    warranty: string
-    warrantyUnit: string
-    amc: string
-    nextDue: string
-    remarks: string
   }
   /** Named by the engineer who captured them - there is no fixed set */
   documents: { id: string; name: string; file: string; uploaded: string }[]
@@ -179,7 +174,6 @@ export function assetProfileFor(a: AssetRecord): AssetProfile {
   // that does not exist under its department; blank when the department has none
   const subDepts = plant?.departments.find((d) => d.name === a.department)?.subDepartments ?? []
   const subDepartment = subDepts.length ? subDepts[s % subDepts.length].name : ""
-  const commissioned = parseDmy(a.onboarded)
 
   return {
     details: {
@@ -188,7 +182,6 @@ export function assetProfileFor(a: AssetRecord): AssetProfile {
       area: a.area,
       department: a.department,
       subDepartment,
-      address: `${a.area}, ${a.plant}`,
       category: a.category,
       tag: a.tag,
       description: `${a.category} — ${a.tag}`,
@@ -196,18 +189,9 @@ export function assetProfileFor(a: AssetRecord): AssetProfile {
     parameters: seededParameters(a, s),
     operational: {
       operationalStatus: pick(assetOperationalStatus, s, 9),
-      condition: pick(assetConditions, s, 7),
       commissioned: a.onboarded,
-      load: String(100 + (s % 900)),
       latitude: plant?.latitude ?? "0.0000",
       longitude: plant?.longitude ?? "0.0000",
-      criticality: a.criticality,
-      warranty: String(2 + (s % 4)),
-      warrantyUnit: "Years",
-      amc: s % 3 === 0 ? "No" : "Yes",
-      // Next general check, counted forward from onboarding in whole years
-      nextDue: dmy(new Date(REFERENCE.getFullYear(), commissioned.getMonth(), commissioned.getDate())),
-      remarks: s % 4 === 0 ? "Installed as part of the Phase-2 expansion." : "",
     },
     documents: [
       { id: "d1", name: "Nameplate Photo (Close-up)", file: `${a.tag}-Nameplate.jpg`, uploaded: a.onboarded },
@@ -235,7 +219,8 @@ export function assetProfileFor(a: AssetRecord): AssetProfile {
 function seededParameters(a: AssetRecord, s: number) {
   return parametersFor(a.category).map((spec, i) => {
     if (spec.key === "criticality") return { label: spec.label, value: a.criticality }
-    if (spec.options) return { label: spec.label, value: spec.options[(s + i * 5) % spec.options.length], unit: spec.unit }
+    const unit = spec.units?.[(s + i) % spec.units.length]
+    if (spec.options) return { label: spec.label, value: spec.options[(s + i * 5) % spec.options.length], unit }
     if (spec.kind === "number") {
       const n = spec.unit === "%" ? 4 + ((s + i) % 40) / 10 : spec.unit === "Nos." ? 2 + ((s + i) % 20) : 100 + ((s + i * 37) % 900)
       return { label: spec.label, value: spec.unit === "%" ? n.toFixed(2) : String(n), unit: spec.unit }

@@ -1,13 +1,13 @@
 import { useMemo } from "react"
 import { Link, useNavigate, useParams } from "react-router"
-import { Activity, ArrowLeft, Building2, CircleDashed, Cog, FileText, Images, QrCode, Settings, TriangleAlert } from "lucide-react"
+import { Activity, ArrowLeft, Building2, CircleDashed, FileText, Images, QrCode, Settings, TriangleAlert } from "lucide-react"
 import { cn } from "cn"
 
 import { PageHeader } from "@/components/common/page-header"
 import { AssetPhoto } from "@/components/common/asset-photo"
 import { HealthDial } from "@/components/common/health-dial"
 import { DetailList, DetailPanel } from "@/components/common/detail-list"
-import { assetDetailRows, assetOperationalRows, assetTechnicalRows } from "@/components/assets/asset-sections"
+import { assetDetailRows, assetTechnicalRows } from "@/components/assets/asset-sections"
 import { AssetIdChip, AssetQrPanel, QrLabelPreview } from "@/components/assets/asset-qr"
 import { CategoryIcon } from "@/components/common/category-icon"
 import { Badge } from "@/components/ui/badge"
@@ -108,14 +108,6 @@ function AssetDetail({ asset, onBack }: { asset: AssetRecord; onBack: () => void
                 Not inspected yet. A health score appears once the first inspection report is in.
               </p>
             )}
-            <DetailList
-              className="mt-3"
-              rows={[
-                { label: "Asset Condition", value: profile.operational.condition, always: true },
-                { label: "Current Load", value: profile.operational.load ? `${profile.operational.load} kVA` : "" },
-                { label: "Next Due Date", value: profile.operational.nextDue },
-              ]}
-            />
           </DetailPanel>
 
           <DetailPanel title="QR Code Label Preview">
@@ -147,10 +139,6 @@ function AssetDetail({ asset, onBack }: { asset: AssetRecord; onBack: () => void
 
         <DetailPanel icon={Settings} title="Technical Details">
           <DetailList rows={assetTechnicalRows(profile)} />
-        </DetailPanel>
-
-        <DetailPanel icon={Cog} title="Operational Details">
-          <DetailList rows={assetOperationalRows(profile)} />
         </DetailPanel>
 
         {/* ---------- The paperwork behind the ratings ---------- */}

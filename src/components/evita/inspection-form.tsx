@@ -454,19 +454,30 @@ function ReadingsSection({ category, capture, set }: { category: string; capture
       icon={Gauge}
       done={missing.length === 0}
       actions={
-        <CountPill done={missing.length === 0}>
-          {specs.length - missing.length} / {specs.length}
-        </CountPill>
+        specs.length ? (
+          <CountPill done={missing.length === 0}>
+            {specs.length - missing.length} / {specs.length}
+          </CountPill>
+        ) : null
       }
     >
-      <p className="mb-3 text-sm text-muted-foreground">
-        The readings a {category} is inspected for. Take them at the asset, under load where the asset is live.
-      </p>
-      <div className="grid gap-4 sm:grid-cols-2">
-        {specs.map((spec) => (
-          <Reading key={spec.key} spec={spec} readings={capture.readings} onChange={write} />
-        ))}
-      </div>
+{specs.length === 0 ? (
+        <p className="rounded-xl bg-info-soft p-3 text-sm text-info-soft-foreground">
+          The inspection parameter sheet has no column for {category}, so no readings are asked for. Record what you see
+          in the remarks and OCC will raise it with OLIVINE.
+        </p>
+      ) : (
+        <>
+          <p className="mb-3 text-sm text-muted-foreground">
+            The readings a {category} is inspected for. Take them at the asset, under load where the asset is live.
+          </p>
+          <div className="grid gap-4 sm:grid-cols-2">
+            {specs.map((spec) => (
+              <Reading key={spec.key} spec={spec} readings={capture.readings} onChange={write} />
+            ))}
+          </div>
+        </>
+      )}
     </StepCard>
   )
 }

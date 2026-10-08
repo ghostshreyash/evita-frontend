@@ -18,6 +18,8 @@
  * approved values per Asset Type without a code change.
  */
 
+import { assetCategories } from "@/data/master-data"
+
 /** How a value reaches the record; manual and device values pass the same rules */
 export type CaptureMethod = "Camera" | "Thermal camera" | "Manual entry" | "Device (Bluetooth)" | "Derived"
 
@@ -161,16 +163,20 @@ const readingRows: (Omit<ReadingSpec, "required"> & { sheet: string })[] = [
 /**
  * Which readings this asset type is inspected for.
  *
- * Two master categories — HT Panel and Solar Transformer — have no column on
- * the sheet, so they read as "Other" until the client supplies one.
+ * A type the sheet has no column for gets no readings at all. Nothing is
+ * borrowed from the "Other" column: a reading the sheet does not give for an
+ * asset is not taken on that asset - see `typesWithoutReadings`.
  */
 export function inspectionReadingsFor(category: string): ReadingSpec[] {
-  const found = readingTypes.indexOf(category)
-  const column = found === -1 ? readingTypes.indexOf("Other") : found
+  const column = readingTypes.indexOf(category)
+  if (column === -1) return []
   return readingRows
     .filter((row) => row.sheet[column] !== ".")
     .map(({ sheet, ...spec }) => ({ ...spec, required: sheet[column] === "M" }))
 }
+
+/** Master categories the sheet has no column for; they are asked for nothing */
+export const typesWithoutReadings = assetCategories.filter((c) => !readingTypes.includes(c))
 
 /** Every input key one spec contributes: a per-phase reading contributes three */
 export const readingKeys = (spec: ReadingSpec) =>

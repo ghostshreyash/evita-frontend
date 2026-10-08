@@ -10,7 +10,7 @@ import { CheckList, DetailList, DetailPanel } from "@/components/common/detail-l
 import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
-import { parametersFor } from "@/data/asset-parameters"
+import { parametersFor, unitFor } from "@/data/asset-parameters"
 import { suggestedDocumentNames, suggestedImageNames } from "@/data/master-data"
 import { urlFor } from "@/lib/object-url"
 import { missingUploads, type AssetFormValues, type AssetUpload } from "@/pages/assets/schemas"
@@ -171,7 +171,9 @@ export function StepUploads({ form }: { form: UseFormReturn<AssetFormValues> }) 
                  preview lists whatever step 2 asked for */
               ...parametersFor(values.category).map((spec) => ({
                 label: spec.label,
-                value: [values.parameters?.[spec.key], spec.unit].filter(Boolean).join(" "),
+                value: values.parameters?.[spec.key]
+                  ? [values.parameters[spec.key], unitFor(spec, values.parameters)].filter(Boolean).join(" ")
+                  : "",
               })),
             ]}
           />

@@ -8,6 +8,10 @@ import type { AssetProfile } from "@/data/asset-data"
  * built once here. Anything the engineer left blank drops out, which is what
  * keeps a lightly-filled optional section from rendering as a wall of dashes —
  * see `DetailList`.
+ *
+ * Two groups, not three: everything OLIVINE's documents ask for about how the
+ * asset is run is two fields, so they sit with the rest of the asset's details
+ * rather than in a panel of their own.
  */
 
 export const assetDetailRows = (p: AssetProfile): DetailRow[] => [
@@ -15,11 +19,16 @@ export const assetDetailRows = (p: AssetProfile): DetailRow[] => [
   { label: "Plant", value: p.details.plant, always: true },
   { label: "Department", value: p.details.department },
   { label: "Sub-Department", value: p.details.subDepartment },
-  { label: "Address", value: p.details.address },
   { label: "Location / Area", value: p.details.area, always: true },
+  {
+    label: "GPS Coordinates",
+    value: p.operational.latitude && p.operational.longitude ? `${p.operational.latitude}, ${p.operational.longitude}` : "",
+  },
   { label: "Asset Category", value: p.details.category, always: true },
   { label: "Asset Name", value: p.details.tag, always: true },
   { label: "Asset Description", value: p.details.description },
+  { label: "Operational Status", value: p.operational.operationalStatus, always: true },
+  { label: "Commissioning Date", value: p.operational.commissioned },
 ]
 
 /**
@@ -32,22 +41,3 @@ export const assetTechnicalRows = (p: AssetProfile): DetailRow[] =>
     label: param.label,
     value: param.value ? [param.value, param.unit].filter(Boolean).join(" ") : "",
   }))
-
-export const assetOperationalRows = (p: AssetProfile): DetailRow[] => [
-  { label: "Operational Status", value: p.operational.operationalStatus, always: true },
-  { label: "Asset Condition", value: p.operational.condition },
-  { label: "Commissioning Date", value: p.operational.commissioned },
-  { label: "Current Load (kVA)", value: p.operational.load },
-  {
-    label: "GPS Coordinates",
-    value: p.operational.latitude && p.operational.longitude ? `${p.operational.latitude}, ${p.operational.longitude}` : "",
-  },
-  { label: "Asset Criticality", value: p.operational.criticality, always: true },
-  { label: "Warranty Period", value: unit(p.operational.warranty, p.operational.warrantyUnit) },
-  { label: "AMC / Maintenance Contract", value: p.operational.amc },
-  { label: "Next Due Date", value: p.operational.nextDue },
-  { label: "Remarks", value: p.operational.remarks },
-]
-
-/** "5" + "Years" -> "5 Years"; nothing at all when the value is blank */
-const unit = (value?: string, suffix?: string) => (value ? [value, suffix].filter(Boolean).join(" ") : "")

@@ -8,7 +8,7 @@ import {
   type AssetRecord,
 } from "@/data/asset-data"
 import { healthBandFor, type AssetCriticality } from "@/data/master-data"
-import { parametersFor } from "@/data/asset-parameters"
+import { parametersFor, unitFor } from "@/data/asset-parameters"
 import type { AssetFormValues } from "@/pages/assets/schemas"
 
 /**
@@ -81,27 +81,18 @@ export function profileFrom(values: AssetFormValues, dates: { onboarded: string 
       area: values.area,
       department: values.department ?? "",
       subDepartment: values.subDepartment ?? "",
-      address: values.address ?? "",
       category: values.category,
       tag: values.tag,
       description: values.description ?? "",
     },
     parameters: parametersFor(values.category)
       .filter((spec) => answers[spec.key]?.trim())
-      .map((spec) => ({ label: spec.label, value: answers[spec.key].trim(), unit: spec.unit })),
+      .map((spec) => ({ label: spec.label, value: answers[spec.key].trim(), unit: unitFor(spec, answers) })),
     operational: {
       operationalStatus: values.operationalStatus,
-      condition: values.condition ?? "",
       commissioned: toDmy(values.commissioned),
-      load: values.load ?? "",
       latitude: values.latitude ?? "",
       longitude: values.longitude ?? "",
-      criticality: answers.criticality ?? "",
-      warranty: values.warranty ?? "",
-      warrantyUnit: values.warrantyUnit ?? "",
-      amc: values.amc ?? "",
-      nextDue: toDmy(values.nextDue),
-      remarks: values.remarks ?? "",
     },
     documents: (values.documents ?? []).map((d) => ({
       id: d.id,
