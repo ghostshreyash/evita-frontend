@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react"
-import { Camera, Check, Flame, Gauge, Lock, NotebookPen, Save, Send, Thermometer, Zap, type LucideIcon } from "lucide-react"
+import { Camera, Check, Flame, Gauge, Lock, Save, Send, Thermometer, Zap, type LucideIcon } from "lucide-react"
 import { toast } from "sonner"
 import { format } from "date-fns"
 import { cn } from "cn"
@@ -161,19 +161,7 @@ export function InspectionForm({ job, detail }: { job: Job; detail: InspectionDe
           ) : section === "thermal" ? (
             <ThermalImagesSection category={category} capture={capture} evidence={evidence} set={set} onEvidence={setEvidence} onRemove={removeEvidence} />
           ) : section === "technical" ? (
-            <>
-              <ReadingsSection category={category} capture={capture} set={set} />
-              {/* The one free-text note on the inspection, kept with the readings it explains */}
-              <StepCard title="Inspection Remarks" icon={NotebookPen} done={!!remarks.trim()}>
-                <Textarea
-                  value={remarks}
-                  rows={3}
-                  maxLength={500}
-                  onChange={(e) => setRemarks(e.target.value)}
-                  placeholder="Anything the readings do not say on their own."
-                />
-              </StepCard>
-            </>
+            <TechnicalSection category={category} capture={capture} set={set} remarks={remarks} onRemarks={setRemarks} />
           ) : (
             <FpsSection capture={capture} set={set} />
           )}
@@ -370,7 +358,8 @@ function ThermalImagesSection({
 }
 
 /**
- * The electrical readings for this asset type.
+ * The Technical Details tab: the electrical readings for this asset type, and
+ * the one free-text note on the inspection.
  *
  * Which readings apply, and which of them are mandatory, come from the client's
  * inspection parameter sheet: a Network Switch is read for voltage alone, a
@@ -378,14 +367,26 @@ function ThermalImagesSection({
  * current. Nothing not applicable to the type is asked for, so the ELPREMAR is
  * never shown a box there is no meter reading for.
  */
-function ReadingsSection({ category, capture, set }: { category: string; capture: InspectionCapture; set: Setter }) {
+function TechnicalSection({
+  category,
+  capture,
+  set,
+  remarks,
+  onRemarks,
+}: {
+  category: string
+  capture: InspectionCapture
+  set: Setter
+  remarks: string
+  onRemarks: (value: string) => void
+}) {
   const specs = inspectionReadingsFor(category)
   const missing = missingReadings(category, capture.readings)
   const write = (key: string, value: string) => set({ readings: { ...capture.readings, [key]: value } })
 
   return (
     <StepCard
-      title="Electrical Readings"
+      title="Technical Details"
       icon={Gauge}
       done={missing.length === 0}
       actions={
@@ -396,7 +397,7 @@ function ReadingsSection({ category, capture, set }: { category: string; capture
         ) : null
       }
     >
-{specs.length === 0 ? (
+      {specs.length === 0 ? (
         <p className="rounded-xl bg-info-soft p-3 text-sm text-info-soft-foreground">
           A {category} is inspected without electrical readings: they cannot be measured reliably with the asset
           energised, and the instruments for them are not held. Images, the thermal scan and the fire prevention system
@@ -414,6 +415,18 @@ function ReadingsSection({ category, capture, set }: { category: string; capture
           </div>
         </>
       )}
+
+      {/* The one free-text note on the inspection, inside the card it explains */}
+      <div className={cn(specs.length && "mt-5 border-t pt-4")}>
+        <FieldLabel>Remarks</FieldLabel>
+        <Textarea
+          value={remarks}
+          rows={3}
+          maxLength={500}
+          onChange={(e) => onRemarks(e.target.value)}
+          placeholder="Anything the readings do not say on their own."
+        />
+      </div>
     </StepCard>
   )
 }
