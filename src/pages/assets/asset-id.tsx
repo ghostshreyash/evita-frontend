@@ -1,7 +1,7 @@
 import { ArrowLeft, Check, CircleCheckBig, Cog, Lightbulb, QrCode } from "lucide-react"
 
 import { PageHeader } from "@/components/common/page-header"
-import { CheckList, DetailList, DetailPanel } from "@/components/common/detail-list"
+import { DetailList, DetailPanel } from "@/components/common/detail-list"
 import { AssetIdChip, AssetQrPanel, QrLabelPreview } from "@/components/assets/asset-qr"
 import { Button } from "@/components/ui/button"
 import { profileOf } from "@/data/asset-store"
@@ -14,8 +14,7 @@ import type { AssetRecord } from "@/data/asset-data"
  * Maintenance Information and Recent Activities. None of them belong on this
  * screen: the asset was registered seconds ago, so it has never been inspected,
  * never been maintained, and has no history beyond its own creation. Those four
- * panels would read as data when they are in fact placeholders. The submission
- * checklist takes their place, carrying the new Asset ID as its first line.
+ * panels would read as data when they are in fact placeholders.
  *
  * Everything they would have shown lives on the asset detail screen, which is
  * where an asset with a history is read.
@@ -104,18 +103,6 @@ export function AssetIdScreen({
           <DetailPanel title="QR Code Label Preview">
             <QrLabelPreview asset={asset} />
           </DetailPanel>
-
-          <CheckList
-            title="Submission Checklist"
-            items={[
-              { label: <>Asset ID generated — <strong className="font-semibold">{asset.id}</strong></>, done: true },
-              { label: "Asset details completed", done: true },
-              { label: "Technical details completed", done: true },
-              { label: "Images uploaded", done: profile.images.length > 0 },
-              { label: "Required documents uploaded", done: profile.documents.length > 0 },
-              { label: "Information reviewed and submitted", done: true },
-            ]}
-          />
         </div>
       </div>
 

@@ -110,6 +110,9 @@ export type InspectionDetail = {
   description: string
   createdBy: string
   area: string
+  /** Owning department and sub-department, from the plant's own tree */
+  department: string
+  subDepartment: string
   assetTag: string
   assetCategory: string
   /** How badly a failure here would hurt: High / Medium / Low */

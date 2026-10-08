@@ -9,7 +9,6 @@ import {
   Check,
   CircleCheck,
   ClipboardList,
-  FolderOpen,
   Gauge,
   HardHat,
   History,
@@ -28,13 +27,13 @@ import { cn } from "cn"
 
 import { Timeline } from "@/components/common/detail-view"
 import { CategoryIcon } from "@/components/common/category-icon"
-import { HealthRing, TaskPanel, TaskStepper } from "@/components/evita/field-kit"
+import { HealthRing, TaskPanel } from "@/components/evita/field-kit"
 import { InspectionForm, ScoreBreakdown } from "@/components/evita/inspection-form"
 import { JobStatusBadge } from "@/components/evita/job-action"
 import { MaintenanceForm } from "@/components/evita/maintenance-form"
 import { InspectionRecord, MaintenanceRecord } from "@/components/evita/work-summary"
 import { Button } from "@/components/ui/button"
-import { instructions, inspectionTimeline } from "@/data/inspection-detail"
+import { inspectionTimeline } from "@/data/inspection-detail"
 import { findInspection, useInspectionDetails } from "@/data/inspection-store"
 import { maintenanceTimeline } from "@/data/maintenance-detail"
 import { findMaintenance, useMaintenanceDetails } from "@/data/maintenance-store"
@@ -43,22 +42,7 @@ import { categoryLook, shortCategory } from "@/lib/category-icons"
 import { useCurrentElpremar } from "@/lib/me"
 import { startJob } from "@/lib/start-job"
 import { openPanel } from "@/lib/ui-store"
-import { actionFor, categoryFor, isOverdue, isToday, parseDay, useMyJobs, type FieldStatus, type Job } from "@/lib/work"
-
-/* ---------- Progress ---------- */
-
-const steps: Record<Job["kind"], { title: string }[]> = {
-  inspection: [{ title: "Assigned" }, { title: "Started" }, { title: "Recording" }, { title: "Completed" }],
-  maintenance: [{ title: "Assigned" }, { title: "Started" }, { title: "Work Logged" }, { title: "Submitted" }, { title: "Approved" }],
-}
-
-/** Index of the step the task is on; past the last step means every step is done */
-function stepOf(kind: Job["kind"], field: FieldStatus) {
-  if (field === "open" || field === "overdue") return 1
-  if (field === "in_progress") return 2
-  if (kind === "inspection") return 4
-  return field === "approved" ? 5 : 4
-}
+import { actionFor, categoryFor, isOverdue, isToday, jobKindLook, parseDay, useMyJobs, type Job } from "@/lib/work"
 
 const prepare: { icon: LucideIcon; tone: string; title: string; detail: string }[] = [
   { icon: ClipboardList, tone: "text-info", title: "Permit to work", detail: "issued and valid for this asset and activity" },
@@ -71,10 +55,20 @@ const prepare: { icon: LucideIcon; tone: string; title: string; detail: string }
 /** A label above its value, in the Task Details grid */
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
-    <div className="min-w-0 border-b pb-2.5">
+    <div className="min-w-0">
       <div className="text-sm text-muted-foreground">{label}</div>
       <div className="mt-0.5 text-base font-medium break-words">{children}</div>
     </div>
+  )
+}
+
+/** One titled run of fields inside Task Details: the task, the place, the asset */
+function Group({ title, last, children }: { title: string; last?: boolean; children: React.ReactNode }) {
+  return (
+    <section className={cn(!last && "mb-4 border-b pb-4")}>
+      <h4 className="mb-2.5 text-xs font-bold tracking-wider text-muted-foreground uppercase">{title}</h4>
+      <div className="grid gap-x-6 gap-y-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">{children}</div>
+    </section>
   )
 }
 
@@ -114,8 +108,8 @@ export function TaskPage() {
   const action = actionFor(job)
   const category = categoryFor(job.asset)
   const look = categoryLook(category)
+  const kind = jobKindLook[job.kind]
   const overdue = isOverdue(job)
-  const procedure = inspection ? (instructions[job.activity] ?? "") : (maintenance?.description ?? "")
   const timeline =
     job.kind === "inspection"
       ? inspection && findInspection(job.id) && inspectionTimeline(findInspection(job.id)!, inspection)
@@ -160,6 +154,9 @@ export function TaskPage() {
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-2">
             <span className="rounded-md bg-muted px-2 py-1 tabular-nums text-xs font-semibold">{shortCategory(category)}</span>
+            <span className={cn("flex items-center gap-1 rounded-md px-2 py-1 text-xs font-semibold", kind.tint)}>
+              <kind.icon className="size-3.5" /> {kind.label}
+            </span>
             {detail?.assetTag ? (
               <span className="flex items-center gap-1.5 text-lg font-bold tabular-nums text-brand-navy dark:text-foreground">
                 {detail.assetTag} <QrCode className="size-4 text-primary" />
@@ -184,50 +181,55 @@ export function TaskPage() {
         </div>
       </section>
 
-      <TaskStepper steps={steps[job.kind]} current={stepOf(job.kind, job.field)} />
-
-      {/* ---------- What OCC assigned ---------- */}
-      <div className="grid gap-5 lg:grid-cols-2">
-        <TaskPanel icon={SlidersHorizontal} title="Task Details">
-          <div className="grid gap-x-6 gap-y-3 sm:grid-cols-2">
-            <Field label="Activity">{job.activity}</Field>
-            <Field label="Enterprise">{job.enterprise}</Field>
-            <Field label="Plant">{job.plant}</Field>
-            <Field label="Location / Area">{detail?.area || "—"}</Field>
-            <Field label="Asset Category">{category}</Field>
-            <Field label="Asset Tag"><span className="tabular-nums font-semibold text-primary">{detail?.assetTag ?? "—"}</span></Field>
-            <Field label="Asset Criticality">
-              {detail ? <span className={cn("rounded-md px-2 py-0.5 text-sm font-semibold", criticalityTone[detail.assetCriticality])}>{detail.assetCriticality}</span> : "—"}
-            </Field>
-            <Field label="Assigned By">{detail?.createdBy ?? "OCC"}</Field>
-            <Field label="Commissioned">{detail?.commissionedOn ?? "—"}</Field>
+      {/* ---------- What OCC assigned, and where the asset is ---------- */}
+      <TaskPanel icon={SlidersHorizontal} title="Task Details">
+        <Group title="Task">
+          <Field label="Task ID"><span className="tabular-nums font-semibold text-primary">{job.id}</span></Field>
+          <Field label="Task Type">
+            <span className={cn("inline-flex items-center gap-1.5 rounded-md px-2 py-0.5 text-sm font-semibold", kind.tint)}>
+              <kind.icon className="size-4" /> {kind.label}
+            </span>
+          </Field>
+          <Field label="Activity">{job.activity}</Field>
+          <Field label="Assigned By">{detail?.createdBy ?? "OCC"}</Field>
+          {/* Only maintenance traces back to something: the inspection that raised it */}
+          {job.kind === "maintenance" ? (
             <Field label="Raised From">{job.inspectionId ? `Inspection ${job.inspectionId}` : "—"}</Field>
-          </div>
-        </TaskPanel>
-
-        <TaskPanel icon={FolderOpen} title="Procedure">
-          {procedure ? (
-            <p className="flex items-start gap-3 rounded-xl bg-info-soft/50 p-4 text-sm leading-relaxed ring-1 ring-info/15">
-              <BookOpen className="mt-0.5 size-5 shrink-0 text-primary" />
-              {procedure}
-            </p>
-          ) : (
-            <p className="text-sm text-muted-foreground">No instruction attached.</p>
-          )}
-          {maintenance?.review?.outcome === "rejected" ? (
-            <div className="mt-4 flex items-start gap-3 rounded-xl bg-critical-soft p-4 text-sm ring-1 ring-critical/20">
-              <TriangleAlert className="mt-0.5 size-5 shrink-0 text-critical" />
-              <span>
-                <span className="block font-semibold text-critical-soft-foreground">
-                  Sent back by {maintenance.review.by} · {maintenance.review.at}
-                </span>
-                {maintenance.review.remarks}
-                {action === "start" ? <span className="mt-1 block text-muted-foreground">Start the task to correct the record and resubmit.</span> : null}
-              </span>
-            </div>
           ) : null}
-        </TaskPanel>
-      </div>
+        </Group>
+
+        <Group title="Where">
+          <Field label="Enterprise">{job.enterprise}</Field>
+          <Field label="Plant">{job.plant}</Field>
+          <Field label="Department">{detail?.department || "—"}</Field>
+          <Field label="Sub-Department">{detail?.subDepartment || "—"}</Field>
+          <Field label="Location / Area">{detail?.area || "—"}</Field>
+        </Group>
+
+        <Group title="Asset" last>
+          <Field label="Asset Name">{job.asset}</Field>
+          <Field label="Asset Tag"><span className="tabular-nums font-semibold text-primary">{detail?.assetTag ?? "—"}</span></Field>
+          <Field label="Asset Category">{category}</Field>
+          <Field label="Asset Criticality">
+            {detail ? <span className={cn("rounded-md px-2 py-0.5 text-sm font-semibold", criticalityTone[detail.assetCriticality])}>{detail.assetCriticality}</span> : "—"}
+          </Field>
+          <Field label="Commissioned">{detail?.commissionedOn ?? "—"}</Field>
+        </Group>
+      </TaskPanel>
+
+      {/* Work OCC sent back: the one thing the engineer must read before starting again */}
+      {maintenance?.review?.outcome === "rejected" ? (
+        <section className="flex items-start gap-3 rounded-2xl bg-critical-soft p-5 text-sm shadow-xs ring-1 ring-critical/25">
+          <TriangleAlert className="mt-0.5 size-5 shrink-0 text-critical" />
+          <span>
+            <span className="block font-semibold text-critical-soft-foreground">
+              Sent back by {maintenance.review.by} · {maintenance.review.at}
+            </span>
+            {maintenance.review.remarks}
+            {action === "start" ? <span className="mt-1 block text-muted-foreground">Start the task to correct the record and resubmit.</span> : null}
+          </span>
+        </section>
+      ) : null}
 
       {/* ---------- The work itself ---------- */}
       {action === "start" ? (
