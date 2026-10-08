@@ -21,9 +21,14 @@ import {
   dustTypes,
   fpsStatuses,
   hygieneChecks,
+  inspectionReadingsFor,
   MIN_THERMAL_POINTS,
+  missingReadings,
+  readingKeys,
+  readingPhases,
   resultPill,
   thermalPointsFor,
+  type ReadingSpec,
 } from "@/data/test-template"
 import { categoryFor } from "@/lib/asset-category"
 import { urlFor } from "@/lib/object-url"
@@ -95,9 +100,9 @@ export function InspectionForm({ job, detail }: { job: Job; detail: InspectionDe
   }, [patch, job.id])
 
   const done = sectionsDone(capture, category, ids)
-  const tabDone: Record<Section, boolean> = { images: done.images, thermal: done.thermal, parameters: done.contamination, fps: done.fps, pd: false }
+  const tabDone: Record<Section, boolean> = { images: done.images, thermal: done.thermal, parameters: done.readings && done.contamination, fps: done.fps, pd: false }
   const preview = scoreCapture(capture)
-  const ready = done.images && done.thermal && done.contamination && done.fps
+  const ready = done.images && done.thermal && done.readings && done.contamination && done.fps
   const set: Setter = (p) => setCapture((c) => ({ ...c, ...p }))
   const removeEvidence = (id: string) => setEvidence((ev) => ev.filter((e) => e.id !== id))
 
@@ -154,12 +159,12 @@ export function InspectionForm({ job, detail }: { job: Job; detail: InspectionDe
           ) : section === "thermal" ? (
             <ThermalImagesSection category={category} capture={capture} evidence={evidence} set={set} onEvidence={setEvidence} onRemove={removeEvidence} />
           ) : section === "parameters" ? (
-            <ContaminationSection capture={capture} set={set} />
+            <ContaminationSection category={category} capture={capture} set={set} />
           ) : (
             <FpsSection capture={capture} set={set} />
           )}
 
-          <StepCard step={6} title="Inspection Remarks" icon={NotebookPen} done={!!remarks.trim()}>
+          <StepCard step={7} title="Inspection Remarks" icon={NotebookPen} done={!!remarks.trim()}>
             <Textarea value={remarks} rows={3} maxLength={500} onChange={(e) => setRemarks(e.target.value)} placeholder="Overall condition, anything OCC should know." />
           </StepCard>
         </div>
@@ -181,6 +186,7 @@ export function InspectionForm({ job, detail }: { job: Job; detail: InspectionDe
               items={[
                 { label: "At least one asset image", done: done.images },
                 { label: `${MIN_THERMAL_POINTS} or more thermal images`, done: done.thermal },
+                { label: "Electrical readings recorded", done: done.readings },
                 { label: "Contamination and hygiene assessed", done: done.contamination },
                 { label: "Fire prevention system checked", done: done.fps },
               ]}
@@ -333,20 +339,33 @@ function ThermalImagesSection({
   return (
     <div className="rounded-2xl bg-card p-4 shadow-xs ring-1 ring-foreground/10">
       <p className="mb-3 text-sm text-muted-foreground">Add a thermal image for each joint or termination you scan, at least {MIN_THERMAL_POINTS}.</p>
+      {/* Every point is judged on its rise over ambient, so the reading is taken once for the whole scan */}
+      <label className="mb-4 flex max-w-xs items-center gap-3">
+        <span className="shrink-0 text-sm font-medium">Ambient temperature (°C)</span>
+        <Input
+          value={capture.ambient}
+          inputMode="decimal"
+          onChange={(e) => set({ ambient: e.target.value })}
+          className="h-12 bg-card text-base tabular-nums"
+          placeholder="32"
+        />
+      </label>
       <UploadSection icon={Thermometer} title="Thermal Images" noun="thermal image" thermal items={items} suggestions={thermalPointsFor(category)} onAdd={add} onRemove={remove} />
       <OfflineNote thermal />
     </div>
   )
 }
 
-/* ---------- 3–4. Parameters: contamination & hygiene ---------- */
+/* ---------- 3–5. Parameters: electrical readings, contamination & hygiene ---------- */
 
-function ContaminationSection({ capture, set }: { capture: InspectionCapture; set: Setter }) {
+function ContaminationSection({ category, capture, set }: { category: string; capture: InspectionCapture; set: Setter }) {
   const level = contaminationLevel(capture.thickness, capture.dustTypes)
   const checked = hygieneChecks.filter((c) => capture.hygiene[c.key]).length
   return (
     <>
-      <StepCard step={3} title="Contamination Assessment" icon={Wind} done={!!capture.thickness} actions={level ? <span className={cn("rounded-full px-3 py-1 text-sm font-bold", levelPill[level])}>{level}</span> : null}>
+      <ReadingsSection category={category} capture={capture} set={set} />
+
+      <StepCard step={4} title="Contamination Assessment" icon={Wind} done={!!capture.thickness} actions={level ? <span className={cn("rounded-full px-3 py-1 text-sm font-bold", levelPill[level])}>{level}</span> : null}>
         <div className="space-y-4">
           <div>
             <FieldLabel required>Dust accumulation thickness</FieldLabel>
@@ -381,7 +400,7 @@ function ContaminationSection({ capture, set }: { capture: InspectionCapture; se
         </div>
       </StepCard>
 
-      <StepCard step={4} title="Physical Hygiene Checks" icon={Check} done={checked === hygieneChecks.length} actions={<CountPill done={checked === hygieneChecks.length}>{checked} / {hygieneChecks.length}</CountPill>}>
+      <StepCard step={5} title="Physical Hygiene Checks" icon={Check} done={checked === hygieneChecks.length} actions={<CountPill done={checked === hygieneChecks.length}>{checked} / {hygieneChecks.length}</CountPill>}>
         <ul className="divide-y">
           {hygieneChecks.map((c) => {
             const h = capture.hygiene[c.key]
@@ -414,12 +433,88 @@ function ContaminationSection({ capture, set }: { capture: InspectionCapture; se
   )
 }
 
-/* ---------- 5. Fire prevention ---------- */
+/**
+ * The electrical readings for this asset type.
+ *
+ * Which readings apply, and which of them are mandatory, come from the client's
+ * inspection parameter sheet: a Network Switch is read for voltage alone, a
+ * transformer for voltage, per-phase load current, frequency and neutral
+ * current. Nothing not applicable to the type is asked for, so the ELPREMAR is
+ * never shown a box there is no meter reading for.
+ */
+function ReadingsSection({ category, capture, set }: { category: string; capture: InspectionCapture; set: Setter }) {
+  const specs = inspectionReadingsFor(category)
+  const missing = missingReadings(category, capture.readings)
+  const write = (key: string, value: string) => set({ readings: { ...capture.readings, [key]: value } })
+
+  return (
+    <StepCard
+      step={3}
+      title="Electrical Readings"
+      icon={Gauge}
+      done={missing.length === 0}
+      actions={
+        <CountPill done={missing.length === 0}>
+          {specs.length - missing.length} / {specs.length}
+        </CountPill>
+      }
+    >
+      <p className="mb-3 text-sm text-muted-foreground">
+        The readings a {category} is inspected for. Take them at the asset, under load where the asset is live.
+      </p>
+      <div className="grid gap-4 sm:grid-cols-2">
+        {specs.map((spec) => (
+          <Reading key={spec.key} spec={spec} readings={capture.readings} onChange={write} />
+        ))}
+      </div>
+    </StepCard>
+  )
+}
+
+/** One reading: a single box, or three side by side when it is taken per phase */
+function Reading({
+  spec,
+  readings,
+  onChange,
+}: {
+  spec: ReadingSpec
+  readings: Record<string, string>
+  onChange: (key: string, value: string) => void
+}) {
+  return (
+    <div className={cn(spec.phases && "sm:col-span-2")}>
+      <FieldLabel required={spec.required}>
+        {spec.label} <span className="font-normal text-muted-foreground">({spec.unit})</span>
+      </FieldLabel>
+      <div className={cn("gap-2", spec.phases ? "grid grid-cols-3" : "flex")}>
+        {readingKeys(spec).map((key, i) => (
+          <label key={key} className="flex min-w-0 flex-1 items-center gap-2">
+            {spec.phases ? (
+              <span className="w-5 shrink-0 text-center text-sm font-semibold text-muted-foreground">{readingPhases[i]}</span>
+            ) : null}
+            <span className="sr-only">
+              {spec.label}
+              {spec.phases ? ` ${readingPhases[i]} phase` : ""} in {spec.unit}
+            </span>
+            <Input
+              value={readings[key] ?? ""}
+              inputMode="decimal"
+              onChange={(e) => onChange(key, e.target.value)}
+              className="h-12 min-w-0 bg-card text-base tabular-nums"
+            />
+          </label>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+/* ---------- 6. Fire prevention ---------- */
 
 function FpsSection({ capture, set }: { capture: InspectionCapture; set: Setter }) {
   const fps = capture.fps
   return (
-    <StepCard step={5} title="Fire Prevention System" icon={Flame} done={fps.installed === "No" || (fps.installed === "Yes" && !!fps.status)}>
+    <StepCard step={6} title="Fire Prevention System" icon={Flame} done={fps.installed === "No" || (fps.installed === "Yes" && !!fps.status)}>
       <div className="space-y-4">
         <div>
           <FieldLabel required>Is a fire prevention system installed in the panel?</FieldLabel>
