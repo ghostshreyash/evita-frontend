@@ -93,7 +93,6 @@ export function StepDetails({
             rows={2}
             maxLength={200}
             placeholder="Main Substation (11kV), Block A — whatever gets the next engineer to it"
-            className="sm:col-span-2"
           />
 
           {/* The grid on the right fills this in too — it is the faster way on a tablet */}
