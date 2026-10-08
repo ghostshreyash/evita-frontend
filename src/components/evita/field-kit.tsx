@@ -65,7 +65,6 @@ export function FieldLabel({ children, required }: { children: React.ReactNode; 
  * numbered title, and a slot on the right for a count pill or an action.
  */
 export function StepCard({
-  step,
   title,
   icon: Icon,
   done,
@@ -73,7 +72,6 @@ export function StepCard({
   children,
   className,
 }: {
-  step?: number
   title: string
   icon: React.ComponentType<{ className?: string }>
   done?: boolean
@@ -87,10 +85,7 @@ export function StepCard({
         <span className={cn("flex size-9 shrink-0 items-center justify-center rounded-full", done ? "bg-healthy-soft text-healthy" : "bg-info-soft text-primary")}>
           {done ? <Check className="size-5" strokeWidth={3} aria-label="Done" /> : <Icon className="size-5" />}
         </span>
-        <h3 className="flex-1 text-lg font-semibold text-brand-navy dark:text-foreground">
-          {step !== undefined ? <span className="tabular-nums">{step}. </span> : null}
-          {title}
-        </h3>
+        <h3 className="flex-1 text-lg font-semibold text-brand-navy dark:text-foreground">{title}</h3>
         {actions}
       </header>
       <div className="p-5">{children}</div>

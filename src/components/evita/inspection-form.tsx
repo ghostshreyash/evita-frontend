@@ -164,7 +164,7 @@ export function InspectionForm({ job, detail }: { job: Job; detail: InspectionDe
             <>
               <ReadingsSection category={category} capture={capture} set={set} />
               {/* The one free-text note on the inspection, kept with the readings it explains */}
-              <StepCard step={4} title="Inspection Remarks" icon={NotebookPen} done={!!remarks.trim()}>
+              <StepCard title="Inspection Remarks" icon={NotebookPen} done={!!remarks.trim()}>
                 <Textarea
                   value={remarks}
                   rows={3}
@@ -385,7 +385,6 @@ function ReadingsSection({ category, capture, set }: { category: string; capture
 
   return (
     <StepCard
-      step={3}
       title="Electrical Readings"
       icon={Gauge}
       done={missing.length === 0}
@@ -462,7 +461,7 @@ function Reading({
 function FpsSection({ capture, set }: { capture: InspectionCapture; set: Setter }) {
   const fps = capture.fps
   return (
-    <StepCard step={5} title="Fire Prevention System" icon={Flame} done={fps.installed === "No" || (fps.installed === "Yes" && !!fps.status)}>
+    <StepCard title="Fire Prevention System" icon={Flame} done={fps.installed === "No" || (fps.installed === "Yes" && !!fps.status)}>
       <div className="space-y-4">
         <div>
           <FieldLabel required>Is a fire prevention system installed in the panel?</FieldLabel>
