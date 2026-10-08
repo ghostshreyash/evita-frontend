@@ -106,7 +106,7 @@ export type InspectionResult = {
 }
 
 export type InspectionDetail = {
-  /* --- what OCC assigned --- */
+  /* --- what EMMS-E assigned --- */
   description: string
   createdBy: string
   area: string
@@ -167,7 +167,7 @@ export function inspectionDetail(row: TaskRow): InspectionDetail {
 
   const detail: InspectionDetail = {
     description: instructions[row.activity] ?? instructions["Preventive Assessment"],
-    createdBy: `${pick(supervisors)} (OCC)`,
+    createdBy: `${pick(supervisors)} (EMMS-E)`,
     area: pick(areas),
     ...placeInPlant(row),
     assetTag: `TAG-${row.plant.slice(0, 3).toUpperCase()}-${row.id.slice(-4)}`,

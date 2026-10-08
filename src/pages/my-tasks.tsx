@@ -127,7 +127,7 @@ function MyTasks() {
     <div>
       <PageHeader
         title="My Tasks"
-        description="Everything OCC has assigned to you. Filter by Type for inspection tasks or maintenance tasks."
+        description="Everything EMMS-E has assigned to you. Filter by Type for inspection tasks or maintenance tasks."
         breadcrumbs={[{ label: "My Tasks" }]}
       />
 

@@ -16,7 +16,7 @@ const beforeYouStart = [
   "Keep the approach distance to live parts; barricade the work area.",
 ]
 
-/** The maintenance programmes, worded as on the OCC assignment */
+/** The maintenance programmes, worded as on the EMMS-E assignment */
 const maintenanceSops: Record<string, string> = {
   "Preventive Maintenance":
     "De-dust the panel, clean contact surfaces with the specified INSTA CLEAN grade, verify terminations to torque and record post-work readings and photos.",

@@ -37,7 +37,7 @@ export type Execution = {
 }
 
 export type MaintenanceDetail = {
-  /* --- what OCC assigned --- */
+  /* --- what EMMS-E assigned --- */
   priority: Priority
   description: string
   createdBy: string
@@ -124,7 +124,7 @@ export function maintenanceDetail(row: MaintenanceRow): MaintenanceDetail {
   const detail: MaintenanceDetail = {
     priority: pick(priorities),
     description: pick(descriptions),
-    createdBy: `${pick(supervisors)} (OCC)`,
+    createdBy: `${pick(supervisors)} (EMMS-E)`,
     area: pick(areas),
     ...placeInPlant(row),
     assetTag: `TAG-${row.plant.slice(0, 3).toUpperCase()}-${row.id.slice(-4)}`,

@@ -95,7 +95,7 @@ export function TaskPage() {
       <div className="flex flex-col items-center justify-center gap-3 rounded-2xl bg-card py-20 text-center shadow-xs ring-1 ring-foreground/10">
         <TriangleAlert className="size-8 text-attention" />
         <p className="max-w-md text-sm text-muted-foreground">
-          <span className="font-semibold">{id}</span> is not on your book of work. It may have been reassigned by OCC.
+          <span className="font-semibold">{id}</span> is not on your book of work. It may have been reassigned by EMMS-E.
         </p>
         <Button asChild><Link to="/my-tasks">Back to My Tasks</Link></Button>
       </div>
@@ -181,7 +181,7 @@ export function TaskPage() {
         </div>
       </section>
 
-      {/* ---------- What OCC assigned, and where the asset is ---------- */}
+      {/* ---------- What EMMS-E assigned, and where the asset is ---------- */}
       <TaskPanel icon={SlidersHorizontal} title="Task Details">
         <Group title="Task">
           <Field label="Task ID"><span className="tabular-nums font-semibold text-primary">{job.id}</span></Field>
@@ -191,7 +191,7 @@ export function TaskPage() {
             </span>
           </Field>
           <Field label="Activity">{job.activity}</Field>
-          <Field label="Assigned By">{detail?.createdBy ?? "OCC"}</Field>
+          <Field label="Assigned By">{detail?.createdBy ?? "EMMS-E"}</Field>
           {/* Only maintenance traces back to something: the inspection that raised it */}
           {job.kind === "maintenance" ? (
             <Field label="Raised From">{job.inspectionId ? `Inspection ${job.inspectionId}` : "—"}</Field>
