@@ -43,13 +43,13 @@ export function InspectionReports({ job, detail }: { job: Job; detail: Inspectio
 
   /*
    * The ratings to compare the readings against, off the asset register.
-   * TODO: a task carries no asset id yet, so the register is matched on
-   * category — see `inspectionFor` in lib/work for the same limitation.
+   * TODO: a task carries no asset id yet, so the register is matched on plant
+   * and category — see `inspectionFor` in lib/work for the same limitation.
    */
   const rated = useMemo(() => {
-    const asset = register.find((a) => a.category === category)
+    const asset = register.find((a) => a.plant === job.plant && a.category === category)
     return asset ? profileOf(asset).parameters : []
-  }, [register, category])
+  }, [register, job.plant, category])
 
   const reports = useMemo(() => {
     if (!detail.capture) return []
