@@ -1,12 +1,11 @@
 import { useMemo, useState } from "react"
-import { BookOpen, Download, HardDrive, Search, Sparkles, SprayCan, TrendingUp, TriangleAlert, X } from "lucide-react"
+import { BookOpen, Download, HardDrive, Search, Sparkles, SprayCan, TriangleAlert, X } from "lucide-react"
 import { cn } from "cn"
 import { toast } from "sonner"
 
 import { PageHeader } from "@/components/common/page-header"
 import { SortHead, TablePager } from "@/components/common/data-table"
 import { CategoryIcon } from "@/components/common/category-icon"
-import { DonutChart, TrendChart, type Slice } from "@/components/common/charts"
 import { AssetReportPanel } from "@/components/reports/asset-report-panel"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -20,19 +19,15 @@ import {
   contaminationTone,
   findingLook,
   findings,
-  healthSplit,
-  hygieneHotspots,
   hygieneKpis,
-  hygieneTrend,
   reportRows,
   uninspectedCount,
   type Finding,
   type ReportRow,
 } from "@/data/report-data"
-import { assetCategories, healthScoreWeights } from "@/data/master-data"
+import { assetCategories } from "@/data/master-data"
 import { control, nextSort, PAGE_SIZES, sortRows, td, th, type Accessors, type Sort } from "@/lib/data-table"
 import { parseDmy } from "@/data/asset-data"
-import { healthStatus } from "@/lib/status"
 
 type Column = "id" | "name" | "category" | "area" | "level" | "score" | "status" | "inspected" | "due"
 
@@ -130,7 +125,6 @@ export function ReportsPage() {
             [
               { value: "contamination", icon: SprayCan, label: "Contamination Wise Report" },
               { value: "hygiene", icon: Sparkles, label: "Hygiene Wise Report" },
-              { value: "insights", icon: TriangleAlert, label: "AI Insights" },
             ] as const
           ).map((tab) => (
             <TabsTrigger
@@ -174,9 +168,6 @@ export function ReportsPage() {
           </TabsContent>
           <TabsContent value="hygiene" className="mt-0">
             <HygieneReport rows={rows} selected={selected} onSelect={setSelected} onClose={close} onClear={clear} />
-          </TabsContent>
-          <TabsContent value="insights" className="mt-0">
-            <AiInsights rows={rows} />
           </TabsContent>
         </div>
       </Tabs>
@@ -281,12 +272,6 @@ function HygieneReport({
   onClear: () => void
 }) {
   const kpis = hygieneKpis(rows)
-  const trend = hygieneTrend(rows)
-  const slices: Slice[] = [
-    { key: "healthy", label: "Healthy", value: kpis.clear, color: findingLook.Healthy.color },
-    { key: "attention", label: "Alarming", value: kpis.attention, color: findingLook["Alarming"].color },
-    { key: "risk", label: "At Risk", value: kpis.atRisk, color: findingLook["At Risk"].color },
-  ]
 
   const accessors: Accessors<ReportRow, Column> = {
     id: (r) => r.asset.id,
@@ -307,30 +292,6 @@ function HygieneReport({
         Point-specific condition report over the Phase-1 physical parameters. It carries no health score — that is the
         contamination report's job.
       </p>
-
-      <div className="grid gap-3 lg:grid-cols-2">
-        <section className="rounded-2xl bg-card p-3 shadow-xs ring-1 ring-foreground/10">
-          <h3 className="mb-2 flex items-center gap-2 text-base font-semibold text-brand-navy dark:text-foreground">
-            <Sparkles className="size-5 text-primary" /> Asset Hygiene Status Distribution
-          </h3>
-          <DonutChart slices={slices} centreLabel="Total Assets" />
-        </section>
-
-        <section className="rounded-2xl bg-card p-3 shadow-xs ring-1 ring-foreground/10">
-          <h3 className="mb-2 flex items-center gap-2 text-base font-semibold text-brand-navy dark:text-foreground">
-            <TrendingUp className="size-5 text-primary" /> Hygiene Trend (Last 6 Months)
-          </h3>
-          <TrendChart
-            data={trend}
-            xKey="month"
-            series={[
-              { key: "Healthy", label: "Healthy", color: findingLook.Healthy.color },
-              { key: "Alarming", label: "Alarming", color: findingLook["Alarming"].color },
-              { key: "At Risk", label: "At Risk", color: findingLook["At Risk"].color },
-            ]}
-          />
-        </section>
-      </div>
 
       <ReportTable
         title="Asset Hygiene Details"
@@ -371,130 +332,6 @@ function HygieneReport({
       />
     </div>
   )
-}
-
-/* ---------- AI Insights ---------- */
-
-/**
- * Grounded in the register rather than written out: every count below is read
- * off the rows on screen. The client's answer is explicit that AI output stays
- * advisory — it may recommend a product, a priority or a date, but nothing is
- * executed, scheduled or closed from it without an authorised user accepting it.
- */
-function AiInsights({ rows }: { rows: ReportRow[] }) {
-  const split = healthSplit(rows)
-  const hotspots = hygieneHotspots(rows).filter((h) => h.failing > 0).slice(0, 5)
-
-  /** Categories carrying the most assets below the healthy band */
-  const byCategory = worstCategories(rows)
-
-  return (
-    <div className="space-y-3">
-      <p className="flex items-start gap-2 rounded-lg bg-highlight-soft px-3 py-2 text-sm">
-        <TriangleAlert className="mt-0.5 size-4 shrink-0 text-highlight" />
-        <span>
-          Advisory only. Recommendations may name a cleaning product, a priority or a next inspection date, but nothing is
-          scheduled, executed or closed from them until an authorised user accepts it. Engineering and safety rules take
-          precedence.
-        </span>
-      </p>
-
-      <div className="grid gap-3 lg:grid-cols-2">
-        <section className="rounded-2xl bg-card p-3 shadow-xs ring-1 ring-foreground/10">
-          <h3 className="mb-2 text-base font-semibold text-brand-navy dark:text-foreground">Where the risk sits</h3>
-          {byCategory.length ? (
-            <ul className="space-y-2">
-              {byCategory.map((c) => (
-                <li key={c.category} className="flex items-center gap-2.5 text-sm">
-                  <CategoryIcon category={c.category} className="size-5 shrink-0 text-muted-foreground" />
-                  <span className="min-w-0 flex-1 truncate">{c.category}</span>
-                  <span className="shrink-0 text-xs text-muted-foreground tabular-nums">
-                    {c.failing} of {c.total} below healthy
-                  </span>
-                </li>
-              ))}
-            </ul>
-          ) : (
-            <p className="py-3 text-center text-sm text-muted-foreground">Nothing below the healthy band in this scope.</p>
-          )}
-        </section>
-
-        <section className="rounded-2xl bg-card p-3 shadow-xs ring-1 ring-foreground/10">
-          <h3 className="mb-2 text-base font-semibold text-brand-navy dark:text-foreground">
-            What the score is weighted on
-          </h3>
-          <ul className="space-y-2">
-            {healthScoreWeights.map((w) => (
-              <li key={w.input} className="flex items-center gap-2 text-sm">
-                <span className="min-w-44 shrink-0">{w.input}</span>
-                <span className="h-2 rounded-full bg-primary" style={{ width: `${w.weight}%` }} />
-                <span className="shrink-0 text-xs text-muted-foreground tabular-nums">{w.weight}%</span>
-              </li>
-            ))}
-          </ul>
-          <p className="mt-2 text-xs text-muted-foreground">
-            From the scoring rules in the platform specification, not inferred from this data.
-          </p>
-        </section>
-
-        <section className="rounded-2xl bg-card p-3 shadow-xs ring-1 ring-foreground/10">
-          <h3 className="mb-2 text-base font-semibold text-brand-navy dark:text-foreground">Health distribution</h3>
-          <ul className="space-y-2 text-sm">
-            {(
-              [
-                ["Healthy", split.healthy, "bg-healthy"],
-                [healthStatus.attention.label, split.attention, "bg-attention"],
-                ["At Risk", split.critical, "bg-critical"],
-              ] as const
-            ).map(([label, value, tone]) => (
-              <li key={label} className="flex items-center gap-2">
-                <span className={cn("size-2.5 shrink-0 rounded-full", tone)} />
-                <span className="min-w-0 flex-1">{label}</span>
-                <span className="shrink-0 font-semibold tabular-nums">{value}</span>
-                <span className="w-12 shrink-0 text-right text-xs text-muted-foreground tabular-nums">
-                  {rows.length ? Math.round((value / rows.length) * 100) : 0}%
-                </span>
-              </li>
-            ))}
-          </ul>
-        </section>
-
-        <section className="rounded-2xl bg-card p-3 shadow-xs ring-1 ring-foreground/10">
-          <h3 className="mb-2 text-base font-semibold text-brand-navy dark:text-foreground">
-            Physical points to work through
-          </h3>
-          {hotspots.length ? (
-            <ul className="space-y-2 text-sm">
-              {hotspots.map((h) => (
-                <li key={h.check} className="flex items-center gap-2">
-                  <span className="min-w-0 flex-1 truncate">{h.check}</span>
-                  <span className="shrink-0 text-xs text-muted-foreground tabular-nums">{h.failing} assets</span>
-                </li>
-              ))}
-            </ul>
-          ) : (
-            <p className="py-3 text-center text-sm text-muted-foreground">No physical points outstanding in this scope.</p>
-          )}
-        </section>
-      </div>
-    </div>
-  )
-}
-
-/** Which categories carry the most assets below the healthy band */
-function worstCategories(rows: ReportRow[]) {
-  const map = new Map<string, { total: number; failing: number }>()
-  for (const r of rows) {
-    const entry = map.get(r.asset.category) ?? { total: 0, failing: 0 }
-    entry.total += 1
-    if (r.contaminationStatus === "At Risk" || r.contaminationStatus === "Alarming") entry.failing += 1
-    map.set(r.asset.category, entry)
-  }
-  return [...map.entries()]
-    .map(([category, v]) => ({ category, ...v }))
-    .filter((c) => c.failing > 0)
-    .sort((a, b) => b.failing - a.failing)
-    .slice(0, 6)
 }
 
 /* ---------- Shared table ---------- */

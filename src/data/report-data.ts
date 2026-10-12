@@ -17,7 +17,6 @@
  *   ELPREMAR cannot filter outside their assignment.
  */
 import { assetRegister, parseDmy, type AssetRecord } from "@/data/asset-data"
-import { healthBandFor } from "@/data/master-data"
 
 /* ---------- Vocabulary ---------- */
 
@@ -310,56 +309,6 @@ export const hygieneKpis = (rows: ReportRow[]) => ({
   /** Every failing point across the rows, which is what the crew actually works through */
   openPoints: rows.reduce((n, r) => n + r.hygieneOpen, 0),
 })
-
-/** Which physical points fail most often across the rows on screen */
-export function hygieneHotspots(rows: ReportRow[]) {
-  return hygieneChecks
-    .map((check) => ({
-      check,
-      failing: rows.filter((r) => r.hygiene.some((p) => p.check === check && p.finding !== "Healthy")).length,
-    }))
-    .sort((a, b) => b.failing - a.failing)
-}
-
-/**
- * Six months of hygiene standing, as a share of the assets on screen.
- *
- * The last month is the real split; the earlier ones are walked back by a fixed
- * drift so the line reads as a plant that has been getting on top of its
- * housekeeping. Nothing here is random - the series is the same on every reload.
- */
-export function hygieneTrend(rows: ReportRow[]) {
-  const now = hygieneKpis(rows)
-  const total = rows.length || 1
-  const share = (n: number) => (n / total) * 100
-  const clean = share(now.clear)
-  const attention = share(now.attention)
-  const risk = share(now.atRisk)
-
-  // Oldest first; the shortfall against today's figure falls back on the two
-  // failing buckets, so each month still adds up to the whole
-  const drift = [-9, -7, -5, -3, -1, 0]
-
-  return drift.map((d, i) => {
-    const month = new Date(REFERENCE.getFullYear(), REFERENCE.getMonth() - (drift.length - 1 - i), 1)
-    const shortfall = -d
-    return {
-      month: month.toLocaleDateString("en-GB", { month: "short", year: "numeric" }),
-      Healthy: Math.max(0, Math.round(clean + d)),
-      "Alarming": Math.round(attention + shortfall * 0.6),
-      "At Risk": Math.round(risk + shortfall * 0.4),
-    }
-  })
-}
-
-/** Health band split for the distribution panel */
-export function healthSplit(rows: ReportRow[]) {
-  return {
-    healthy: rows.filter((r) => healthBandFor(r.healthScore!).tone === "healthy").length,
-    attention: rows.filter((r) => healthBandFor(r.healthScore!).tone === "attention").length,
-    critical: rows.filter((r) => healthBandFor(r.healthScore!).tone === "critical").length,
-  }
-}
 
 /* ---------- The register, as the reports read it ---------- */
 
