@@ -2,7 +2,7 @@ import { useMemo, useState } from "react"
 import { Link, useSearchParams } from "react-router"
 import type { DateRange } from "react-day-picker"
 import { format, isAfter, isBefore, startOfDay } from "date-fns"
-import { ArrowDownUp, Clock, MapPin, Search, X } from "lucide-react"
+import { ArrowDownUp, CalendarDays, Clock, Factory, MapPin, Play, Search, X } from "lucide-react"
 import { cn } from "cn"
 
 import { ChipTabs, type ChipTab } from "@/components/common/chip-tabs"
@@ -17,6 +17,7 @@ import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { priorityTone, slotLabel } from "@/data/occ-tables"
 import { control } from "@/lib/data-table"
+import { openPanel } from "@/lib/ui-store"
 import {
   categoryFor,
   fieldStatuses,
@@ -156,6 +157,7 @@ function MyTasks({ only }: { only?: JobKind }) {
   ]
 
   const filtersOn = !!query || (!only && type !== "all") || status !== "all" || !!range?.from
+  const label = only === "inspection" ? "inspection" : "task"
   const reset = (fn: () => void) => {
     fn()
     setPage(1)
@@ -164,13 +166,22 @@ function MyTasks({ only }: { only?: JobKind }) {
   return (
     <div>
       <PageHeader
-        title={only ? `${jobKindLook[only].long}s` : "My Tasks"}
+        title={only === "inspection" ? "Inspections" : only ? `${jobKindLook[only].long}s` : "My Tasks"}
         description={
-          only
-            ? `Everything assigned to you for ${jobKindLook[only].label.toLowerCase()}. They are on My Tasks too.`
-            : "Your assigned inspection and maintenance tasks."
+          only === "inspection"
+            ? "The plants you are booked to inspect. You can also start one at any asset without being booked for it."
+            : only
+              ? `Everything assigned to you for ${jobKindLook[only].label.toLowerCase()}. They are on My Tasks too.`
+              : "Your assigned inspection and maintenance tasks."
         }
-        breadcrumbs={[{ label: only ? `${jobKindLook[only].long}s` : "My Tasks" }]}
+        breadcrumbs={[{ label: only === "inspection" ? "Inspections" : only ? `${jobKindLook[only].long}s` : "My Tasks" }]}
+        actions={
+          only === "inspection" ? (
+            <Button onClick={() => openPanel({ kind: "begin-inspection" })}>
+              <Play className="fill-current" /> Start Inspection
+            </Button>
+          ) : undefined
+        }
       />
 
       {/* ---------- Search, then the filters as chips ---------- */}
@@ -180,8 +191,8 @@ function MyTasks({ only }: { only?: JobKind }) {
           <Input
             value={query}
             onChange={(e) => reset(() => setQuery(e.target.value))}
-            placeholder="Search task, asset or location"
-            aria-label="Search tasks"
+            placeholder={only === "inspection" ? "Search by plant, enterprise or ID" : "Search task, asset or location"}
+            aria-label={`Search ${label}s`}
             className={cn(control, "bg-card pl-9")}
           />
         </div>
@@ -196,7 +207,7 @@ function MyTasks({ only }: { only?: JobKind }) {
         )}
         <DateRangeFilter label="Due" range={range} onApply={(r) => reset(() => setRange(r))} />
         <Select value={sort} onValueChange={(v) => setSort(v as SortKey)}>
-          <SelectTrigger aria-label="Sort tasks" className={cn(control, "w-auto min-w-36 bg-card")}>
+          <SelectTrigger aria-label={`Sort ${label}s`} className={cn(control, "w-auto min-w-36 bg-card")}>
             <ArrowDownUp className="size-4 text-muted-foreground" />
             <SelectValue />
           </SelectTrigger>
@@ -226,7 +237,7 @@ function MyTasks({ only }: { only?: JobKind }) {
       </div>
 
       <ChipTabs
-        label="Task status"
+        label={only === "inspection" ? "Inspection status" : "Task status"}
         tabs={tabs}
         value={status}
         onChange={(v) => reset(() => setStatus(v as typeof status))}
@@ -236,13 +247,13 @@ function MyTasks({ only }: { only?: JobKind }) {
       {/* ---------- A card per task ---------- */}
       {shown.length ? (
         <ul className="grid gap-2.5 xl:grid-cols-2">
-          {shown.map((job) => (
-            <TaskCard key={job.id} job={job} />
-          ))}
+          {shown.map((job) =>
+            only === "inspection" ? <VisitCard key={job.id} job={job} /> : <TaskCard key={job.id} job={job} />
+          )}
         </ul>
       ) : (
         <p className="rounded-2xl bg-card py-16 text-center text-sm text-muted-foreground shadow-xs ring-1 ring-foreground/10">
-          No tasks match these filters.
+          Nothing matches these filters.
         </p>
       )}
 
@@ -331,6 +342,69 @@ function TaskCard({ job }: { job: Job }) {
       <Link
         to={`/my-tasks/${job.id}`}
         aria-label={`Open task ${job.id}, ${job.asset}`}
+        className="absolute inset-0 rounded-2xl outline-none"
+      />
+    </li>
+  )
+}
+
+/**
+ * One inspection, as the visit it is.
+ *
+ * No asset on it: the client was clear on 12-10-2026 that an inspection sends
+ * the ELPREMAR to a plant - "you have to visit this plant for inspection" -
+ * and which assets get inspected is settled on site, by onboarding them or
+ * scanning their labels. So the card carries the enterprise, the plant, the
+ * day and the booked hour, and nothing it cannot know yet.
+ */
+function VisitCard({ job }: { job: Job }) {
+  const overdue = isOverdue(job)
+
+  return (
+    <li
+      className={cn(
+        "relative flex items-stretch overflow-hidden rounded-2xl bg-card shadow-xs ring-1 ring-foreground/10 transition-shadow hover:shadow-md focus-within:ring-2 focus-within:ring-primary",
+        overdue && "bg-critical-soft/40"
+      )}
+    >
+      <span aria-hidden className={cn("w-1.5 shrink-0", statusEdge[job.field])} />
+
+      <div className="flex min-w-0 flex-1 flex-wrap items-center gap-3 p-3">
+        <span className="flex size-12 shrink-0 items-center justify-center rounded-xl bg-info-soft text-primary">
+          <Factory className="size-6" />
+        </span>
+
+        <div className="min-w-0 flex-1">
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="tabular-nums text-xs font-bold text-muted-foreground">{job.id}</span>
+            <span className={cn("rounded-md px-1.5 py-0.5 text-[0.7rem] font-bold tracking-wide uppercase", priorityTone[job.priority])}>
+              {job.priority}
+            </span>
+          </div>
+          <h3 className="mt-0.5 truncate text-base font-bold text-brand-navy dark:text-foreground">{job.plant}</h3>
+          <p className="truncate text-sm text-muted-foreground">{job.enterprise}</p>
+          <p className="mt-1 truncate text-sm">{job.activity}</p>
+        </div>
+
+        <div className="flex shrink-0 flex-col items-end gap-1.5">
+          <span className={cn("flex items-center gap-1.5 text-sm font-semibold whitespace-nowrap", overdue && "text-critical")}>
+            <CalendarDays className="size-4" />
+            {isToday(job.date) ? "Today" : format(parseDay(job.date), "d MMM yyyy")}
+          </span>
+          <span className={cn("flex items-center gap-1.5 tabular-nums text-xs", overdue ? "text-critical" : "text-muted-foreground")}>
+            <Clock className="size-3.5" />
+            {slotLabel(job.slot)}
+            {overdue ? " · Overdue" : ""}
+          </span>
+          <JobStatusBadge job={job} />
+          {/* Above the stretched link, so the action fires instead of opening it */}
+          <JobActionButton job={job} className="relative z-10 mt-1 w-28" />
+        </div>
+      </div>
+
+      <Link
+        to={`/my-tasks/${job.id}`}
+        aria-label={`Open inspection ${job.id} at ${job.plant}`}
         className="absolute inset-0 rounded-2xl outline-none"
       />
     </li>

@@ -1,13 +1,15 @@
 import { useSyncExternalStore } from "react"
 
 /**
- * The app-wide panels any screen can open: QR scanner, Report an Issue, SOP,
- * Safety and Notifications. They are mounted once in the app shell, so the
+ * The app-wide panels any screen can open: QR scanner, Start an inspection,
+ * Report an Issue, SOP, Safety and Notifications. They are mounted once in the app shell, so the
  * dashboard, the top bar and a task screen all open the same dialog with the
  * context they have (an asset, a task, an activity).
  */
 export type Panel =
   | { kind: "scan" }
+  /** Which asset is being inspected: scan one, or onboard it first */
+  | { kind: "begin-inspection" }
   | { kind: "issue"; assetId?: string; jobId?: string; jobKind?: "inspection" | "maintenance"; asset?: string; plant?: string; enterprise?: string }
   | { kind: "sop"; activity?: string }
   | { kind: "safety" }

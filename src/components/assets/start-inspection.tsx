@@ -1,20 +1,22 @@
 import { useNavigate } from "react-router"
-import { ClipboardCheck, Play } from "lucide-react"
+import { Play } from "lucide-react"
 import { cn } from "cn"
 
 import { Button } from "@/components/ui/button"
 import type { AssetRecord } from "@/data/asset-data"
+import { addInspectionForAsset } from "@/data/inspection-store"
 import { useCurrentElpremar } from "@/lib/me"
 import { startJob } from "@/lib/start-job"
 import { actionFor, inspectionFor, useMyJobs } from "@/lib/work"
 
 /**
- * The button that opens the inspection on this asset.
+ * Inspect the asset in front of you.
  *
- * An inspection is assigned by EMMS-E, never raised from the tablet, so there
- * is nothing to create here: it starts the one already on the engineer's book
- * for this asset, continues it if it is running, and says plainly when there is
- * none - see `inspectionFor`.
+ * An inspection is not an assigned task. The client was explicit on
+ * 12-10-2026: the ELPREMAR walks up to a panel, onboards it or scans its
+ * label, and inspects it - "yeh pura task usne apne marzi se kiya". So this
+ * button always works. An assignment only decides whether the inspection is
+ * already on the book or is raised here and then.
  */
 export function StartInspection({
   asset,
@@ -30,39 +32,37 @@ export function StartInspection({
 }) {
   const navigate = useNavigate()
   const me = useCurrentElpremar()
-  const job = inspectionFor(useMyJobs(), asset)
+  const assigned = inspectionFor(useMyJobs(), asset)
+  const running = assigned ? actionFor(assigned) === "continue" : false
 
-  const go = (to: string) => {
+  const go = () => {
     onLeave?.()
-    navigate(to)
+    if (assigned) {
+      if (!running) startJob(assigned, me.name)
+      navigate(`/my-tasks/${assigned.id}`)
+      return
+    }
+    // Nothing on the book for it: raise the inspection here and open it
+    navigate(`/my-tasks/${addInspectionForAsset(asset, me.name)}`)
   }
 
-  if (!job) {
-    return (
-      <div className={cn("flex flex-wrap items-center justify-between gap-2 rounded-xl bg-muted/50 px-3 py-2.5", className)}>
-        <p className="text-sm text-muted-foreground">No inspection is assigned to you for this asset.</p>
-        <Button variant="outline" size="sm" onClick={() => go("/inspections")}>
-          <ClipboardCheck /> Inspection tasks
-        </Button>
-      </div>
-    )
-  }
-
-  const running = actionFor(job) === "continue"
   return (
     <div className={className}>
       <Button
         size={size}
         className={cn("w-full font-semibold shadow-md shadow-primary/25", size === "lg" && "h-14 text-base")}
-        onClick={() => {
-          if (!running) startJob(job, me.name)
-          go(`/my-tasks/${job.id}`)
-        }}
+        onClick={go}
       >
         <Play className="fill-current" /> {running ? "Continue Inspection" : "Start Inspection"}
       </Button>
       <p className="mt-1.5 text-center text-xs text-muted-foreground">
-        <span className="tabular-nums font-medium">{job.id}</span> · {job.activity}
+        {assigned ? (
+          <>
+            <span className="tabular-nums font-medium">{assigned.id}</span> · {assigned.activity}
+          </>
+        ) : (
+          "Not on your book — this raises the inspection against this asset"
+        )}
       </p>
     </div>
   )

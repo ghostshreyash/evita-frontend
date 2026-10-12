@@ -66,6 +66,59 @@ export function startInspection(id: string, by: string) {
 }
 
 /** Save what has been captured so far without finishing — the draft survives a refresh */
+/**
+ * Raise an inspection on the spot, against an asset the engineer is standing
+ * at, and start it.
+ *
+ * An inspection is not an assigned task. The client was explicit on
+ * 12-10-2026: an ELPREMAR walks up to a panel, onboards it or scans its label,
+ * and inspects it - "yeh pura task usne apne marzi se kiya". An assignment
+ * puts a visit on the book; it is not what permits the work.
+ *
+ * Returns the new id so the caller can open it.
+ */
+export function addInspectionForAsset(
+  asset: { id: string; name: string; category: string; plant: string; enterprise: string; area: string },
+  by: string
+) {
+  const id = `TSK-${9000 + rows.filter((r) => r.id.startsWith("TSK-9")).length}`
+  const today = stampNow().split(" ")[0]
+  const row: TaskRow = {
+    id,
+    elpremar: by,
+    enterprise: asset.enterprise,
+    plant: asset.plant,
+    asset: asset.name,
+    country: "India",
+    activity: "Visual Inspection",
+    due: today,
+    slot: new Date().getHours(),
+    priority: "Medium",
+    status: "in_progress",
+  }
+  rows = [row, ...rows]
+  details = {
+    ...details,
+    [id]: {
+      ...inspectionDetail(row),
+      // Raised at the asset, so what it is and where it stands are known
+      area: asset.area,
+      assetTag: asset.id,
+      assetCategory: asset.category,
+      createdBy: `${by} (on site)`,
+      execution: { performedBy: by, startedAt: stampNow(), remarks: "" },
+      measurements: [],
+      observations: [],
+      evidence: [],
+      capture: emptyCapture(),
+      result: undefined,
+      sync: { state: "draft", at: stampNow() },
+    },
+  }
+  emit()
+  return id
+}
+
 export function saveInspectionDraft(id: string, patch: Partial<InspectionDetail>) {
   details = { ...details, [id]: { ...details[id], ...patch, sync: { state: "draft", at: stampNow() } } }
   emit()

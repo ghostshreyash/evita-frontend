@@ -6,6 +6,7 @@ import {
   CloudCheck,
   CloudUpload,
   FileText,
+  Plus,
   QrCode,
   TriangleAlert,
   type LucideIcon,
@@ -13,10 +14,8 @@ import {
 import { cn } from "cn"
 
 import { useInspectionDetails } from "@/data/inspection-store"
-import { useCurrentElpremar } from "@/lib/me"
-import { startJob } from "@/lib/start-job"
 import { openPanel } from "@/lib/ui-store"
-import { actionFor, useMyJobs, type Job } from "@/lib/work"
+import { actionFor, useMyJobs } from "@/lib/work"
 
 /**
  * Everything the field needs, one tap from the home screen.
@@ -32,21 +31,14 @@ import { actionFor, useMyJobs, type Job } from "@/lib/work"
  */
 export function QuickActions() {
   const navigate = useNavigate()
-  const me = useCurrentElpremar()
   const jobs = useMyJobs()
   const details = useInspectionDetails()
 
-  /** The next inspection to start, and the one already under way */
-  const next = jobs.find((j) => j.kind === "inspection" && actionFor(j) === "start")
+  /** The inspection already under way, if there is one */
   const running = jobs.find((j) => j.kind === "inspection" && actionFor(j) === "continue")
 
   /** Records held on the tablet that the server has not got yet */
   const waiting = Object.values(details).filter((d) => d.sync && d.sync.state !== "synced").length
-
-  const open = (job: Job, start: boolean) => {
-    if (start) startJob(job, me.name)
-    navigate(`/my-tasks/${job.id}`)
-  }
 
   const actions: Action[] = [
     {
@@ -57,19 +49,27 @@ export function QuickActions() {
       run: () => openPanel({ kind: "scan" }),
     },
     {
+      icon: Plus,
+      title: "Onboard Asset",
+      // The first step in the client's own order: onboard, then inspect
+      detail: "Register an asset that is not on the book",
+      tone: "bg-info-soft text-primary",
+      run: () => navigate("/assets/onboarding"),
+    },
+    {
       icon: ClipboardCheck,
       title: "Start Inspection",
-      detail: next ? `${next.id} · ${next.asset}` : "Nothing waiting to be started",
+      // Not a task to be handed one: the engineer picks the asset and goes
+      detail: "Scan an asset, or onboard a new one",
       tone: "bg-healthy-soft text-healthy",
-      run: next ? () => open(next, true) : () => navigate("/inspections"),
-      quiet: !next,
+      run: () => openPanel({ kind: "begin-inspection" }),
     },
     {
       icon: FileText,
       title: "Log Test Results",
       detail: running ? `${running.id} · under way` : "No inspection is open",
       tone: "bg-attention-soft text-attention",
-      run: running ? () => open(running, false) : () => navigate("/inspections"),
+      run: running ? () => navigate(`/my-tasks/${running.id}`) : () => navigate("/inspections"),
       quiet: !running,
     },
     {
@@ -103,7 +103,7 @@ export function QuickActions() {
         <h3 className="text-lg font-semibold text-brand-navy dark:text-foreground">Quick Actions</h3>
         <p className="text-sm text-muted-foreground">Everything you need for field work</p>
       </div>
-      <ul className="grid gap-2.5 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-6">
+      <ul className="grid gap-2.5 sm:grid-cols-2 lg:grid-cols-4 2xl:grid-cols-7">
         {actions.map((action) => (
           <li key={action.title}>
             <button
