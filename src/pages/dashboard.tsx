@@ -197,7 +197,6 @@ export function DashboardPage() {
     [register]
   )
   const totalAssets = register.length
-  const email = `${me.name.toLowerCase().replace(/\s+/g, ".")}@olivineglobal.com`
 
   const quickActions = [
     { icon: QrCode, label: "Scan Asset QR", tone: "bg-info-soft text-info", run: () => openPanel({ kind: "scan" }) },
@@ -313,8 +312,25 @@ export function DashboardPage() {
                     { icon: CalendarDays, label: "Joined", value: me.joined },
                     // The ELPREMAR's own location (their address from onboarding), not the site they are posted to
                     { icon: MapPin, label: "Location", value: `${profile.basic.city}, ${profile.basic.state}` },
-                    { icon: Phone, label: "Phone", value: <a href="tel:+919876543210" className="tabular-nums text-primary">+91 98765 43210</a> },
-                    { icon: Mail, label: "Email", value: <a href={`mailto:${email}`} className="text-primary">{email}</a> },
+                    // The engineer's own, from the register - not a literal typed in here
+                    {
+                      icon: Phone,
+                      label: "Phone",
+                      value: (
+                        <a href={`tel:${profile.basic.phoneCode}${profile.basic.phone}`} className="tabular-nums text-primary">
+                          {profile.basic.phoneCode} {profile.basic.phone}
+                        </a>
+                      ),
+                    },
+                    {
+                      icon: Mail,
+                      label: "Email",
+                      value: (
+                        <a href={`mailto:${profile.basic.email}`} className="text-primary">
+                          {profile.basic.email}
+                        </a>
+                      ),
+                    },
                   ]}
                 />
               </TabsContent>

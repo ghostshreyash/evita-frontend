@@ -5,7 +5,7 @@ import {
   FileText,
   HardDrive,
   LayoutDashboard,
-  MoreHorizontal,
+  Headset,
   QrCode,
   type LucideIcon,
 } from "lucide-react"
@@ -27,6 +27,9 @@ import { actionFor, useMyJobs } from "@/lib/work"
  * than a list that ran out of room. The order puts the engineer's own work to
  * the left of the scanner and the plant to its right, so scanning a label
  * leads straight into the half of the bar the asset lives in.
+ *
+ * The profile is not on the bar: it is behind the avatar in the top bar, where
+ * a profile is looked for. The sixth slot is Contact & Help instead.
  */
 type Tab = { path: string; title: string; icon: LucideIcon; badge?: "work" | "inspection" }
 
@@ -39,7 +42,7 @@ const left: Tab[] = [
 const right: Tab[] = [
   { path: "/assets", title: "Assets", icon: HardDrive },
   { path: "/reports", title: "Reports", icon: FileText },
-  { path: "/more", title: "More", icon: MoreHorizontal },
+  { path: "/contact", title: "Contact", icon: Headset },
 ]
 
 const under = (current: string, path: string) =>
