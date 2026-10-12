@@ -29,10 +29,20 @@ import { td, th } from "@/lib/data-table"
  * The mockup's Trend & Analytics tab is not here — trend reporting was dropped
  * from this screen along with the Trend Analysis tab above it.
  */
-export function AssetReportPanel({ row, onClose }: { row: ReportRow; onClose: () => void }) {
+export function AssetReportPanel({
+  row,
+  /** Which report the panel was opened from; it opens on that tab */
+  from = "contamination",
+  onClose,
+}: {
+  row: ReportRow
+  from?: "contamination" | "hygiene"
+  onClose: () => void
+}) {
   const { asset } = row
   const report = assetReport(row)
   const band = row.healthScore === null ? null : healthBandFor(row.healthScore)
+  const hygiene = from === "hygiene"
 
   return (
     <div className="flex h-full min-h-0 flex-col bg-card">
@@ -100,7 +110,7 @@ export function AssetReportPanel({ row, onClose }: { row: ReportRow; onClose: ()
         </section>
 
         {/* ---------- Where it stands ---------- */}
-        <div className="grid grid-cols-3 gap-2">
+        <div className={cn("grid gap-2", hygiene ? "grid-cols-3" : "grid-cols-2")}>
           <Stat label="Health Score">
             {band ? (
               <HealthDial score={row.healthScore!} label={band.label} tone={band.tone} className="size-20" />
@@ -116,31 +126,43 @@ export function AssetReportPanel({ row, onClose }: { row: ReportRow; onClose: ()
               {report.inspection.dustType || "No assessment yet"}
             </span>
           </Stat>
-          <Stat label="Hygiene">
-            <Badge variant={findingLook[row.hygieneStatus].badge} className="h-auto rounded px-1.5 py-1 text-xs">
-              {row.hygieneStatus}
-            </Badge>
-            <span className="mt-1 block text-[0.65rem] leading-tight text-muted-foreground">
-              {row.hygieneOpen} of 8 points open
-            </span>
-          </Stat>
+          {/*
+            * The two reports are kept apart, as the client asked: hygiene is its
+            * own report and carries no score, so it does not sit in the
+            * contamination summary. It shows only when the panel was opened
+            * from the hygiene report.
+            */}
+          {hygiene ? (
+            <Stat label="Hygiene">
+              <Badge variant={findingLook[row.hygieneStatus].badge} className="h-auto rounded px-1.5 py-1 text-xs">
+                {row.hygieneStatus}
+              </Badge>
+              <span className="mt-1 block text-[0.65rem] leading-tight text-muted-foreground">
+                {row.hygieneOpen} of 8 points open
+              </span>
+            </Stat>
+          ) : null}
         </div>
 
         {/* ---------- The record behind it ---------- */}
-        <Tabs defaultValue="inspection">
+        <Tabs defaultValue={hygiene ? "hygiene" : "inspection"}>
           <TabsList className="w-full">
-            <TabsTrigger value="inspection" className="flex-1">
-              <ClipboardList className="size-4" /> Inspection
-            </TabsTrigger>
-            <TabsTrigger value="hygiene" className="flex-1">
-              <Sparkles className="size-4" /> Hygiene
-            </TabsTrigger>
+            {/* Hygiene is a report of its own; the inspection tab is the contamination record */}
+            {hygiene ? (
+              <TabsTrigger value="hygiene" className="flex-1">
+                <Sparkles className="size-4" /> Hygiene
+              </TabsTrigger>
+            ) : (
+              <TabsTrigger value="inspection" className="flex-1">
+                <ClipboardList className="size-4" /> Inspection
+              </TabsTrigger>
+            )}
             <TabsTrigger value="maintenance" className="flex-1">
               <Wrench className="size-4" /> Maintenance
             </TabsTrigger>
           </TabsList>
 
-          <TabsContent value="inspection" className="mt-2">
+          <TabsContent value="inspection" className="mt-2" hidden={hygiene}>
             <DetailList
               rows={[
                 { label: "Last Inspection", value: row.lastInspection, always: true },
@@ -158,7 +180,7 @@ export function AssetReportPanel({ row, onClose }: { row: ReportRow; onClose: ()
             />
           </TabsContent>
 
-          <TabsContent value="hygiene" className="mt-2">
+          <TabsContent value="hygiene" className="mt-2" hidden={!hygiene}>
             {/* Point specific, and no score: the client was explicit that the
                 hygiene report carries none — see report-data.ts */}
             <ul className="text-sm">
@@ -220,7 +242,7 @@ export function AssetReportPanel({ row, onClose }: { row: ReportRow; onClose: ()
           className="w-full"
           onClick={() => toast.info("Report generation is a Phase-1 server job; nothing is produced on the tablet yet.")}
         >
-          <Download /> Download Report (PDF)
+          <Download /> Download {hygiene ? "Hygiene" : "Contamination"} Report (PDF)
         </Button>
       </div>
     </div>

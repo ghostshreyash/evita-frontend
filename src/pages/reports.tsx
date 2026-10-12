@@ -209,6 +209,7 @@ function ContaminationReport({
 
   return (
     <ReportTable
+      report="contamination"
       title="Assets (Contamination Analysis)"
       rows={rows}
       accessors={accessors}
@@ -294,6 +295,7 @@ function HygieneReport({
       </p>
 
       <ReportTable
+        report="hygiene"
         title="Asset Hygiene Details"
         rows={rows}
         accessors={accessors}
@@ -347,6 +349,7 @@ function ReportTable({
   kpis,
   head,
   cells,
+  report,
 }: {
   title: string
   rows: ReportRow[]
@@ -359,6 +362,8 @@ function ReportTable({
   /** The columns that differ between the two reports */
   head: (sort: Sort<Column>, onSort: (c: Column) => void) => React.ReactNode
   cells: (row: ReportRow) => React.ReactNode
+  /** Which report this table is, so the drawer opens on the matching record */
+  report: "contamination" | "hygiene"
 }) {
   /* Asset ID ascending by default, which is the order the client asked for */
   const [sort, setSort] = useState<Sort<Column>>(null)
@@ -491,7 +496,7 @@ function ReportTable({
           <SheetDescription className="sr-only">
             The contamination and hygiene record for the selected asset.
           </SheetDescription>
-          {selected ? <AssetReportPanel row={selected} onClose={onClose} /> : null}
+          {selected ? <AssetReportPanel row={selected} from={report} onClose={onClose} /> : null}
         </SheetContent>
       </Sheet>
     </div>
