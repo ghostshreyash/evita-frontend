@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react"
-import { ChevronRight, Factory, Headset, MessageCircleQuestion, Network, Search, TriangleAlert, UserRound, X } from "lucide-react"
+import { Clock, ChevronRight, Factory, Headset, Mail, MessageCircleQuestion, Network, Phone, Search, TriangleAlert, UserRound, X } from "lucide-react"
 import { cn } from "cn"
 
 import { PageHeader } from "@/components/common/page-header"
@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { faqCategories, faqEntries, searchFaq } from "@/data/faq"
 import { elpremarProfileFor } from "@/data/elpremar-data"
+import { olivineSupport } from "@/data/support"
 import { control } from "@/lib/data-table"
 import { useCurrentElpremar } from "@/lib/me"
 import { openPanel } from "@/lib/ui-store"
@@ -19,13 +20,15 @@ const SUPPORT = "Support & Helpdesk"
  * Who to contact, and the answers before anyone has to be contacted.
  *
  * The FAQ is the client's own `Olivine_APP_AI_Chatbot_FAQ_` sheet, unedited —
- * see data/faq.ts. It is browsed in two steps rather than as one list of 278
- * questions: the categories first, then the questions inside one. Searching
- * skips straight to the answers, across every category at once.
+ * see data/faq.ts, which holds the rows the sheet marks for EVITA. It is
+ * browsed in two steps rather than as one long list: the categories first, then
+ * the questions inside one. Searching skips straight to the answers, across
+ * every category at once.
  *
- * No support telephone number or address is shown, because no OLIVINE document
- * gives one. The sheet's own answer to "what if the chatbot cannot solve my
- * problem" is to raise a ticket, so that is what this page offers.
+ * The support line is a placeholder: no OLIVINE document gives a number or
+ * hours - see data/support.ts. The sheet's own answer to "what if the chatbot
+ * cannot solve my problem" is to raise a ticket, so the ticket is still the
+ * action the page leads with.
  */
 export function ContactPage() {
   const me = useCurrentElpremar()
@@ -73,16 +76,37 @@ export function ContactPage() {
           <Button className="h-14 text-base" onClick={() => openPanel({ kind: "issue" })}>
             <TriangleAlert /> Report an Issue
           </Button>
-          <Button variant="outline" className="h-14 text-base" onClick={() => setCategory(SUPPORT)}>
-            <MessageCircleQuestion /> Support questions
-            <span className="rounded-full bg-muted px-1.5 text-xs tabular-nums">{support.length}</span>
-          </Button>
+          {/* Only when the sheet still has that topic for EVITA */}
+          {support.length ? (
+            <Button variant="outline" className="h-14 text-base" onClick={() => setCategory(SUPPORT)}>
+              <MessageCircleQuestion /> Support questions
+              <span className="rounded-full bg-muted px-1.5 text-xs tabular-nums">{support.length}</span>
+            </Button>
+          ) : null}
         </div>
-        {/* TODO: no OLIVINE document gives a support number or address; add them here once they exist */}
-        <p className="mt-3 text-xs text-muted-foreground">
-          A support telephone number and address have not been published for the field app. Until they are, a ticket is
-          the way through.
-        </p>
+        {/* Placeholder details until OLIVINE publish theirs — see data/support.ts */}
+        <dl className="mt-3 divide-y border-t">
+          <Line
+            icon={Phone}
+            label="Support line"
+            value={
+              <a href={`tel:${olivineSupport.phoneDial}`} className="tabular-nums text-primary">
+                {olivineSupport.phone}
+              </a>
+            }
+          />
+          <Line
+            icon={Mail}
+            label="Support email"
+            value={
+              <a href={`mailto:${olivineSupport.email}`} className="text-primary">
+                {olivineSupport.email}
+              </a>
+            }
+          />
+          <Line icon={Clock} label="Hours" value={olivineSupport.hours} />
+        </dl>
+        <p className="mt-2 text-xs text-muted-foreground">{olivineSupport.note}</p>
       </section>
 
       {/* ---------- The reporting line, from the register ---------- */}
@@ -191,7 +215,7 @@ export function ContactPage() {
   )
 }
 
-/** One row of the reporting line */
+/** One label-and-value row, in the reporting line and the support details */
 function Line({
   icon: Icon,
   label,
@@ -199,7 +223,7 @@ function Line({
 }: {
   icon: React.ComponentType<{ className?: string }>
   label: string
-  value: string
+  value: React.ReactNode
 }) {
   return (
     <div className="flex min-h-12 items-center gap-3 py-2 text-sm">

@@ -2,10 +2,13 @@
  * The help the ELPREMAR can read on the tablet, transcribed from the client's
  * `Olivine_APP_AI_Chatbot_FAQ_` sheet.
  *
- * The sheet answers for all three products; only the rows marked EVITA, shared
- * with EVITA, or common to every app are here - 278 of 321. The
- * wording is the client's, unedited: these are the answers OLIVINE approved, and
- * the same rows will feed the Phase-2 chatbot, so the two must not drift.
+ * The sheet answers for all three products. Only the rows it marks for EVITA
+ * are here - 254 of 321: EVITA on its own, or EVITA shared with
+ * another app. Rows marked "All apps" are not EVITA rows and are left out, which
+ * is why there is no Login or Troubleshooting topic.
+ *
+ * The wording is the client's, unedited: these are the answers OLIVINE approved,
+ * and the same rows will feed the Phase-2 chatbot, so the two must not drift.
  *
  * Generated from the sheet rather than typed. Re-run the export and regenerate
  * when the sheet changes; do not edit the entries by hand.
@@ -23,20 +26,11 @@ export type FaqEntry = {
 
 /** Categories in the order the sheet lists them, so related questions stay together */
 export const faqCategories = [
-  "Login & Access",
-  "Roles & Permissions",
-  "Security",
   "Asset Onboarding",
   "Inspection Workflow",
   "Offline & Sync",
   "Support & Helpdesk",
-  "Data Quality",
-  "Safety & Compliance",
-  "General",
   "Device & App",
-  "Asset Lifecycle",
-  "Troubleshooting",
-  "Reports & Analytics",
   "Technical Basics",
   "Asset Technical Parameters – ACB (Air Circuit Breaker)",
   "Asset Technical Parameters – AMF Panel",
@@ -92,78 +86,6 @@ export function searchFaq(entries: readonly FaqEntry[], query: string): FaqEntry
 }
 
 export const faqEntries: FaqEntry[] = [
-  {
-    id: "FAQ-001",
-    category: "Login & Access",
-    question: "How do I log in to the APP?",
-    answer: "Open the application assigned to your role and enter your authorized username and password. Use the correct environment and application: EVITA is used by field personnel for inspections; EMMSE-E is the enterprise-facing application; OCC is used for global administration and monitoring. If your credentials do not work, confirm the username, check keyboard/caps-lock settings, and contact your administrator or support team. Never share your password in the chatbot.",
-    keywords: [
-      "login",
-      "sign in",
-      "access app",
-      "username",
-      "password"
-    ]
-  },
-  {
-    id: "FAQ-002",
-    category: "Login & Access",
-    question: "What should I do if I forget my password?",
-    answer: "Use the approved password-reset process available in your application, if enabled. If self-service reset is not available, contact your enterprise administrator or OCC support team to verify your identity and request a reset. The chatbot should never ask you to disclose your existing password or send a password in plain text.",
-    keywords: [
-      "forgot password",
-      "reset password",
-      "password recovery"
-    ]
-  },
-  {
-    id: "FAQ-003",
-    category: "Login & Access",
-    question: "My account is locked or I cannot access the application. What should I do?",
-    answer: "Stop repeated login attempts. Verify that you are using the correct application and username, then contact your administrator or support team. Provide the application name, username or user ID (never the password), approximate time of failure, and any error message or screenshot that does not expose sensitive information.",
-    keywords: [
-      "account locked",
-      "login blocked",
-      "access denied",
-      "unable to login"
-    ]
-  },
-  {
-    id: "FAQ-004",
-    category: "Roles & Permissions",
-    question: "Why can I not see a menu or feature?",
-    answer: "Menus and actions depend on your assigned role and permissions. EVITA supports field inspection workflows; EMMSE-E supports enterprise operations; OCC supports command-centre administration and monitoring. If a required feature is missing, ask your administrator to verify your role, enterprise/plant assignment, and access permissions. Do not assume a missing menu is a system failure.",
-    keywords: [
-      "menu missing",
-      "no access",
-      "permission",
-      "role",
-      "feature unavailable"
-    ]
-  },
-  {
-    id: "FAQ-006",
-    category: "Security",
-    question: "Can I share my login credentials with a colleague?",
-    answer: "No. Each authorized user should use their own account so that actions, inspections, approvals, and support activities remain traceable. Request a separate account for the colleague through the authorized onboarding process.",
-    keywords: [
-      "share login",
-      "common account",
-      "colleague access"
-    ]
-  },
-  {
-    id: "FAQ-007",
-    category: "Security",
-    question: "What information should I avoid sharing with the chatbot?",
-    answer: "Do not share passwords, authentication codes, private keys, or unnecessary personal or confidential information. Share only the operational details needed to troubleshoot the issue, such as application/module, asset ID, ticket ID, error text, and approximate time. Follow your organization's data-handling policy for photographs and plant information.",
-    keywords: [
-      "privacy",
-      "sensitive information",
-      "password",
-      "confidential data"
-    ]
-  },
   {
     id: "FAQ-017",
     category: "Asset Onboarding",
@@ -477,87 +399,6 @@ export const faqEntries: FaqEntry[] = [
     ]
   },
   {
-    id: "FAQ-071",
-    category: "Data Quality",
-    question: "How do I report incorrect enterprise, plant, or asset information?",
-    answer: "Use the approved edit or correction workflow if your role permits it. Otherwise, raise a support ticket with the record type, identifier, incorrect value, correct value, and supporting context. Do not create a duplicate record to bypass a correction restriction. Changes to important identifiers should be handled by an authorized administrator.",
-    keywords: [
-      "incorrect data",
-      "wrong location",
-      "wrong enterprise",
-      "correction"
-    ]
-  },
-  {
-    id: "FAQ-072",
-    category: "Data Quality",
-    question: "Why is some information blank?",
-    answer: "A blank field may mean the information was not entered, has not synchronized, is not applicable, is hidden by role permissions, or is not available in the current version. Check the record, required fields, sync status, and access rights. Report persistent gaps with the relevant record ID and field name.",
-    keywords: [
-      "blank field",
-      "missing information",
-      "data not showing"
-    ]
-  },
-  {
-    id: "FAQ-073",
-    category: "Safety & Compliance",
-    question: "Can the chatbot tell me whether it is safe to work on electrical equipment?",
-    answer: "The chatbot can explain the application's workflow and point you to approved procedures, but it cannot authorize electrical work or replace a competent person's risk assessment. Follow site electrical safety rules, isolation/permit procedures, PPE requirements, manufacturer instructions, and applicable regulations. If there is uncertainty or an immediate hazard, stop and contact the responsible authorized person.",
-    keywords: [
-      "safe to work",
-      "electrical safety",
-      "isolation",
-      "permit to work"
-    ]
-  },
-  {
-    id: "FAQ-074",
-    category: "Safety & Compliance",
-    question: "What should I do if I suspect an electrical fire or immediate danger?",
-    answer: "Follow the site's emergency response procedure immediately, alert authorized site emergency personnel, and keep people away from the hazard. Do not approach, touch, open, or attempt to clean or repair unsafe equipment. Contact the appropriate emergency service according to site procedures. Do not wait for a chatbot response or support ticket.",
-    keywords: [
-      "electrical fire",
-      "smoke",
-      "burning smell",
-      "emergency",
-      "danger"
-    ]
-  },
-  {
-    id: "FAQ-075",
-    category: "General",
-    question: "What is the difference between EVITA, EMMSE-E, EMMSE 0, and OCC?",
-    answer: "EVITA is the tablet-based field application for authorized personnel to select assets and perform supported inspection/testing workflows, including offline capture where enabled. EMMSE-E is the enterprise-facing web application for enterprise asset information, reports, analytics, and relevant workflows. EMMSE 0 is the separate application planned for Olivine Global's retail-sector inspection and maintenance operations. OCC is the global command centre for administration, monitoring, alerts, enterprise/plant status, activity visibility, and support; it should not host operational inspection/maintenance pages under the agreed scope.",
-    keywords: [
-      "EVITA vs EMMSE",
-      "OCC difference",
-      "application purpose"
-    ]
-  },
-  {
-    id: "FAQ-076",
-    category: "General",
-    question: "Why is a feature described in an FAQ not visible in my application?",
-    answer: "The feature may depend on your role, application, rollout status, configuration, or software version. Confirm that you are in the correct application and that your role has permission. If it should be available, raise a support ticket with the feature name, application, user role, and screenshot. The knowledge base should be updated whenever approved workflows change.",
-    keywords: [
-      "feature unavailable",
-      "not in my app",
-      "different version"
-    ]
-  },
-  {
-    id: "FAQ-077",
-    category: "General",
-    question: "How can I report an incorrect chatbot answer?",
-    answer: "Provide the question you asked, the chatbot's answer, the correct approved information if known, and the application/module involved. Do not include credentials or sensitive data. Route the feedback to the knowledge-base owner for review and approval before changing a published answer.",
-    keywords: [
-      "wrong chatbot answer",
-      "FAQ feedback",
-      "incorrect response"
-    ]
-  },
-  {
     id: "FAQ-078",
     category: "Device & App",
     question: "EVITA cannot open the camera. What should I check?",
@@ -580,61 +421,6 @@ export const faqEntries: FaqEntry[] = [
     ]
   },
   {
-    id: "FAQ-084",
-    category: "Asset Lifecycle",
-    question: "How is an asset's inspection or maintenance due date determined?",
-    answer: "The due date should be calculated from the approved inspection or preventive-maintenance schedule and the relevant recorded dates. Maintenance intervals may depend on asset type and AC/non-AC environment. If the displayed date conflicts with the approved schedule, provide the Asset ID, last activity date, environment, and schedule reference for review.",
-    keywords: [
-      "inspection due date",
-      "maintenance due date",
-      "next service"
-    ]
-  },
-  {
-    id: "FAQ-085",
-    category: "General",
-    question: "How do I request a new feature or change to the APP?",
-    answer: "Raise a support ticket or use the approved change-request process. Describe the business problem, intended users, current limitation, proposed outcome, and urgency. Feature requests should be reviewed by the product owner and approved through the project change-control process before being treated as committed functionality.",
-    keywords: [
-      "feature request",
-      "enhancement",
-      "change request"
-    ]
-  },
-  {
-    id: "FAQ-086",
-    category: "General",
-    question: "What should I do if a record seems to have disappeared?",
-    answer: "First verify filters, date range, enterprise/plant selection, permissions, and sync status. Do not recreate the record until you have checked whether it exists under another reference. Raise a ticket with the record ID if known, approximate creation date, user role, and last known status so the support team can investigate audit history.",
-    keywords: [
-      "record disappeared",
-      "deleted record",
-      "missing record"
-    ]
-  },
-  {
-    id: "FAQ-087",
-    category: "General",
-    question: "What if the app uses a term I do not understand?",
-    answer: "Ask the chatbot to explain the term in the context of the current screen. For technical electrical terms, use the approved glossary or asset-specific procedure. If a field label is ambiguous, share the screen name and exact label so the product team can clarify the definition and update the help content.",
-    keywords: [
-      "meaning of field",
-      "terminology",
-      "unclear label"
-    ]
-  },
-  {
-    id: "FAQ-088",
-    category: "Support & Helpdesk",
-    question: "Should I create a new ticket for the same ongoing issue?",
-    answer: "If a ticket already exists for the same issue, add information to that ticket or reference its ID when contacting support. Create a new ticket only when the issue is materially different or the support policy instructs you to do so. This helps avoid fragmented investigation and duplicate work.",
-    keywords: [
-      "duplicate ticket",
-      "same issue",
-      "existing ticket"
-    ]
-  },
-  {
     id: "FAQ-091",
     category: "Inspection Workflow",
     question: "Can I save an inspection and complete it later?",
@@ -654,72 +440,6 @@ export const faqEntries: FaqEntry[] = [
       "measurement units",
       "units",
       "wrong units"
-    ]
-  },
-  {
-    id: "FAQ-093",
-    category: "Troubleshooting",
-    question: "Can I refresh the page when something goes wrong?",
-    answer: "For web applications, first check whether there are unsaved changes. Save or record your work before refreshing, and avoid refreshing during a submission or upload. For EVITA, do not force-close or clear application data if offline records may be unsynchronized. If the problem repeats, capture the error and raise a ticket.",
-    keywords: [
-      "refresh page",
-      "reload app",
-      "unsaved changes"
-    ]
-  },
-  {
-    id: "FAQ-094",
-    category: "Troubleshooting",
-    question: "What should I do if the application asks for an update?",
-    answer: "Follow the organization's approved application-update process and use only authorized distribution channels. Before updating EVITA, confirm that offline records and images are synchronized or safely retained according to the approved procedure. If you are unsure whether an update is mandatory or compatible with the tablet, contact support.",
-    keywords: [
-      "app update",
-      "new version",
-      "upgrade app"
-    ]
-  },
-  {
-    id: "FAQ-095",
-    category: "Data Quality",
-    question: "What if an inspection or maintenance timestamp is incorrect?",
-    answer: "Do not manually alter timestamps unless the application provides an authorized correction workflow. Record the affected Asset ID, inspection or maintenance reference, displayed timestamp, expected context, and device time zone if relevant. Ask an authorized administrator or support team to investigate while preserving the audit trail.",
-    keywords: [
-      "wrong timestamp",
-      "date time incorrect",
-      "maintenance time"
-    ]
-  },
-  {
-    id: "FAQ-096",
-    category: "Reports & Analytics",
-    question: "Can I download or share an asset health report?",
-    answer: "Use the export or sharing options provided by your role and the deployed application. Before sharing, verify the recipient is authorized and the report contains only information they are permitted to receive. Follow company policy for storing or transmitting enterprise and asset information.",
-    keywords: [
-      "download report",
-      "share report",
-      "export PDF"
-    ]
-  },
-  {
-    id: "FAQ-098",
-    category: "Troubleshooting",
-    question: "The app says there is no connection. What should I do?",
-    answer: "Check whether the device is connected to the approved Wi-Fi or mobile network and whether other approved services can connect. For EVITA, continue only with workflows supported offline and preserve pending data for later sync. For OCC or EMMSE web access, retry after connectivity returns; if the issue persists, report the app, time, network context, and error.",
-    keywords: [
-      "no connection",
-      "internet error",
-      "network disconnected"
-    ]
-  },
-  {
-    id: "FAQ-099",
-    category: "General",
-    question: "Who should I contact for help?",
-    answer: "Use the in-app Helpdesk or Support Tickets function where available. Enterprise users may contact their designated enterprise administrator; ELPREMARs should follow their assigned operational support route; OCC users should follow the internal OCC support process. Include the relevant application, reference ID, and error details. Use emergency procedures for immediate safety risks.",
-    keywords: [
-      "contact support",
-      "helpdesk contact",
-      "who to call"
     ]
   },
   {
