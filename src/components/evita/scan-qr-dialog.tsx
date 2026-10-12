@@ -90,7 +90,6 @@ export function ScanQrDialog({ open, onOpenChange }: { open: boolean; onOpenChan
       stream?.getTracks().forEach((t) => t.stop())
     }
     // The camera starts once per opening; `answer` only records what was read
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, read])
 
   const retry = () => {
