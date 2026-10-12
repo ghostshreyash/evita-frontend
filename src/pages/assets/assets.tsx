@@ -4,7 +4,6 @@ import { ChevronRight, HardDrive, LayoutGrid, List, Plus, Search, SlidersHorizon
 import { cn } from "cn"
 
 import { PageHeader } from "@/components/common/page-header"
-import { ScanResult } from "@/components/assets/scan-result"
 import { ChipTabs, type ChipTab } from "@/components/common/chip-tabs"
 import { AssetPhoto } from "@/components/common/asset-photo"
 import { SortHead, TablePager } from "@/components/common/data-table"
@@ -64,10 +63,9 @@ export function AssetsPage() {
 
   // The dashboard's category tiles deep-link here, so that filter starts from the URL
   const [category, setCategory] = useState(params.get("category") ?? ANY)
-  /* A scanned label arrives as ?asset=<id> and lands in the search box, so the
-     code the camera read is visible and can be corrected if it misread */
-  const scanned = params.get("asset")
-  const [query, setQuery] = useState(scanned ?? "")
+  /* The scanner answers a code in its own dialog; "Search the register" from
+     there arrives as ?asset=<code> and lands in the search box */
+  const [query, setQuery] = useState(params.get("asset") ?? "")
   const [area, setArea] = useState(ANY)
   const [criticality, setCriticality] = useState(ANY)
   const [band, setBand] = useState(ANY)
@@ -143,13 +141,6 @@ export function AssetsPage() {
     setParams({}, { replace: true })
   }
 
-  /* A label can carry the Digital Asset ID, the plant's own tag, or the name */
-  const scannedAsset = useMemo(() => {
-    if (!scanned) return undefined
-    const code = scanned.trim().toLowerCase()
-    return register.find((a) => [a.id, a.tag, a.name].some((v) => v.toLowerCase() === code))
-  }, [register, scanned])
-
   const site = register[0]
 
   return (
@@ -166,18 +157,6 @@ export function AssetsPage() {
           </Button>
         }
       />
-
-      {/* What the scanner just read, before the register it was read against */}
-      {scanned ? (
-        <ScanResult
-          code={scanned}
-          asset={scannedAsset}
-          onDismiss={() => {
-            setQuery("")
-            setParams({}, { replace: true })
-          }}
-        />
-      ) : null}
 
       {/* Which site this register belongs to — EVITA shows one plant and no other */}
       <p className="mb-3 flex flex-wrap items-center gap-x-2 gap-y-0.5 rounded-xl bg-info-soft px-3 py-2 text-sm">
