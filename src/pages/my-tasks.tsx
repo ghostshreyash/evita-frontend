@@ -115,7 +115,15 @@ function MyTasks({ only }: { only?: JobKind }) {
   const [pageSize, setPageSize] = useState(10)
 
   /** The kind of work on view, before the status, date and search filters */
-  const scoped = useMemo(() => jobs.filter((j) => kind === "all" || j.kind === kind), [jobs, kind])
+  const scoped = useMemo(() => {
+    const mine = jobs.filter((j) => kind === "all" || j.kind === kind)
+    /*
+     * An inspection is never overdue. It is a visit the engineer starts when
+     * they get to the plant, not a job with a deadline attached, so a booking
+     * that has gone past is still simply open.
+     */
+    return only === "inspection" ? mine.map((j) => (j.field === "overdue" ? { ...j, field: "open" as const } : j)) : mine
+  }, [jobs, kind, only])
 
   /** Everything but the status filter, so the tab counts show what choosing one would give */
   const matched = useMemo(() => {
@@ -153,7 +161,9 @@ function MyTasks({ only }: { only?: JobKind }) {
 
   const tabs: ChipTab[] = [
     { value: "all", label: "All", count: matched.length },
-    ...fieldStatuses.map((s) => ({ value: s, label: fieldStatusLook[s].label, count: matched.filter((j) => j.field === s).length })),
+    ...fieldStatuses
+      .filter((s) => !(only === "inspection" && s === "overdue"))
+      .map((s) => ({ value: s, label: fieldStatusLook[s].label, count: matched.filter((j) => j.field === s).length })),
   ]
 
   const filtersOn = !!query || (!only && type !== "all") || status !== "all" || !!range?.from
@@ -359,17 +369,13 @@ function TaskCard({ job }: { job: Job }) {
  * happen to sit in it, so the card leads with the area and names the plant
  * under it. Beyond that it carries only the day and the booked hour - nothing
  * it cannot know yet.
+ *
+ * Nothing here is overdue: an inspection is started when the engineer gets to
+ * the plant, so a booking that has gone past is still simply open.
  */
 function VisitCard({ job }: { job: Job }) {
-  const overdue = isOverdue(job)
-
   return (
-    <li
-      className={cn(
-        "relative flex items-stretch overflow-hidden rounded-2xl bg-card shadow-xs ring-1 ring-foreground/10 transition-shadow hover:shadow-md focus-within:ring-2 focus-within:ring-primary",
-        overdue && "bg-critical-soft/40"
-      )}
-    >
+    <li className="relative flex items-stretch overflow-hidden rounded-2xl bg-card shadow-xs ring-1 ring-foreground/10 transition-shadow hover:shadow-md focus-within:ring-2 focus-within:ring-primary">
       <span aria-hidden className={cn("w-1.5 shrink-0", statusEdge[job.field])} />
 
       <div className="flex min-w-0 flex-1 flex-wrap items-center gap-3 p-3">
@@ -390,14 +396,13 @@ function VisitCard({ job }: { job: Job }) {
         </div>
 
         <div className="flex shrink-0 flex-col items-end gap-1.5">
-          <span className={cn("flex items-center gap-1.5 text-sm font-semibold whitespace-nowrap", overdue && "text-critical")}>
+          <span className="flex items-center gap-1.5 text-sm font-semibold whitespace-nowrap">
             <CalendarDays className="size-4" />
             {isToday(job.date) ? "Today" : format(parseDay(job.date), "d MMM yyyy")}
           </span>
-          <span className={cn("flex items-center gap-1.5 tabular-nums text-xs", overdue ? "text-critical" : "text-muted-foreground")}>
+          <span className="flex items-center gap-1.5 text-xs tabular-nums text-muted-foreground">
             <Clock className="size-3.5" />
             {slotLabel(job.slot)}
-            {overdue ? " · Overdue" : ""}
           </span>
           <JobStatusBadge job={job} />
           {/* Above the stretched link, so the action fires instead of opening it */}
