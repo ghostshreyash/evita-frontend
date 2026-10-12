@@ -11,6 +11,7 @@ import { areas, assetCategories, commissionDate, priorities } from "@/data/mock"
 import { assetCriticality, type AssetCriticality } from "@/data/master-data"
 import type { MaintenanceRow } from "@/data/occ-tables"
 import { slotLabel } from "@/data/occ-tables"
+import { instaProducts } from "@/data/insta"
 import { placeInPlant } from "@/data/plant-tree"
 
 type Priority = (typeof priorities)[number]
@@ -70,13 +71,12 @@ export type MaintenanceDetail = {
 export type TimeEntry = { start: string; end?: string }
 
 /** INSTA consumables an ELPREMAR can book against a job */
-export const products = [
-  { name: "INSTA CLEAN Contact Cleaner", unit: "ml" },
-  { name: "INSTA CLEAN Foam Spray", unit: "can" },
-  { name: "INSTA CLEAN Degreaser", unit: "L" },
-  { name: "INSTA SHIELD Insulation Coating", unit: "ml" },
-  { name: "INSTA DRY Moisture Absorber", unit: "kg" },
-]
+/**
+ * The three INSTA CLEAN products, as the client named them on 12-10-2026 -
+ * see data/insta.ts for which one an inspection calls for. Booked in litres,
+ * which is how the cleaning is costed.
+ */
+export const products = instaProducts.map((name) => ({ name, unit: "L" }))
 
 export const fireSystems = [
   "Aerosol fire suppression module (panel-mounted)",

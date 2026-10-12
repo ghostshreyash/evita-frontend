@@ -215,6 +215,29 @@ export const dustTypes = [
 /** Low / Medium / High, the scale the Asset Health Report shows */
 export type ContaminationLevel = "Low" | "Medium" | "High"
 
+/**
+ * What the panel is carrying, broken down the way the client reads it:
+ * "carbon bhi, dust bhi, corrosion bhi - high, medium, low" (12-10-2026).
+ *
+ * Read off the photographs by AI after sync, not recorded by hand, and
+ * weighted into the 70% the contamination assessment carries.
+ */
+export const contaminationKinds = ["Carbon / soot", "Dust", "Corrosion"] as const
+
+export type ContaminationKind = (typeof contaminationKinds)[number]
+
+export const contaminationSeverities = ["Low", "Medium", "High"] as const
+
+/** The worst of the three is the level the asset is reported at */
+export function worstContamination(
+  breakdown?: Partial<Record<ContaminationKind, ContaminationLevel>>
+): ContaminationLevel | undefined {
+  if (!breakdown) return undefined
+  const found = contaminationKinds.map((kind) => breakdown[kind]).filter(Boolean) as ContaminationLevel[]
+  if (!found.length) return undefined
+  return found.includes("High") ? "High" : found.includes("Medium") ? "Medium" : "Low"
+}
+
 /** Types that make even a thin layer serious, because they conduct or corrode */
 const severeTypes = new Set<string>(["Conductive / metallic dust", "Moisture / damp", "Chemical / corrosive"])
 
