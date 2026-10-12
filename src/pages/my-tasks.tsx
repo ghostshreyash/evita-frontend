@@ -75,17 +75,21 @@ const kinds: JobKind[] = ["inspection", "maintenance"]
  * seven-column table it used to be made that a scan across the screen. The
  * status tabs along the top do the work the KPI tiles used to.
  *
+ * `only` locks the screen to one kind of work, which is what the Inspection tab
+ * is: the same book with the Type filter already made and taken away. Nothing
+ * is removed from My Tasks itself — an inspection is on both.
+ *
  * The dashboard links here with `?status=` (Open, Overdue, In Progress,
  * Completed, Approved), `?type=` (inspection, maintenance) or `?date=today`,
  * which preset the filters.
  */
-export function MyTasksPage() {
+export function MyTasksPage({ only }: { only?: JobKind }) {
   // The dashboard can link here while My Tasks is already open; a new query string resets the filters
   const [params] = useSearchParams()
-  return <MyTasks key={params.toString()} />
+  return <MyTasks key={`${only ?? "all"}-${params.toString()}`} only={only} />
 }
 
-function MyTasks() {
+function MyTasks({ only }: { only?: JobKind }) {
   const jobs = useMyJobs()
   const [params] = useSearchParams()
 
@@ -102,12 +106,15 @@ function MyTasks() {
   })
   const [query, setQuery] = useState("")
   const [type, setType] = useState<JobKind | "all">(kinds.includes(initialType as JobKind) ? (initialType as JobKind) : "all")
+  /* A locked screen ignores both the filter and the query string: it only ever
+     shows its own kind of work */
+  const kind = only ?? type
   const [sort, setSort] = useState<SortKey>("status")
   const [page, setPage] = useState(1)
   const [pageSize, setPageSize] = useState(10)
 
   /** The kind of work on view, before the status, date and search filters */
-  const scoped = useMemo(() => jobs.filter((j) => type === "all" || j.kind === type), [jobs, type])
+  const scoped = useMemo(() => jobs.filter((j) => kind === "all" || j.kind === kind), [jobs, kind])
 
   /** Everything but the status filter, so the tab counts show what choosing one would give */
   const matched = useMemo(() => {
@@ -148,7 +155,7 @@ function MyTasks() {
     ...fieldStatuses.map((s) => ({ value: s, label: fieldStatusLook[s].label, count: matched.filter((j) => j.field === s).length })),
   ]
 
-  const filtersOn = !!query || type !== "all" || status !== "all" || !!range?.from
+  const filtersOn = !!query || (!only && type !== "all") || status !== "all" || !!range?.from
   const reset = (fn: () => void) => {
     fn()
     setPage(1)
@@ -156,7 +163,15 @@ function MyTasks() {
 
   return (
     <div>
-      <PageHeader title="My Tasks" description="Your assigned inspection and maintenance tasks." breadcrumbs={[{ label: "My Tasks" }]} />
+      <PageHeader
+        title={only ? `${jobKindLook[only].long}s` : "My Tasks"}
+        description={
+          only
+            ? `Everything assigned to you for ${jobKindLook[only].label.toLowerCase()}. They are on My Tasks too.`
+            : "Your assigned inspection and maintenance tasks."
+        }
+        breadcrumbs={[{ label: only ? `${jobKindLook[only].long}s` : "My Tasks" }]}
+      />
 
       {/* ---------- Search, then the filters as chips ---------- */}
       <div className="mb-3 flex flex-wrap items-center gap-2">
@@ -170,12 +185,15 @@ function MyTasks() {
             className={cn(control, "bg-card pl-9")}
           />
         </div>
-        <FilterSelect
-          label="Type"
-          value={type}
-          onChange={(v) => reset(() => setType(v as typeof type))}
-          options={kinds.map((k) => ({ value: k, label: jobKindLook[k].long }))}
-        />
+        {/* No Type filter on a locked screen — the lock is the filter */}
+        {only ? null : (
+          <FilterSelect
+            label="Type"
+            value={type}
+            onChange={(v) => reset(() => setType(v as typeof type))}
+            options={kinds.map((k) => ({ value: k, label: jobKindLook[k].long }))}
+          />
+        )}
         <DateRangeFilter label="Due" range={range} onApply={(r) => reset(() => setRange(r))} />
         <Select value={sort} onValueChange={(v) => setSort(v as SortKey)}>
           <SelectTrigger aria-label="Sort tasks" className={cn(control, "w-auto min-w-36 bg-card")}>

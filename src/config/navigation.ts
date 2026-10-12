@@ -1,4 +1,4 @@
-import { ClipboardList, FileText, HardDrive, LayoutDashboard, type LucideIcon } from "lucide-react"
+import { ClipboardCheck, ClipboardList, FileText, HardDrive, LayoutDashboard, type LucideIcon } from "lucide-react"
 
 export type NavItem = {
   title: string
@@ -16,13 +16,15 @@ export type NavItem = {
  * EVITA sidebar — the field engineer's app, not the command centre.
  *
  * Mirrors `evitaNavigation` in occ-frontend's `src/config/navigation.ts`, minus
- * the inspection and maintenance queues: on the tablet both are My Tasks
- * narrowed by task type, so My Tasks carries them through its Type filter. There the sections sit under `/evita` because OCC and EVITA share
+ * the maintenance queue: on the tablet it is My Tasks narrowed by task type,
+ * which My Tasks carries through its Type filter. Inspections have a section of
+ * their own because that is what an ELPREMAR is sent out to do most days. There the sections sit under `/evita` because OCC and EVITA share
  * one deployment; here EVITA is the whole app, so they sit at the root.
  */
 export const navigation: NavItem[] = [
   { title: "Dashboard", path: "/", icon: LayoutDashboard },
   { title: "Assets", path: "/assets", icon: HardDrive },
   { title: "My Tasks", path: "/my-tasks", icon: ClipboardList },
+  { title: "Inspections", path: "/inspections", icon: ClipboardCheck },
   { title: "Reports", path: "/reports", icon: FileText },
 ]

@@ -1,5 +1,5 @@
 import { NavLink, useLocation } from "react-router"
-import { ClipboardList, FileText, HardDrive, LayoutDashboard, QrCode, type LucideIcon } from "lucide-react"
+import { ClipboardCheck, ClipboardList, FileText, HardDrive, LayoutDashboard, QrCode, type LucideIcon } from "lucide-react"
 import { cn } from "cn"
 
 import { openPanel } from "@/lib/ui-store"
@@ -20,6 +20,9 @@ const tabs: Tab[] = [
   { path: "/", title: "Home", icon: LayoutDashboard },
   { path: "/assets", title: "Assets", icon: HardDrive },
   { path: "/my-tasks", title: "Tasks", icon: ClipboardList },
+  /* The inspection half of the book on its own tab: it is what an ELPREMAR is
+     sent out to do most days, and My Tasks still carries it as well */
+  { path: "/inspections", title: "Inspection", icon: ClipboardCheck },
   { path: "/reports", title: "Reports", icon: FileText },
 ]
 
@@ -28,16 +31,20 @@ const under = (current: string, path: string) =>
 
 export function TabBar() {
   const { pathname } = useLocation()
-  // Work still needing the engineer's hands, as a count on Tasks
-  const open = useMyJobs().filter((j) => actionFor(j) !== "view").length
-  const [left, right] = [tabs.slice(0, 2), tabs.slice(2)]
+  // Work still needing the engineer's hands, as a count on Tasks and on Inspection
+  const waiting = useMyJobs().filter((j) => actionFor(j) !== "view")
+  const open = waiting.length
+  const openInspections = waiting.filter((j) => j.kind === "inspection").length
+  // Fewer on the left, so the raised scanner sits just before the work tabs
+  const split = Math.floor(tabs.length / 2)
+  const [left, right] = [tabs.slice(0, split), tabs.slice(split)]
 
   return (
     <nav
       aria-label="Sections"
       className="fixed inset-x-0 bottom-0 z-30 border-t bg-card pb-[env(safe-area-inset-bottom)] shadow-[0_-2px_12px_rgb(0_0_0/0.06)]"
     >
-      <ul className="mx-auto flex max-w-2xl items-stretch">
+      <ul className="mx-auto flex max-w-3xl items-stretch">
         {left.map((tab) => (
           <Item key={tab.path} tab={tab} active={under(pathname, tab.path)} />
         ))}
@@ -54,7 +61,12 @@ export function TabBar() {
         </li>
 
         {right.map((tab) => (
-          <Item key={tab.path} tab={tab} active={under(pathname, tab.path)} badge={tab.path === "/my-tasks" ? open : 0} />
+          <Item
+            key={tab.path}
+            tab={tab}
+            active={under(pathname, tab.path)}
+            badge={tab.path === "/my-tasks" ? open : tab.path === "/inspections" ? openInspections : 0}
+          />
         ))}
       </ul>
     </nav>
@@ -68,7 +80,7 @@ function Item({ tab, active, badge = 0 }: { tab: Tab; active: boolean; badge?: n
         to={tab.path}
         end={tab.path === "/"}
         className={cn(
-          "relative flex min-h-16 flex-col items-center justify-center gap-0.5 px-1 text-xs font-medium",
+          "relative flex min-h-16 flex-col items-center justify-center gap-0.5 px-0.5 text-[0.7rem] font-medium sm:text-xs",
           active ? "text-primary" : "text-muted-foreground"
         )}
       >

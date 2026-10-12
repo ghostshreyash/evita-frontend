@@ -20,7 +20,7 @@ import { TaskPage } from "@/pages/task"
 import { ComingSoonPage } from "@/pages/coming-soon"
 
 /** Sidebar sections with a real screen; the rest render a placeholder */
-const built = new Set(["/", "/assets", "/my-tasks", "/reports"])
+const built = new Set(["/", "/assets", "/my-tasks", "/inspections", "/reports"])
 
 /*
  * There is no Register screen: ELPREMAR accounts are created by OLIVINE in the
@@ -49,6 +49,8 @@ export const router = createBrowserRouter([
           { path: "reports", element: <ReportsPage /> },
           { path: "my-tasks", element: <MyTasksPage /> },
           { path: "my-tasks/:id", element: <TaskPage /> },
+          /* The same book, locked to inspections; a task opens on its My Tasks route */
+          { path: "inspections", element: <MyTasksPage only="inspection" /> },
           /* Reached from the avatar in the top bar, not from the tab bar */
           { path: "more", element: <MorePage /> },
           // Remaining sidebar entries show a placeholder until their screens are built
