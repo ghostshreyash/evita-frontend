@@ -4,10 +4,12 @@ import { Info } from "lucide-react"
 import { StepCard } from "@/components/common/wizard"
 import { DetailList, DetailPanel } from "@/components/common/detail-list"
 import { CategoryIcon } from "@/components/common/category-icon"
+import { SelectField } from "@/components/form/fields"
 import { Field, FieldLabel } from "@/components/ui/field"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { parametersFor, unitFor, unitKeyOf, type ParamSpec } from "@/data/asset-parameters"
+import { cleaningIntervalMonths, environmentNote, installEnvironments } from "@/data/maintenance-schedule"
 import type { AssetFormValues } from "@/pages/assets/schemas"
 
 /**
@@ -50,6 +52,25 @@ export function StepTechnical({ form }: { form: UseFormReturn<AssetFormValues> }
           {specs.map((spec) => (
             <ParamField key={spec.key} spec={spec} answers={answers} onChange={set} />
           ))}
+        </div>
+
+        {/* Not a rating, but asked for here because it is about the asset and
+            decides how often it is cleaned */}
+        <div className="mt-4 border-t pt-4">
+          <SelectField
+            control={form.control}
+            name="environment"
+            label="Installation Environment"
+            required
+            options={installEnvironments}
+            placeholder="Where does this asset stand?"
+            description={
+              values.environment
+                ? `${environmentNote[values.environment as (typeof installEnvironments)[number]]} \u2014 cleaned every ${cleaningIntervalMonths(values.category, values.environment)} months`
+                : "Decides how often the asset is scheduled for cleaning"
+            }
+            className="max-w-md"
+          />
         </div>
       </StepCard>
 

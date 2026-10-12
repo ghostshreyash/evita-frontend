@@ -1,7 +1,8 @@
 import { useNavigate } from "react-router"
-import { ClipboardCheck, MapPin, Play, SearchX, SquareArrowOutUpRight } from "lucide-react"
+import { MapPin, SearchX, SquareArrowOutUpRight } from "lucide-react"
 import { cn } from "cn"
 
+import { StartInspection } from "@/components/assets/start-inspection"
 import { AssetPhoto } from "@/components/common/asset-photo"
 import { CategoryIcon } from "@/components/common/category-icon"
 import { Badge } from "@/components/ui/badge"
@@ -9,10 +10,7 @@ import { Button } from "@/components/ui/button"
 import { healthBandFor } from "@/data/master-data"
 import { criticalityTone } from "@/data/occ-tables"
 import type { AssetRecord } from "@/data/asset-data"
-import { useCurrentElpremar } from "@/lib/me"
-import { startJob } from "@/lib/start-job"
 import { healthStatus } from "@/lib/status"
-import { actionFor, categoryFor, useMyJobs } from "@/lib/work"
 
 /**
  * What a scanned label comes back as, inside the scanner itself: the asset in
@@ -73,7 +71,7 @@ export function ScanResult({
   return (
     <div className="space-y-3">
       <AssetBrief asset={asset} />
-      <StartInspection asset={asset} onClose={onClose} />
+      <StartInspection asset={asset} onLeave={onClose} />
       <div className="grid gap-2 sm:grid-cols-2">
         <Button variant="outline" className="h-12" onClick={onRetry}>
           Scan another
@@ -131,63 +129,6 @@ function AssetBrief({ asset }: { asset: AssetRecord }) {
         </span>
         {health ? <span className="text-sm font-bold tabular-nums">{asset.health}/100</span> : null}
       </div>
-    </div>
-  )
-}
-
-/**
- * The reason the label was scanned.
- *
- * An inspection is assigned by EMMS-E, never raised from the tablet, so the
- * button starts the one that is already on the engineer's book for this kind
- * of asset. With nothing assigned it says so rather than pretending.
- *
- * TODO: there is no asset id on a task yet. The mock book names its assets
- * loosely ("LT Panel - Block A") while the register names them by series ("LT
- * Panel - 01"), and the two sit at different plants, so the only link that
- * holds is the asset category. Match on the asset id once the API carries one.
- */
-function StartInspection({ asset, onClose }: { asset: AssetRecord; onClose: () => void }) {
-  const navigate = useNavigate()
-  const me = useCurrentElpremar()
-  const jobs = useMyJobs()
-
-  const job = jobs.find((j) => j.kind === "inspection" && actionFor(j) !== "view" && categoryFor(j.asset) === asset.category)
-
-  if (!job) {
-    return (
-      <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl bg-muted/50 px-3 py-2.5">
-        <p className="text-sm text-muted-foreground">No inspection is assigned to you for this asset.</p>
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => {
-            onClose()
-            navigate("/inspections")
-          }}
-        >
-          <ClipboardCheck /> Inspection tasks
-        </Button>
-      </div>
-    )
-  }
-
-  const running = actionFor(job) === "continue"
-  return (
-    <div>
-      <Button
-        className="h-14 w-full text-base font-semibold shadow-md shadow-primary/25"
-        onClick={() => {
-          if (!running) startJob(job, me.name)
-          onClose()
-          navigate(`/my-tasks/${job.id}`)
-        }}
-      >
-        <Play className="fill-current" /> {running ? "Continue Inspection" : "Start Inspection"}
-      </Button>
-      <p className="mt-1.5 text-center text-xs text-muted-foreground">
-        <span className="tabular-nums font-medium">{job.id}</span> · {job.activity}
-      </p>
     </div>
   )
 }

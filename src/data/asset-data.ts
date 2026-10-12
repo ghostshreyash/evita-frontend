@@ -19,6 +19,7 @@ import {
   type AssetCriticality,
 } from "@/data/master-data"
 import { parametersFor } from "@/data/asset-parameters"
+import { installEnvironments } from "@/data/maintenance-schedule"
 import { elpremarRecords } from "@/data/elpremar-data"
 import { enterpriseRecords, profileFor, type PlantProfile } from "@/data/occ-tables"
 
@@ -55,12 +56,17 @@ export type AssetProfile = {
     area: string
     department: string
     subDepartment: string
-      category: string
+    category: string
     tag: string
     description: string
     /** The asset's own coordinates, defaulting to the plant's */
     latitude: string
     longitude: string
+    /**
+     * Controlled / AC or Uncontrolled / non-AC. Decides how often the asset is
+     * scheduled for cleaning - see data/maintenance-schedule.ts.
+     */
+    environment: string
   }
   /**
    * The electrical specification, as the asset type defines it. Resolved to
@@ -176,6 +182,8 @@ export function assetProfileFor(a: AssetRecord): AssetProfile {
       description: `${a.category} — ${a.tag}`,
       latitude: plant?.latitude ?? "0.0000",
       longitude: plant?.longitude ?? "0.0000",
+      // Roughly a third of a plant's assets sit in an air-conditioned room
+      environment: installEnvironments[s % 3 === 0 ? 0 : 1],
     },
     parameters: seededParameters(a, s),
     documents: [

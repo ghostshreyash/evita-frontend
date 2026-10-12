@@ -5,6 +5,7 @@ import { ClipboardCheck, Wrench, type LucideIcon } from "lucide-react"
 import { useInspectionDetails, useInspectionRows } from "@/data/inspection-store"
 import { useMaintenanceDetails, useMaintenanceRows, useStartedMaintenance } from "@/data/maintenance-store"
 import type { Priority } from "@/data/occ-tables"
+import { categoryFor } from "@/lib/asset-category"
 import { useCurrentElpremar } from "@/lib/me"
 import type { WorkStatus } from "@/lib/status"
 
@@ -64,6 +65,18 @@ export type Job = {
   area: string
   /** Inspection the maintenance traces back to */
   inspectionId?: string
+}
+
+/**
+ * The inspection on the engineer's book for this asset, if there is one.
+ *
+ * TODO: there is no asset id on a task yet. The mock book names its assets
+ * loosely ("LT Panel - Block A") while the register names them by series ("LT
+ * Panel - 01"), and the two sit at different plants, so the only link that
+ * holds is the asset category. Match on the asset id once the API carries one.
+ */
+export function inspectionFor(jobs: Job[], asset: { category: string }) {
+  return jobs.find((j) => j.kind === "inspection" && actionFor(j) !== "view" && categoryFor(j.asset) === asset.category)
 }
 
 /** What the ELPREMAR can do with a job right now */
@@ -177,4 +190,4 @@ export function summarise(jobs: Job[]) {
   }
 }
 
-export { categoryFor } from "@/lib/asset-category"
+export { categoryFor }

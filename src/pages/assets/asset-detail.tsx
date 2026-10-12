@@ -1,6 +1,6 @@
 import { useMemo } from "react"
 import { Link, useNavigate, useParams } from "react-router"
-import { Activity, ArrowLeft, Building2, CircleDashed, FileText, Images, QrCode, Settings, TriangleAlert } from "lucide-react"
+import { Activity, ArrowLeft, Building2, CircleDashed, ClipboardCheck, FileText, Images, QrCode, Settings, TriangleAlert } from "lucide-react"
 import { cn } from "cn"
 
 import { PageHeader } from "@/components/common/page-header"
@@ -9,6 +9,7 @@ import { HealthDial } from "@/components/common/health-dial"
 import { DetailList, DetailPanel } from "@/components/common/detail-list"
 import { assetDetailRows, assetTechnicalRows } from "@/components/assets/asset-sections"
 import { AssetIdChip, AssetQrPanel, QrLabelPreview } from "@/components/assets/asset-qr"
+import { StartInspection } from "@/components/assets/start-inspection"
 import { CategoryIcon } from "@/components/common/category-icon"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -139,6 +140,14 @@ function AssetDetail({ asset, onBack }: { asset: AssetRecord; onBack: () => void
 
         <DetailPanel icon={Settings} title="Technical Details">
           <DetailList rows={assetTechnicalRows(profile)} />
+        </DetailPanel>
+
+        {/* Walk up to the asset, open its record, inspect it */}
+        <DetailPanel icon={ClipboardCheck} title="Inspect this asset">
+          <StartInspection asset={asset} />
+          <p className="mt-3 text-sm text-muted-foreground">
+            Scanning the label on the panel door opens this record and offers the same inspection.
+          </p>
         </DetailPanel>
 
         {/* ---------- The paperwork behind the ratings ---------- */}

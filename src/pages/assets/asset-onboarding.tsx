@@ -61,6 +61,7 @@ export function AssetOnboardingPage() {
       description: "",
       /* Filled in per asset type on step 2 - see data/asset-parameters.ts */
       parameters: {},
+      environment: "",
 
       // Pre-filled from the plant's own registered location, and editable on site
       latitude: site.plant.latitude,

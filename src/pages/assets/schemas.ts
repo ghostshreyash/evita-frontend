@@ -58,6 +58,14 @@ export const assetSchema = z.object({
    */
   parameters: z.record(z.string(), z.string()),
 
+  /*
+   * Where the asset stands. The client gave this on 12-10-2026: a controlled,
+   * air-conditioned room goes twelve months between cleanings and an open one
+   * six, so the cleaning schedule falls out of this answer rather than being
+   * typed - see data/maintenance-schedule.ts.
+   */
+  environment: required("Installation environment"),
+
   /* ---------- Step 3: Images & Documents ---------- */
   /* At least one photograph, per the onboarding sheet's Asset Photograph. What
      it shows and what it is called is the engineer's to decide. */
@@ -73,7 +81,7 @@ export const stepFields: (keyof AssetFormValues)[][] = [
     "enterprise", "plant", "department", "subDepartment", "area",
     "category", "tag", "description", "latitude", "longitude",
   ],
-  ["parameters"],
+  ["parameters", "environment"],
   ["images", "documents"],
   [],
 ]
