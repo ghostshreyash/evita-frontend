@@ -1,21 +1,8 @@
 import { useNavigate } from "react-router"
-import {
-  ChevronRight,
-  ClipboardCheck,
-  ClipboardList,
-  CloudCheck,
-  CloudUpload,
-  FileText,
-  Plus,
-  QrCode,
-  TriangleAlert,
-  type LucideIcon,
-} from "lucide-react"
+import { ChevronRight, ClipboardCheck, ClipboardList, Plus, QrCode, TriangleAlert, type LucideIcon } from "lucide-react"
 import { cn } from "cn"
 
-import { useInspectionDetails } from "@/data/inspection-store"
 import { openPanel } from "@/lib/ui-store"
-import { actionFor, useMyJobs } from "@/lib/work"
 
 /**
  * Everything the field needs, one tap from the home screen.
@@ -25,20 +12,13 @@ import { actionFor, useMyJobs } from "@/lib/work"
  * inspection to be startable from the front screen — "front screen pe ho
  * Start Inspection… usko layman form mein sabse easy rahega" (12-10-2026).
  *
- * Every card does something real. Where there is nothing to act on — no
- * inspection assigned, nothing waiting to sync — the card says so rather than
- * leading somewhere empty.
+ * Five, and every one of them does something. There is no Log Test Results
+ * card because recording readings is the inspection itself, and no Sync card
+ * because there is no button to press - records reach the server on their own,
+ * and the top bar already shows whether they have.
  */
 export function QuickActions() {
   const navigate = useNavigate()
-  const jobs = useMyJobs()
-  const details = useInspectionDetails()
-
-  /** The inspection already under way, if there is one */
-  const running = jobs.find((j) => j.kind === "inspection" && actionFor(j) === "continue")
-
-  /** Records held on the tablet that the server has not got yet */
-  const waiting = Object.values(details).filter((d) => d.sync && d.sync.state !== "synced").length
 
   const actions: Action[] = [
     {
@@ -65,14 +45,6 @@ export function QuickActions() {
       run: () => openPanel({ kind: "begin-inspection" }),
     },
     {
-      icon: FileText,
-      title: "Log Test Results",
-      detail: running ? `${running.id} · under way` : "No inspection is open",
-      tone: "bg-attention-soft text-attention",
-      run: running ? () => navigate(`/my-tasks/${running.id}`) : () => navigate("/inspections"),
-      quiet: !running,
-    },
-    {
       icon: TriangleAlert,
       title: "Report Issue",
       detail: "Report any equipment problem",
@@ -86,15 +58,6 @@ export function QuickActions() {
       tone: "bg-highlight-soft text-highlight",
       run: () => navigate("/my-tasks"),
     },
-    {
-      icon: waiting ? CloudUpload : CloudCheck,
-      title: "Offline & Sync",
-      detail: waiting ? `${waiting} record${waiting === 1 ? "" : "s"} held on this tablet` : "Everything has reached the server",
-      tone: waiting ? "bg-attention-soft text-attention" : "bg-healthy-soft text-healthy",
-      // No sync button to press: records go up on their own. The answers explain it.
-      run: () => navigate("/contact"),
-      quiet: !waiting,
-    },
   ]
 
   return (
@@ -103,7 +66,7 @@ export function QuickActions() {
         <h3 className="text-lg font-semibold text-brand-navy dark:text-foreground">Quick Actions</h3>
         <p className="text-sm text-muted-foreground">Everything you need for field work</p>
       </div>
-      <ul className="grid gap-2.5 sm:grid-cols-2 lg:grid-cols-4 2xl:grid-cols-7">
+      <ul className="grid gap-2.5 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-5">
         {actions.map((action) => (
           <li key={action.title}>
             <button
@@ -120,9 +83,7 @@ export function QuickActions() {
                 </span>
                 <ChevronRight className="size-4 shrink-0 text-muted-foreground" />
               </span>
-              <span className={cn("text-xs leading-snug", action.quiet ? "text-muted-foreground/70" : "text-muted-foreground")}>
-                {action.detail}
-              </span>
+              <span className="text-xs leading-snug text-muted-foreground">{action.detail}</span>
             </button>
           </li>
         ))}
@@ -137,6 +98,4 @@ type Action = {
   detail: string
   tone: string
   run: () => void
-  /** Nothing to act on; the card still leads somewhere sensible */
-  quiet?: boolean
 }
