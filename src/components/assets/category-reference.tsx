@@ -34,7 +34,7 @@ export function CategoryReference({
   const choose = (category: string) => (category === "Other" ? setOpen(true) : onSelect(category))
 
   return (
-    <div className={cn("rounded-lg bg-card p-3 shadow-xs ring-1 ring-foreground/10", className)}>
+    <div className={cn("rounded-2xl bg-card p-3 shadow-xs ring-1 ring-foreground/10", className)}>
       <h3 className="mb-2 text-base font-semibold text-brand-navy dark:text-foreground">Asset Category Reference</h3>
       <div className="grid grid-cols-3 gap-2 sm:grid-cols-5 xl:grid-cols-4">
         {commonAssetCategories.map((category) => (

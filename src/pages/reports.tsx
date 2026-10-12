@@ -123,20 +123,28 @@ export function ReportsPage() {
       </p>
 
       <Tabs defaultValue="contamination">
-        <TabsList className="w-full">
-          <TabsTrigger value="contamination" className="flex-1">
-            <SprayCan className="size-4" /> Contamination Wise Report
-          </TabsTrigger>
-          <TabsTrigger value="hygiene" className="flex-1">
-            <Sparkles className="size-4" /> Hygiene Wise Report
-          </TabsTrigger>
-          <TabsTrigger value="insights" className="flex-1">
-            <TriangleAlert className="size-4" /> AI Insights
-          </TabsTrigger>
+        {/* An underline rather than a segmented control: these are views of one
+            report, not three filters, and the row has to scroll on a narrow tablet */}
+        <TabsList className="h-auto w-full justify-start gap-0 overflow-x-auto rounded-none border-b bg-transparent p-0 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+          {(
+            [
+              { value: "contamination", icon: SprayCan, label: "Contamination Wise Report" },
+              { value: "hygiene", icon: Sparkles, label: "Hygiene Wise Report" },
+              { value: "insights", icon: TriangleAlert, label: "AI Insights" },
+            ] as const
+          ).map((tab) => (
+            <TabsTrigger
+              key={tab.value}
+              value={tab.value}
+              className="-mb-px min-h-12 shrink-0 gap-2 rounded-none border-b-2 border-transparent px-4 text-sm font-semibold whitespace-nowrap text-muted-foreground shadow-none data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:text-primary data-[state=active]:shadow-none"
+            >
+              <tab.icon className="size-4" /> {tab.label}
+            </TabsTrigger>
+          ))}
         </TabsList>
 
         {/* ---------- Filters, shared by both report tabs ---------- */}
-        <div className="mt-3 flex flex-wrap items-center gap-2 rounded-lg bg-card p-3 shadow-xs ring-1 ring-foreground/10">
+        <div className="mt-3 flex flex-wrap items-center gap-2 rounded-2xl bg-card p-3 shadow-xs ring-1 ring-foreground/10">
           <div className="relative min-w-56 flex-1">
             <Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
             <Input
@@ -301,14 +309,14 @@ function HygieneReport({
       </p>
 
       <div className="grid gap-3 lg:grid-cols-2">
-        <section className="rounded-lg bg-card p-3 shadow-xs ring-1 ring-foreground/10">
+        <section className="rounded-2xl bg-card p-3 shadow-xs ring-1 ring-foreground/10">
           <h3 className="mb-2 flex items-center gap-2 text-base font-semibold text-brand-navy dark:text-foreground">
             <Sparkles className="size-5 text-primary" /> Asset Hygiene Status Distribution
           </h3>
           <DonutChart slices={slices} centreLabel="Total Assets" />
         </section>
 
-        <section className="rounded-lg bg-card p-3 shadow-xs ring-1 ring-foreground/10">
+        <section className="rounded-2xl bg-card p-3 shadow-xs ring-1 ring-foreground/10">
           <h3 className="mb-2 flex items-center gap-2 text-base font-semibold text-brand-navy dark:text-foreground">
             <TrendingUp className="size-5 text-primary" /> Hygiene Trend (Last 6 Months)
           </h3>
@@ -392,7 +400,7 @@ function AiInsights({ rows }: { rows: ReportRow[] }) {
       </p>
 
       <div className="grid gap-3 lg:grid-cols-2">
-        <section className="rounded-lg bg-card p-3 shadow-xs ring-1 ring-foreground/10">
+        <section className="rounded-2xl bg-card p-3 shadow-xs ring-1 ring-foreground/10">
           <h3 className="mb-2 text-base font-semibold text-brand-navy dark:text-foreground">Where the risk sits</h3>
           {byCategory.length ? (
             <ul className="space-y-2">
@@ -411,7 +419,7 @@ function AiInsights({ rows }: { rows: ReportRow[] }) {
           )}
         </section>
 
-        <section className="rounded-lg bg-card p-3 shadow-xs ring-1 ring-foreground/10">
+        <section className="rounded-2xl bg-card p-3 shadow-xs ring-1 ring-foreground/10">
           <h3 className="mb-2 text-base font-semibold text-brand-navy dark:text-foreground">
             What the score is weighted on
           </h3>
@@ -429,7 +437,7 @@ function AiInsights({ rows }: { rows: ReportRow[] }) {
           </p>
         </section>
 
-        <section className="rounded-lg bg-card p-3 shadow-xs ring-1 ring-foreground/10">
+        <section className="rounded-2xl bg-card p-3 shadow-xs ring-1 ring-foreground/10">
           <h3 className="mb-2 text-base font-semibold text-brand-navy dark:text-foreground">Health distribution</h3>
           <ul className="space-y-2 text-sm">
             {(
@@ -451,7 +459,7 @@ function AiInsights({ rows }: { rows: ReportRow[] }) {
           </ul>
         </section>
 
-        <section className="rounded-lg bg-card p-3 shadow-xs ring-1 ring-foreground/10">
+        <section className="rounded-2xl bg-card p-3 shadow-xs ring-1 ring-foreground/10">
           <h3 className="mb-2 text-base font-semibold text-brand-navy dark:text-foreground">
             Physical points to work through
           </h3>
@@ -537,7 +545,7 @@ function ReportTable({
   const onSort = (c: Column) => setSort(nextSort(sort, c))
 
   return (
-    <div className="rounded-lg bg-card p-3 shadow-xs ring-1 ring-foreground/10">
+    <div className="rounded-2xl bg-card p-3 shadow-xs ring-1 ring-foreground/10">
       <div className="mb-3 grid grid-cols-2 gap-3 lg:grid-cols-5">{kpis}</div>
 
       <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
@@ -657,7 +665,7 @@ function ReportTable({
 
 function Kpi({ label, value, note, tone }: { label: string; value: number; note: string; tone: string }) {
   return (
-    <div className="rounded-lg bg-card px-3 py-2.5 ring-1 ring-foreground/10">
+    <div className="rounded-2xl bg-card px-3 py-2.5 ring-1 ring-foreground/10">
       <div className="text-sm text-muted-foreground">{label}</div>
       <div className="mt-1 flex items-center gap-2.5">
         <span className={cn("flex size-9 shrink-0 items-center justify-center rounded-lg text-sm font-bold tabular-nums", tone)}>

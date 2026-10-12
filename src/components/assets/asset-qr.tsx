@@ -118,7 +118,7 @@ export function AssetQrPanel({ asset }: { asset: AssetRecord }) {
 /** The printable panel-door label, as the mockup's QR Code Label Preview shows it */
 export function QrLabelPreview({ asset }: { asset: AssetRecord }) {
   return (
-    <div className="rounded-lg bg-card p-3 ring-1 ring-foreground/10">
+    <div className="rounded-2xl bg-card p-3 ring-1 ring-foreground/10">
       <div className="flex items-center gap-2 border-b pb-2">
         <img src={EMBLEM} alt="" className="size-8 shrink-0" />
         <div className="min-w-0 text-xs leading-tight">

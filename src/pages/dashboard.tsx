@@ -214,23 +214,25 @@ export function DashboardPage() {
   return (
     <div className="space-y-5">
       {/* ---------- Welcome ---------- */}
-      <section className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-brand-navy via-brand-navy to-primary text-brand-navy-foreground shadow-sm">
-        <div className="relative flex items-center gap-5 p-5">
-          <div className="min-w-0 flex-1">
-            <h2 className="text-3xl font-bold tracking-tight">Welcome, {me.name}!</h2>
-            <div className="mt-4 flex flex-wrap gap-2 text-sm">
-              <span className="flex items-center gap-1.5 rounded-full bg-white/10 px-3.5 py-1.5 ring-1 ring-white/25">
-                <MapPin className="size-4" /> {me.plant}, {me.enterprise}
-              </span>
-              <span className="flex items-center gap-1.5 rounded-full bg-primary px-3.5 py-1.5 font-medium ring-1 ring-white/25">
-                <ClipboardList className="size-4" /> {week.length} task{week.length === 1 ? "" : "s"} this week
-              </span>
-            </div>
-          </div>
-          {/* Field photograph framed on the right */}
-          <div className="relative h-32 w-72 shrink-0 overflow-hidden rounded-xl ring-1 ring-white/20 max-md:hidden">
-            <img src="/brand/evita-login.jpg" alt="" className="size-full object-cover object-[center_30%]" />
-            <div className="absolute inset-0 bg-gradient-to-r from-brand-navy/70 to-transparent" />
+      <section className="relative overflow-hidden rounded-2xl text-brand-navy-foreground shadow-sm">
+        {/* The field photograph carries the whole banner, as the tablet design draws it */}
+        <img src="/brand/evita-login.jpg" alt="" className="absolute inset-0 size-full object-cover object-[center_30%]" />
+        <div className="absolute inset-0 bg-gradient-to-r from-brand-navy via-brand-navy/90 to-brand-navy/30" />
+
+        <div className="relative p-5">
+          <h2 className="text-2xl font-bold tracking-tight sm:text-3xl">Hello, {me.name}!</h2>
+          <p className="mt-1 text-sm text-white/85 sm:text-base">Stay on top of your plant assets and tasks.</p>
+          <div className="mt-4 flex flex-wrap gap-2 text-sm">
+            <span className="flex items-center gap-1.5 rounded-full bg-white/10 px-3.5 py-1.5 ring-1 ring-white/25">
+              <MapPin className="size-4" /> {me.plant}, {me.enterprise}
+            </span>
+            {/* The date moved here when the top bar turned into the tab-design bar */}
+            <span className="flex items-center gap-1.5 rounded-full bg-white/10 px-3.5 py-1.5 tabular-nums ring-1 ring-white/25">
+              <CalendarDays className="size-4" /> {format(new Date(), "EEE d MMM")}
+            </span>
+            <span className="flex items-center gap-1.5 rounded-full bg-primary px-3.5 py-1.5 font-medium ring-1 ring-white/25">
+              <ClipboardList className="size-4" /> {week.length} task{week.length === 1 ? "" : "s"} this week
+            </span>
           </div>
         </div>
       </section>

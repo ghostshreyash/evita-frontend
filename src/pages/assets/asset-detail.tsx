@@ -66,7 +66,7 @@ function AssetDetail({ asset, onBack }: { asset: AssetRecord; onBack: () => void
       />
 
       {/* ---------- Identity strip ---------- */}
-      <div className="mb-3 flex flex-wrap items-center gap-x-3 gap-y-2 rounded-lg bg-card px-3 py-2.5 shadow-xs ring-1 ring-foreground/10">
+      <div className="mb-3 flex flex-wrap items-center gap-x-3 gap-y-2 rounded-2xl bg-card px-3 py-2.5 shadow-xs ring-1 ring-foreground/10">
         <span className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-info-soft text-info">
           <CategoryIcon category={asset.category} className="size-5" />
         </span>

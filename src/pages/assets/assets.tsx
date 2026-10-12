@@ -197,7 +197,7 @@ export function AssetsPage() {
           {narrowed ? <span className="rounded-full bg-primary px-1.5 text-xs text-primary-foreground tabular-nums">{narrowed}</span> : null}
         </Button>
 
-        <div className="flex h-11 shrink-0 items-center rounded-lg bg-card p-1 ring-1 ring-foreground/15">
+        <div className="flex h-11 shrink-0 items-center rounded-2xl bg-card p-1 ring-1 ring-foreground/15">
           <ViewToggle current={view} value="grid" icon={LayoutGrid} label="Grid view" onChange={setView} />
           <ViewToggle current={view} value="list" icon={List} label="List view" onChange={setView} />
         </div>
