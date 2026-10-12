@@ -4,29 +4,26 @@ import { format } from "date-fns"
 import {
   ArrowRight,
   BadgeCheck,
-  BookOpen,
   Building2,
   CalendarDays,
   ChevronRight,
   CircleCheckBig,
   ClipboardList,
   Factory,
-  FileText,
   Hourglass,
   Layers,
   Mail,
   MapPin,
   Network,
   Phone,
-  QrCode,
   ShieldCheck,
-  TriangleAlert,
   type LucideIcon,
 } from "lucide-react"
 import { cn } from "cn"
 
 import { CategoryIcon } from "@/components/common/category-icon"
 import { JobActionButton, JobStatusBadge } from "@/components/evita/job-action"
+import { QuickActions } from "@/components/evita/quick-actions"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { useAssetRows } from "@/data/asset-store"
 import { elpremarProfileFor } from "@/data/elpremar-data"
@@ -36,7 +33,7 @@ import { categoryLook, shortCategory } from "@/lib/category-icons"
 import { useCurrentElpremar } from "@/lib/me"
 import { markRead, noticeTime, useNotifications } from "@/lib/notifications"
 import { openPanel } from "@/lib/ui-store"
-import { actionFor, categoryFor, isOverdue, isThisWeek, isToday, parseDay, summarise, useMyJobs, type Job } from "@/lib/work"
+import { categoryFor, isOverdue, isThisWeek, isToday, parseDay, summarise, useMyJobs, type Job } from "@/lib/work"
 
 const startTime = (slot: number) => slotLabel(slot).split(" - ")[0]
 
@@ -175,13 +172,7 @@ export function DashboardPage() {
   const counts = summarise(jobs)
   // The week at a glance (Monday to Sunday), soonest first — the list the homepage leads with
   const week = useMemo(() => jobs.filter((j) => isThisWeek(j.date)), [jobs])
-  // The job to resume for "Log Test Results": one already running, else the next to start
-  const nextInspection = useMemo(
-    () =>
-      jobs.find((j) => j.kind === "inspection" && j.status === "in_progress") ??
-      jobs.find((j) => j.kind === "inspection" && actionFor(j) === "start"),
-    [jobs]
-  )
+
 
   /**
    * Assets at the location per category, counted from the same register the
@@ -198,17 +189,6 @@ export function DashboardPage() {
   )
   const totalAssets = register.length
 
-  const quickActions = [
-    { icon: QrCode, label: "Scan Asset QR", tone: "bg-info-soft text-info", run: () => openPanel({ kind: "scan" }) },
-    {
-      icon: FileText,
-      label: "Log Test Results",
-      tone: "bg-healthy-soft text-healthy",
-      run: () => navigate(nextInspection ? `/my-tasks/${nextInspection.id}` : "/inspections"),
-    },
-    { icon: TriangleAlert, label: "Report an Issue", tone: "bg-attention-soft text-attention", run: () => openPanel({ kind: "issue" }) },
-    { icon: BookOpen, label: "View SOP / Manual", tone: "bg-highlight-soft text-highlight", run: () => openPanel({ kind: "sop", activity: nextInspection?.activity }) },
-  ]
 
   return (
     <div className="space-y-5">
@@ -235,6 +215,8 @@ export function DashboardPage() {
           </div>
         </div>
       </section>
+
+      <QuickActions />
 
       <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_19rem]">
         <div className="min-w-0 space-y-5">
@@ -362,26 +344,6 @@ export function DashboardPage() {
               </div>
               <ChevronRight className="size-5 shrink-0 text-healthy" />
             </button>
-
-            <section className="rounded-2xl bg-card p-4 shadow-xs ring-1 ring-foreground/10">
-              <h3 className="mb-3 text-xs font-bold tracking-wide text-muted-foreground uppercase">Quick Actions</h3>
-              <div className="grid grid-cols-2 gap-2.5 lg:grid-cols-1">
-                {quickActions.map((a) => (
-                  <button
-                    key={a.label}
-                    type="button"
-                    onClick={a.run}
-                    className="flex min-h-14 w-full items-center gap-3 rounded-xl bg-muted/30 px-3 py-2 text-left ring-1 ring-foreground/10 transition-colors hover:bg-muted active:bg-muted"
-                  >
-                    <span className={cn("flex size-10 shrink-0 items-center justify-center rounded-lg", a.tone)}>
-                      <a.icon className="size-5" />
-                    </span>
-                    <span className="min-w-0 flex-1 text-sm font-semibold">{a.label}</span>
-                    <ChevronRight className="size-4 shrink-0 text-muted-foreground" />
-                  </button>
-                ))}
-              </div>
-            </section>
           </div>
 
           <section className="rounded-2xl bg-card p-4 shadow-xs ring-1 ring-foreground/10 md:col-span-2 lg:col-span-1">
