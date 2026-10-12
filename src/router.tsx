@@ -15,6 +15,7 @@ import { AssetOnboardingPage } from "@/pages/assets/asset-onboarding"
 import { AssetDetailPage } from "@/pages/assets/asset-detail"
 import { ReportsPage } from "@/pages/reports"
 import { MyTasksPage } from "@/pages/my-tasks"
+import { MorePage } from "@/pages/more"
 import { TaskPage } from "@/pages/task"
 import { ComingSoonPage } from "@/pages/coming-soon"
 
@@ -48,6 +49,8 @@ export const router = createBrowserRouter([
           { path: "reports", element: <ReportsPage /> },
           { path: "my-tasks", element: <MyTasksPage /> },
           { path: "my-tasks/:id", element: <TaskPage /> },
+          /* Reached from the avatar in the top bar, not from the tab bar */
+          { path: "more", element: <MorePage /> },
           // Remaining sidebar entries show a placeholder until their screens are built
           ...navigation
             .filter((item) => !built.has(item.path))
