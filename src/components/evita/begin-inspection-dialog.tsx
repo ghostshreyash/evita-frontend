@@ -68,11 +68,9 @@ export function BeginInspectionDialog({ open, onOpenChange }: { open: boolean; o
                     className="flex min-h-14 w-full items-center gap-3 rounded-xl bg-muted/40 px-3 text-left hover:bg-muted"
                   >
                     <span className="min-w-0 flex-1">
-                      <span className="block truncate text-sm font-semibold">
-                        {job.plant}, {job.enterprise}
-                      </span>
+                      <span className="block truncate text-sm font-semibold">{job.area || job.plant}</span>
                       <span className="block truncate text-xs text-muted-foreground">
-                        <span className="tabular-nums">{job.id}</span> · {job.activity} · {job.date}
+                        {job.plant} · <span className="tabular-nums">{job.id}</span> · {job.date}
                       </span>
                     </span>
                     <ChevronRight className="size-4 shrink-0 text-muted-foreground" />

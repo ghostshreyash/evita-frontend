@@ -7,11 +7,8 @@ import {
   Building2,
   CalendarDays,
   ChevronRight,
-  CircleCheckBig,
   ClipboardList,
   Factory,
-  Hourglass,
-  Layers,
   Mail,
   MapPin,
   Network,
@@ -22,20 +19,17 @@ import {
 import { cn } from "cn"
 
 import { CategoryIcon } from "@/components/common/category-icon"
-import { JobActionButton, JobStatusBadge } from "@/components/evita/job-action"
+import { WorkRow } from "@/components/evita/work-row"
 import { QuickActions } from "@/components/evita/quick-actions"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { useAssetRows } from "@/data/asset-store"
 import { elpremarProfileFor } from "@/data/elpremar-data"
 import { assetCategories } from "@/data/master-data"
-import { slotLabel } from "@/data/occ-tables"
 import { categoryLook, shortCategory } from "@/lib/category-icons"
 import { useCurrentElpremar } from "@/lib/me"
 import { markRead, noticeTime, useNotifications } from "@/lib/notifications"
 import { openPanel } from "@/lib/ui-store"
-import { categoryFor, isOverdue, isThisWeek, isToday, parseDay, summarise, useMyJobs, type Job } from "@/lib/work"
-
-const startTime = (slot: number) => slotLabel(slot).split(" - ")[0]
+import { isThisWeek, useMyJobs } from "@/lib/work"
 
 /** White panel with an icon tile, a navy title and an optional subtitle, as the tablet design draws its cards */
 function Panel({
@@ -72,76 +66,6 @@ function Panel({
   )
 }
 
-/** One of the four counters; each opens My Tasks on the matching view */
-function Counter({
-  icon: Icon,
-  label,
-  value,
-  note,
-  tone,
-  to,
-}: {
-  icon: LucideIcon
-  label: string
-  value: number
-  /** Line under the number; only Today's Tasks carries one */
-  note?: string
-  tone: string
-  to: string
-}) {
-  return (
-    <Link
-      to={to}
-      className="group/stat flex min-h-32 flex-col rounded-2xl bg-card p-4 shadow-xs ring-1 ring-foreground/10 transition-[transform,box-shadow] duration-200 hover:shadow-md motion-safe:hover:-translate-y-0.5 active:translate-y-0"
-    >
-      <div className="flex items-start justify-between gap-2">
-        <span className="text-xs font-semibold tracking-wide text-muted-foreground uppercase">{label}</span>
-        <span className={cn("flex size-12 shrink-0 items-center justify-center rounded-xl", tone)}>
-          <Icon className="size-6" />
-        </span>
-      </div>
-      <span className="-mt-3 text-4xl leading-none font-bold text-brand-navy tabular-nums dark:text-foreground">{value}</span>
-      {note ? <span className="mt-auto pt-2 text-sm text-primary">{note}</span> : null}
-    </Link>
-  )
-}
-
-/** One task as a row card: time chip, asset with its category tag, activity, status and the one action */
-function TaskRow({ job, onOpen }: { job: Job; onOpen: () => void }) {
-  const category = categoryFor(job.asset)
-  const look = categoryLook(category)
-  const overdue = isOverdue(job)
-  return (
-    <li>
-      <div
-        role="button"
-        tabIndex={0}
-        onClick={onOpen}
-        onKeyDown={(e) => e.key === "Enter" && onOpen()}
-        className="flex cursor-pointer items-center gap-4 px-5 py-4 transition-colors hover:bg-muted/40 active:bg-muted/60"
-      >
-        <span className={cn("shrink-0 rounded-lg px-2.5 py-1.5 text-center tabular-nums text-sm leading-tight font-semibold", overdue ? "bg-critical-soft text-critical" : "bg-muted text-foreground")}>
-          {isToday(job.date) ? "Today" : format(parseDay(job.date), "EEE d")}
-          <span className="block text-xs font-medium">{startTime(job.slot)}</span>
-        </span>
-        <div className="min-w-0 flex-1">
-          <div className="truncate text-base font-semibold text-brand-navy dark:text-foreground">{job.asset}</div>
-          <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm">
-            <span className={cn("inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-xs font-semibold ring-1 ring-current/20", look.tint)}>
-              <CategoryIcon category={category} className="size-3.5" />
-              {shortCategory(category)}
-            </span>
-            <span className="truncate text-primary">• {job.plant}</span>
-          </div>
-          <div className="mt-1 truncate text-sm text-foreground/80">{job.activity}</div>
-        </div>
-        <JobStatusBadge job={job} className="max-md:hidden" />
-        <JobActionButton job={job} className="h-12 border-2 border-primary/70 text-base" />
-      </div>
-    </li>
-  )
-}
-
 /** Icon + label on the left, value on the right — the profile tabs' rows */
 function InfoRows({ rows }: { rows: { icon: LucideIcon; label: string; value: React.ReactNode }[] }) {
   return (
@@ -169,9 +93,16 @@ export function DashboardPage() {
   const jobs = useMyJobs()
   const { notices } = useNotifications()
 
-  const counts = summarise(jobs)
-  // The week at a glance (Monday to Sunday), soonest first — the list the homepage leads with
+  // The week at a glance (Monday to Sunday), soonest first
   const week = useMemo(() => jobs.filter((j) => isThisWeek(j.date)), [jobs])
+  /*
+   * What the engineer walked away from. An inspection under way is the thing
+   * they are most likely to have come back to the tablet for, so it leads.
+   */
+  const running = useMemo(
+    () => jobs.filter((j) => j.field === "in_progress").sort((a, b) => (a.kind === b.kind ? 0 : a.kind === "inspection" ? -1 : 1)),
+    [jobs]
+  )
 
 
   /**
@@ -220,33 +151,33 @@ export function DashboardPage() {
 
       <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_19rem]">
         <div className="min-w-0 space-y-5">
-          {/* ---------- The day at a glance ---------- */}
-          <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-            <Counter to="/my-tasks?date=today" icon={ClipboardList} label="Today's Tasks" value={counts.today} note={`${counts.pending} Pending • ${counts.running} In Progress`} tone="bg-info-soft text-info" />
-            <Counter to="/my-tasks?status=completed" icon={CircleCheckBig} label="Completed" value={counts.completed} tone="bg-healthy-soft text-healthy" />
-            <Counter to="/my-tasks?status=overdue" icon={Hourglass} label="Overdue" value={counts.overdue} tone="bg-critical-soft text-critical" />
-            <Counter to="/my-tasks" icon={Layers} label="Total Assigned" value={counts.total} tone="bg-highlight-soft text-highlight" />
-          </div>
-
-          {/* ---------- This week's work ---------- */}
+          {/* ---------- What is already open ---------- */}
           <Panel
             icon={ClipboardList}
-            title="This Week's Tasks"
-            subtitle="Monday to Sunday, soonest first"
+            title="Continue working on"
+            subtitle="Started and not yet submitted"
             action={
-              <Link to="/my-tasks?date=week" className="flex min-h-11 shrink-0 items-center gap-1 px-1 text-sm font-semibold text-primary hover:underline">
-                View All ({week.length}) <ArrowRight className="size-4" />
+              <Link to="/my-tasks?status=in_progress" className="flex min-h-11 shrink-0 items-center gap-1 px-1 text-sm font-semibold text-primary hover:underline">
+                View All ({running.length}) <ArrowRight className="size-4" />
               </Link>
             }
           >
-            {week.length ? (
+            {running.length ? (
               <ul className="divide-y">
-                {week.map((t) => <TaskRow key={t.id} job={t} onOpen={() => navigate(`/my-tasks/${t.id}`)} />)}
+                {running.map((job) => (
+                  <WorkRow key={job.id} job={job} />
+                ))}
               </ul>
             ) : (
               <p className="px-5 py-10 text-center text-sm text-muted-foreground">
-                Nothing booked this week.{" "}
-                <Link to="/my-tasks?status=open" className="font-medium text-primary underline-offset-4 hover:underline">See open work</Link>
+                Nothing is under way.{" "}
+                <button
+                  type="button"
+                  onClick={() => openPanel({ kind: "begin-inspection" })}
+                  className="font-medium text-primary underline-offset-4 hover:underline"
+                >
+                  Start an inspection
+                </button>
               </p>
             )}
           </Panel>

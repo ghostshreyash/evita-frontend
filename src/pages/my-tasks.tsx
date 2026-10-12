@@ -169,7 +169,7 @@ function MyTasks({ only }: { only?: JobKind }) {
         title={only === "inspection" ? "Inspections" : only ? `${jobKindLook[only].long}s` : "My Tasks"}
         description={
           only === "inspection"
-            ? "The plants you are booked to inspect. You can also start one at any asset without being booked for it."
+            ? "Each one covers a single area of a plant, whatever departments and assets sit in it. You can also start an inspection at any asset without being booked for it."
             : only
               ? `Everything assigned to you for ${jobKindLook[only].label.toLowerCase()}. They are on My Tasks too.`
               : "Your assigned inspection and maintenance tasks."
@@ -352,10 +352,13 @@ function TaskCard({ job }: { job: Job }) {
  * One inspection, as the visit it is.
  *
  * No asset on it: the client was clear on 12-10-2026 that an inspection sends
- * the ELPREMAR to a plant - "you have to visit this plant for inspection" -
- * and which assets get inspected is settled on site, by onboarding them or
- * scanning their labels. So the card carries the enterprise, the plant, the
- * day and the booked hour, and nothing it cannot know yet.
+ * the ELPREMAR to a place rather than to one asset, and which assets get
+ * inspected is settled on site, by onboarding them or scanning their labels.
+ *
+ * A visit covers a single area of a plant, whatever departments and assets
+ * happen to sit in it, so the card leads with the area and names the plant
+ * under it. Beyond that it carries only the day and the booked hour - nothing
+ * it cannot know yet.
  */
 function VisitCard({ job }: { job: Job }) {
   const overdue = isOverdue(job)
@@ -375,14 +378,14 @@ function VisitCard({ job }: { job: Job }) {
         </span>
 
         <div className="min-w-0 flex-1">
-          <div className="flex flex-wrap items-center gap-2">
-            <span className="tabular-nums text-xs font-bold text-muted-foreground">{job.id}</span>
-            <span className={cn("rounded-md px-1.5 py-0.5 text-[0.7rem] font-bold tracking-wide uppercase", priorityTone[job.priority])}>
-              {job.priority}
-            </span>
-          </div>
-          <h3 className="mt-0.5 truncate text-base font-bold text-brand-navy dark:text-foreground">{job.plant}</h3>
-          <p className="truncate text-sm text-muted-foreground">{job.enterprise}</p>
+          {/* No priority on an inspection: it is a booked visit, not a job queue */}
+          <span className="tabular-nums text-xs font-bold text-muted-foreground">{job.id}</span>
+          <h3 className="mt-0.5 truncate text-base font-bold text-brand-navy dark:text-foreground">
+            {job.area || job.plant}
+          </h3>
+          <p className="truncate text-sm text-muted-foreground">
+            {job.plant}, {job.enterprise}
+          </p>
           <p className="mt-1 truncate text-sm">{job.activity}</p>
         </div>
 
@@ -404,7 +407,7 @@ function VisitCard({ job }: { job: Job }) {
 
       <Link
         to={`/my-tasks/${job.id}`}
-        aria-label={`Open inspection ${job.id} at ${job.plant}`}
+        aria-label={`Open inspection ${job.id} at ${job.area || job.plant}, ${job.plant}`}
         className="absolute inset-0 rounded-2xl outline-none"
       />
     </li>

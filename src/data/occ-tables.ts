@@ -91,15 +91,15 @@ export type MaintenanceRow = {
 type UnlinkedMaintenance = Omit<MaintenanceRow, "inspectionId">
 
 export const maintenanceProgress: MaintenanceRow[] = [
-  { id: "MT-2291", asset: "LT Panel - Block A", plant: "Mumbai Unit 2", enterprise: "Tata Steel Limited", country: "India", type: "Preventive", elpremar: "Suresh Kumar", scheduled: day(-2), slot: 9, inspectionId: "TSK-8841", status: "completed" },
-  { id: "MT-2290", asset: "Transformer - T1", plant: "Jamnagar Substation", enterprise: "Reliance Industries", country: "India", type: "Condition-Based", elpremar: "Amit Sharma", scheduled: day(0), slot: 10, inspectionId: "TSK-8840", status: "open" },
-  { id: "MT-2289", asset: "MCC - Unit 2", plant: "Dolvi Substation", enterprise: "JSW Group", country: "India", type: "Preventive", elpremar: "Ramesh Patil", scheduled: day(0), slot: 9, inspectionId: "TSK-8839", status: "in_progress" },
-  { id: "MT-2288", asset: "PCC - Main", plant: "Mundra Warehouse", enterprise: "Adani Group", country: "India", type: "Fire Preventive", elpremar: "Anil Singh", scheduled: day(2), slot: 11, inspectionId: "TSK-8838", status: "open" },
-  // Deliberately shares Suresh Kumar's 10:00 slot with TSK-8837, so the dialog has a clash to show
-  { id: "MT-2287", asset: "HT Panel - Incomer 1", plant: "Hyderabad Main Plant", enterprise: "NTPC", country: "India", type: "Preventive", elpremar: "Suresh Kumar", scheduled: day(3), slot: 10, inspectionId: "TSK-8837", status: "assigned" },
-  { id: "MT-2286", asset: "APFC Panel - 1", plant: "Dubai Main Plant", enterprise: "Emirates Steel", country: "United Arab Emirates", type: "Preventive", elpremar: "Khalid Rahman", scheduled: day(1), slot: 11, inspectionId: "TSK-8836", status: "open" },
-  { id: "MT-2285", asset: "UPS - 03", plant: "Frankfurt Utility Block", enterprise: "Thyssenkrupp AG", country: "Germany", type: "Fire Preventive", elpremar: "Lukas Weber", scheduled: day(4), slot: 10, inspectionId: "TSK-8835", status: "assigned" },
-  { id: "MT-2284", asset: "Switchboard - SB2", plant: "Houston Main Plant", enterprise: "LyondellBasell", country: "United States", type: "Condition-Based", elpremar: "Maria Lopez", scheduled: day(1), slot: 15, inspectionId: "TSK-8834", status: "open" },
+  { id: "MT-2291", asset: "LT Panel - Block A", plant: "Mumbai Unit 2", enterprise: "Tata Steel Limited", country: "India", type: "Preventive", elpremar: "Suresh Kumar", scheduled: day(-2), slot: 9, inspectionId: "INS-8841", status: "completed" },
+  { id: "MT-2290", asset: "Transformer - T1", plant: "Jamnagar Substation", enterprise: "Reliance Industries", country: "India", type: "Condition-Based", elpremar: "Amit Sharma", scheduled: day(0), slot: 10, inspectionId: "INS-8840", status: "open" },
+  { id: "MT-2289", asset: "MCC - Unit 2", plant: "Dolvi Substation", enterprise: "JSW Group", country: "India", type: "Preventive", elpremar: "Ramesh Patil", scheduled: day(0), slot: 9, inspectionId: "INS-8839", status: "in_progress" },
+  { id: "MT-2288", asset: "PCC - Main", plant: "Mundra Warehouse", enterprise: "Adani Group", country: "India", type: "Fire Preventive", elpremar: "Anil Singh", scheduled: day(2), slot: 11, inspectionId: "INS-8838", status: "open" },
+  // Deliberately shares Suresh Kumar's 10:00 slot with INS-8837, so the dialog has a clash to show
+  { id: "MT-2287", asset: "HT Panel - Incomer 1", plant: "Hyderabad Main Plant", enterprise: "NTPC", country: "India", type: "Preventive", elpremar: "Suresh Kumar", scheduled: day(3), slot: 10, inspectionId: "INS-8837", status: "assigned" },
+  { id: "MT-2286", asset: "APFC Panel - 1", plant: "Dubai Main Plant", enterprise: "Emirates Steel", country: "United Arab Emirates", type: "Preventive", elpremar: "Khalid Rahman", scheduled: day(1), slot: 11, inspectionId: "INS-8836", status: "open" },
+  { id: "MT-2285", asset: "UPS - 03", plant: "Frankfurt Utility Block", enterprise: "Thyssenkrupp AG", country: "Germany", type: "Fire Preventive", elpremar: "Lukas Weber", scheduled: day(4), slot: 10, inspectionId: "INS-8835", status: "assigned" },
+  { id: "MT-2284", asset: "Switchboard - SB2", plant: "Houston Main Plant", enterprise: "LyondellBasell", country: "United States", type: "Condition-Based", elpremar: "Maria Lopez", scheduled: day(1), slot: 15, inspectionId: "INS-8834", status: "open" },
 ]
 
 /**
@@ -174,14 +174,14 @@ export type TaskRow = {
 }
 
 export const taskQueue: TaskRow[] = [
-  { id: "TSK-8841", elpremar: "Suresh Kumar", enterprise: "Tata Steel Limited", plant: "Mumbai Unit 2", asset: "LT Panel - Block A", country: "India", activity: "Thermal Scan", due: day(0), slot: 11, priority: "High", status: "in_progress" },
-  { id: "TSK-8840", elpremar: "Amit Sharma", enterprise: "Reliance Industries", plant: "Jamnagar Substation", asset: "Transformer - T1", country: "India", activity: "Partial Discharge Testing", due: day(2), slot: 11, priority: "Critical", status: "pending" },
-  { id: "TSK-8839", elpremar: "Ramesh Patil", enterprise: "JSW Group", plant: "Dolvi Substation", asset: "MCC - Unit 2", country: "India", activity: "Visual Inspection", due: day(3), slot: 11, priority: "Medium", status: "pending" },
-  { id: "TSK-8838", elpremar: "Anil Singh", enterprise: "Adani Group", plant: "Mundra Warehouse", asset: "PCC - Main", country: "India", activity: "Preventive Assessment", due: day(-3), slot: 10, priority: "Low", status: "completed" },
-  { id: "TSK-8837", elpremar: "Suresh Kumar", enterprise: "NTPC", plant: "Hyderabad Main Plant", asset: "HT Panel - Incomer 1", country: "India", activity: "Insulation Resistance Testing", due: day(3), slot: 10, priority: "Medium", status: "pending" },
-  { id: "TSK-8836", elpremar: "Khalid Rahman", enterprise: "Emirates Steel", plant: "Dubai Main Plant", asset: "APFC Panel - 1", country: "United Arab Emirates", activity: "Preventive Assessment", due: day(2), slot: 9, priority: "High", status: "pending" },
-  { id: "TSK-8835", elpremar: "Lukas Weber", enterprise: "Thyssenkrupp AG", plant: "Frankfurt Utility Block", asset: "Fire Alarm Panel - FA1", country: "Germany", activity: "Fire Prevention System Check", due: day(4), slot: 14, priority: "Medium", status: "pending" },
-  { id: "TSK-8834", elpremar: "Maria Lopez", enterprise: "LyondellBasell", plant: "Houston Main Plant", asset: "Switchboard - SB2", country: "United States", activity: "Thermal Scan", due: day(5), slot: 9, priority: "Low", status: "pending" },
+  { id: "INS-8841", elpremar: "Suresh Kumar", enterprise: "Tata Steel Limited", plant: "Mumbai Unit 2", asset: "LT Panel - Block A", country: "India", activity: "Thermal Scan", due: day(0), slot: 11, priority: "High", status: "in_progress" },
+  { id: "INS-8840", elpremar: "Amit Sharma", enterprise: "Reliance Industries", plant: "Jamnagar Substation", asset: "Transformer - T1", country: "India", activity: "Partial Discharge Testing", due: day(2), slot: 11, priority: "Critical", status: "pending" },
+  { id: "INS-8839", elpremar: "Ramesh Patil", enterprise: "JSW Group", plant: "Dolvi Substation", asset: "MCC - Unit 2", country: "India", activity: "Visual Inspection", due: day(3), slot: 11, priority: "Medium", status: "pending" },
+  { id: "INS-8838", elpremar: "Anil Singh", enterprise: "Adani Group", plant: "Mundra Warehouse", asset: "PCC - Main", country: "India", activity: "Preventive Assessment", due: day(-3), slot: 10, priority: "Low", status: "completed" },
+  { id: "INS-8837", elpremar: "Suresh Kumar", enterprise: "NTPC", plant: "Hyderabad Main Plant", asset: "HT Panel - Incomer 1", country: "India", activity: "Insulation Resistance Testing", due: day(3), slot: 10, priority: "Medium", status: "pending" },
+  { id: "INS-8836", elpremar: "Khalid Rahman", enterprise: "Emirates Steel", plant: "Dubai Main Plant", asset: "APFC Panel - 1", country: "United Arab Emirates", activity: "Preventive Assessment", due: day(2), slot: 9, priority: "High", status: "pending" },
+  { id: "INS-8835", elpremar: "Lukas Weber", enterprise: "Thyssenkrupp AG", plant: "Frankfurt Utility Block", asset: "Fire Alarm Panel - FA1", country: "Germany", activity: "Fire Prevention System Check", due: day(4), slot: 14, priority: "Medium", status: "pending" },
+  { id: "INS-8834", elpremar: "Maria Lopez", enterprise: "LyondellBasell", plant: "Houston Main Plant", asset: "Switchboard - SB2", country: "United States", activity: "Thermal Scan", due: day(5), slot: 9, priority: "Low", status: "pending" },
 ]
 
 /**
@@ -217,7 +217,7 @@ function moreInspections(count: number): TaskRow[] {
     taken.add(`${elpremar}|${due}|${slot}`)
 
     rows.push({
-      id: `TSK-${8833 - i}`,
+      id: `INS-${8833 - i}`,
       elpremar,
       enterprise: site.enterprise,
       plant: site.plant,
@@ -331,7 +331,7 @@ const requesters = [
 export const supportTickets: TicketRow[] = [
   { id: "TK-4592", enterprise: "Tata Steel Limited", plant: "Jamshedpur Main Plant", country: "India", subject: "EVITA sync failing on tablet", category: "System", raised: day(-1), raisedBy: "Rajesh Iyer", source: "EVITA", lastUpdated: stamp(-1, 10), priority: "High", status: "open" },
   { id: "TK-4591", enterprise: "JSW Group", plant: "Dolvi Substation", country: "India", subject: "Request ELPREMAR assignment", category: "Assignment", raised: day(-1), raisedBy: "Meena Krishnan", source: "OCC Console", lastUpdated: stamp(-1, 12), priority: "Medium", status: "open" },
-  { id: "TK-4590", enterprise: "Reliance Industries", plant: "Jamnagar Substation", country: "India", subject: "PD meter not pairing over Bluetooth", category: "Testing & Measurement", raised: day(-2), raisedBy: "Arun Prakash", source: "Testing & Measurements", lastUpdated: stamp(0, 9), elpremar: "Amit Sharma", scheduled: day(1), slot: 11, priority: "Critical", status: "in_progress", assetId: "AST-JMN-0142", inspectionId: "TSK-8840" },
+  { id: "TK-4590", enterprise: "Reliance Industries", plant: "Jamnagar Substation", country: "India", subject: "PD meter not pairing over Bluetooth", category: "Testing & Measurement", raised: day(-2), raisedBy: "Arun Prakash", source: "Testing & Measurements", lastUpdated: stamp(0, 9), elpremar: "Amit Sharma", scheduled: day(1), slot: 11, priority: "Critical", status: "in_progress", assetId: "AST-JMN-0142", inspectionId: "INS-8840" },
   { id: "TK-4589", enterprise: "Adani Group", plant: "Mundra Warehouse", country: "India", subject: "Health report PDF not downloading", category: "Report", raised: day(-2), raisedBy: "Sneha Gupta", source: "Reports", lastUpdated: stamp(-1, 15), elpremar: "Anil Singh", scheduled: day(-2), slot: 10, priority: "Low", status: "closed", reportId: "RPT-MUN-2291", resolution: "Export service restarted; the report now downloads as PDF." },
   { id: "TK-4588", enterprise: "NTPC", plant: "Kolkata Unit 2", country: "India", subject: "Add new sub-division to hierarchy", category: "System", raised: day(-3), raisedBy: "Imran Qureshi", source: "OCC Console", lastUpdated: stamp(-2, 11), elpremar: "Priya Nair", scheduled: day(-3), slot: 14, priority: "Medium", status: "closed", resolution: "Sub-division added under Electrical and access granted." },
   { id: "TK-4587", enterprise: "Emirates Steel", plant: "Dubai Main Plant", country: "United Arab Emirates", subject: "EMMSE dashboard loading slowly", category: "Dashboard", raised: day(-3), raisedBy: "Fatima Al Nuaimi", source: "EMMSE", lastUpdated: stamp(-2, 16), elpremar: "Khalid Rahman", scheduled: day(-2), slot: 9, priority: "Medium", status: "closed", resolution: "Widget query tuned; dashboard now loads within 2s." },
@@ -919,7 +919,7 @@ function moreTickets(count: number): TicketRow[] {
       ...(settled ? { resolution: "Verified with the reporter and closed out." } : {}),
       // Only the modules that actually carry a record pass one across
       ...(category === "Asset" || category === "Maintenance" ? { assetId: `AST-${short}-${String(100 + i).padStart(4, "0")}` } : {}),
-      ...(category === "Inspection" || category === "Testing & Measurement" ? { inspectionId: `TSK-${8800 - i}` } : {}),
+      ...(category === "Inspection" || category === "Testing & Measurement" ? { inspectionId: `INS-${8800 - i}` } : {}),
       ...(category === "Maintenance" ? { maintenanceId: `MT-${2280 - i}` } : {}),
       ...(category === "Report" ? { reportId: `RPT-${short}-${2200 + i}` } : {}),
     })
