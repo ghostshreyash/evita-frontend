@@ -135,6 +135,15 @@ export type InspectionDetail = {
   result?: InspectionResult
   capture?: InspectionCapture
   sync?: SyncState
+  /**
+   * When the two reports were produced, dd-MM-yyyy HH:mm.
+   *
+   * Submitting the capture is not the end of an inspection: the contamination
+   * and hygiene reports still have to come out of it, and on a site with no
+   * signal that cannot happen until the engineer is back in range. Until this
+   * is set the work reads as Report Due rather than Completed.
+   */
+  reportedAt?: string
 }
 
 const supervisors = ["Priya Nair", "Rakesh Menon", "Divya Iyer", "Arun Prakash"]
@@ -258,7 +267,11 @@ export function inspectionDetail(row: TaskRow): InspectionDetail {
   detail.measurements = resultsFrom(capture, category, ids)
   detail.observations = observationsFrom(capture)
   detail.sync = done ? { state: "synced", at: detail.execution.completedAt } : { state: "draft", at: stamp(30) }
-  if (done) detail.result = scoreCapture(capture)
+  if (done) {
+    detail.result = scoreCapture(capture)
+    // A record the server already has is one whose reports were produced
+    detail.reportedAt = detail.execution.completedAt
+  }
 
   return detail
 }

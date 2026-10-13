@@ -120,6 +120,12 @@ export function addInspectionForAsset(
   return id
 }
 
+/** The reports have been produced; the inspection is finished */
+export function markReportGenerated(id: string) {
+  details = { ...details, [id]: { ...details[id], reportedAt: stampNow() } }
+  emit()
+}
+
 export function saveInspectionDraft(id: string, patch: Partial<InspectionDetail>) {
   details = { ...details, [id]: { ...details[id], ...patch, sync: { state: "draft", at: stampNow() } } }
   emit()

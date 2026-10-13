@@ -72,11 +72,19 @@ export function DashboardPage() {
   // The week at a glance (Monday to Sunday), soonest first
   const week = useMemo(() => jobs.filter((j) => isThisWeek(j.date)), [jobs])
   /*
-   * What the engineer walked away from. An inspection under way is the thing
-   * they are most likely to have come back to the tablet for, so it leads.
+   * What the engineer walked away from - work under way, and work where the
+   * visit is done but its report has not been produced. A missing report leads:
+   * it is the quickest of the two to clear and the easiest to forget about.
    */
   const running = useMemo(
-    () => jobs.filter((j) => j.field === "in_progress").sort((a, b) => (a.kind === b.kind ? 0 : a.kind === "inspection" ? -1 : 1)),
+    () =>
+      jobs
+        .filter((j) => j.field === "in_progress" || j.field === "report_due")
+        .sort(
+          (a, b) =>
+            Number(a.field !== "report_due") - Number(b.field !== "report_due") ||
+            (a.kind === b.kind ? 0 : a.kind === "inspection" ? -1 : 1)
+        ),
     [jobs]
   )
 

@@ -9,6 +9,7 @@ import {
   ClipboardList,
   Clock,
   Factory,
+  FileText,
   Play,
   Plus,
   QrCode,
@@ -113,9 +114,10 @@ type Action = { icon: LucideIcon; title: string; detail: string; tint: string; r
 /**
  * The work in front of the engineer, one at a time.
  *
- * Whatever is already running leads, and after it the soonest bookings that
- * still need their hands. The pager steps through them rather than listing
- * them: on site there is only ever one asset in front of you.
+ * Work whose report has not come out leads, then whatever is already running,
+ * and after them the soonest bookings that still need their hands. The pager
+ * steps through them rather than listing them: on site there is only ever one
+ * asset in front of you.
  */
 export function NextTask() {
   const navigate = useNavigate()
@@ -123,18 +125,19 @@ export function NextTask() {
   const jobs = useMyJobs()
   const [at, setAt] = useState(0)
 
-  const open = useMemo(() => {
-    const waiting = jobs.filter((j) => actionFor(j) !== "view")
-    const running = (j: Job) => (actionFor(j) === "continue" ? 0 : 1)
-    return [...waiting].sort((a, b) => running(a) - running(b) || when(a) - when(b))
-  }, [jobs])
+  const open = useMemo(
+    () => [...jobs.filter((j) => actionFor(j) !== "view")].sort((a, b) => rank(a) - rank(b) || when(a) - when(b)),
+    [jobs]
+  )
 
   if (!open.length) return <NothingOpen />
 
   const index = Math.min(at, open.length - 1)
   const job = open[index]
   const kind = jobKindLook[job.kind]
-  const running = actionFor(job) === "continue"
+  const action = actionFor(job)
+  const running = action === "continue"
+  const reportDue = action === "report"
   const inspection = job.kind === "inspection"
 
   return (
@@ -202,11 +205,20 @@ export function NextTask() {
           size="lg"
           className="h-14 w-full bg-gradient-to-r from-primary to-[#0f3fae] text-base font-bold shadow-lg shadow-primary/30 transition-transform motion-safe:hover:-translate-y-0.5 active:translate-y-0"
           onClick={() => {
-            if (!running) startJob(job, me.name)
+            // The visit is already done when only its report is owed
+            if (!running && !reportDue) startJob(job, me.name)
             navigate(jobPath(job))
           }}
         >
-          <Play className="fill-current" /> {running ? `Continue ${kind.label}` : `Start ${kind.label}`}
+          {reportDue ? (
+            <>
+              <FileText /> Generate Report
+            </>
+          ) : (
+            <>
+              <Play className="fill-current" /> {running ? `Continue ${kind.label}` : `Start ${kind.label}`}
+            </>
+          )}
         </Button>
       </div>
     </section>
@@ -235,13 +247,20 @@ function NothingOpen() {
   )
 }
 
+/**
+ * Where a job sits in the queue: the report that has not been produced first -
+ * the visit is done and only the paperwork is missing - then the one under way,
+ * then everything still to start.
+ */
+const rank = (job: Job) => (actionFor(job) === "report" ? 0 : actionFor(job) === "continue" ? 1 : 2)
+
 /** The work after the one in hand, as rows */
 export function UpcomingTasks() {
   const navigate = useNavigate()
   const jobs = useMyJobs()
 
   const upcoming = useMemo(
-    () => [...jobs.filter((j) => actionFor(j) !== "view")].sort((a, b) => when(a) - when(b)).slice(1, 4),
+    () => [...jobs.filter((j) => actionFor(j) !== "view")].sort((a, b) => rank(a) - rank(b) || when(a) - when(b)).slice(1, 4),
     [jobs]
   )
 

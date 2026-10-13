@@ -13,6 +13,7 @@ const statusEdge: Record<FieldStatus, string> = {
   open: "bg-info",
   overdue: "bg-critical",
   in_progress: "bg-attention",
+  report_due: "bg-attention",
   completed: "bg-healthy",
   approved: "bg-highlight",
 }

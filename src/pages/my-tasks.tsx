@@ -24,6 +24,7 @@ const statusEdge: Record<FieldStatus, string> = {
   open: "bg-info",
   overdue: "bg-critical",
   in_progress: "bg-attention",
+  report_due: "bg-attention",
   completed: "bg-healthy",
   approved: "bg-highlight",
 }
@@ -39,8 +40,13 @@ const sortLabels: Record<SortKey, string> = {
 }
 
 const priorityRank: Record<string, number> = { Low: 0, Medium: 1, High: 2, Critical: 3 }
-/** Work needing the engineer first (overdue, running, open), then finished */
-const statusRank: Record<FieldStatus, number> = { overdue: 0, in_progress: 1, open: 2, completed: 3, approved: 4 }
+/**
+ * Work needing the engineer first, then finished.
+ *
+ * Report Due leads: the work on site is done and only the report is missing, so
+ * it is the quickest thing on the book to clear and the easiest to forget.
+ */
+const statusRank: Record<FieldStatus, number> = { report_due: 0, overdue: 1, in_progress: 2, open: 3, completed: 4, approved: 5 }
 
 const sortValue: Record<SortKey, (j: Job) => string | number> = {
   due: when,
