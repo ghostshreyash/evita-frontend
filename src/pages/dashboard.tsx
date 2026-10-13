@@ -18,7 +18,6 @@ import { NextTask, QuickActions, UpcomingTasks } from "@/components/evita/home-h
 import { useAssetRows } from "@/data/asset-store"
 import { assetCategories } from "@/data/master-data"
 import { categoryLook, shortCategory } from "@/lib/category-icons"
-import { categoryImage } from "@/lib/asset-images"
 import { useCurrentElpremar } from "@/lib/me"
 import { markRead, noticeTime, useNotifications } from "@/lib/notifications"
 import { openPanel } from "@/lib/ui-store"
@@ -174,49 +173,21 @@ export function DashboardPage() {
             subtitle="Select a category to see its assets"
             action={<span className="shrink-0 rounded-md bg-muted px-2.5 py-1 text-sm font-medium text-muted-foreground">{totalAssets} Total Registered</span>}
           >
-            <div className="grid grid-cols-2 gap-3 p-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6">
+            <div className="grid grid-cols-3 gap-3 p-5 sm:grid-cols-4 lg:grid-cols-6">
               {categories.map((c) => {
                 const look = categoryLook(c.name)
-                const img = categoryImage(c.name)
                 return (
                   <Link
                     key={c.name}
                     to={`/assets?category=${encodeURIComponent(c.name)}`}
                     title={c.name}
-                    className="group/cat relative flex min-h-36 flex-col overflow-hidden rounded-2xl bg-card text-left ring-1 ring-foreground/10 transition-all duration-200 hover:shadow-lg hover:ring-primary/40 motion-safe:hover:-translate-y-1 active:scale-[0.97] active:translate-y-0"
+                    className="group/cat flex min-h-32 flex-col items-center justify-center gap-2 rounded-xl bg-card px-2 py-3 text-center ring-1 ring-foreground/10 transition-[transform,box-shadow] duration-200 hover:shadow-md motion-safe:hover:-translate-y-0.5 active:translate-y-0"
                   >
-                    {img ? (
-                      <div className="relative h-20 w-full overflow-hidden bg-slate-900/10">
-                        <img
-                          src={img}
-                          alt=""
-                          className="size-full object-cover transition-transform duration-300 group-hover/cat:scale-108"
-                        />
-                        <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-black/10 to-transparent" />
-                        <span className={cn("absolute bottom-1.5 left-1.5 flex size-6 items-center justify-center rounded-md shadow-xs", look.tint)}>
-                          <CategoryIcon category={c.name} className="size-3.5" />
-                        </span>
-                        <span className="absolute bottom-1.5 right-1.5 rounded-md bg-black/60 px-1.5 py-0.5 text-[0.65rem] font-bold text-white backdrop-blur-xs">
-                          {c.count}
-                        </span>
-                      </div>
-                    ) : (
-                      <div className="flex h-20 w-full items-center justify-center bg-muted/40">
-                        <span className={cn("flex size-11 items-center justify-center rounded-xl transition-transform group-hover/cat:scale-110", look.tint)}>
-                          <CategoryIcon category={c.name} className="size-6" />
-                        </span>
-                      </div>
-                    )}
-
-                    <div className="flex flex-1 flex-col justify-between p-2.5">
-                      <span className="line-clamp-2 text-xs font-bold leading-tight text-brand-navy group-hover/cat:text-primary dark:text-foreground">
-                        {shortCategory(c.name)}
-                      </span>
-                      <span className="mt-1 flex items-center justify-between text-[0.7rem] text-muted-foreground">
-                        <span className="tabular-nums font-medium">{c.count} Assets</span>
-                        <ChevronRight className="size-3 text-muted-foreground/60 transition-transform group-hover/cat:translate-x-0.5 group-hover/cat:text-primary" />
-                      </span>
-                    </div>
+                    <span className={cn("flex size-11 items-center justify-center rounded-lg transition-transform motion-safe:group-hover/cat:scale-110", look.tint)}>
+                      <CategoryIcon category={c.name} className="size-6" />
+                    </span>
+                    <span className="line-clamp-2 text-sm leading-tight font-semibold">{shortCategory(c.name)}</span>
+                    <span className="text-xs text-muted-foreground tabular-nums">{c.count} Assets</span>
                   </Link>
                 )
               })}
