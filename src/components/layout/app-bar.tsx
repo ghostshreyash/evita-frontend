@@ -159,8 +159,14 @@ function MenuLink({
   icon: React.ComponentType<{ className?: string }>
   onNavigate: () => void
 }) {
-  const open = useMyJobs().filter((j) => actionFor(j) !== "view").length
-  const badge = path === "/my-tasks" ? open : 0
+  const waiting = useMyJobs().filter((j) => actionFor(j) !== "view")
+  // My Tasks is the maintenance book; inspections are counted on their own entry
+  const badge =
+    path === "/my-tasks"
+      ? waiting.filter((j) => j.kind === "maintenance").length
+      : path === "/inspections"
+        ? waiting.filter((j) => j.kind === "inspection").length
+        : 0
 
   return (
     <NavLink

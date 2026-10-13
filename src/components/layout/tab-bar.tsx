@@ -52,7 +52,11 @@ export function TabBar() {
   const { pathname } = useLocation()
   // Work still needing the engineer's hands, counted for Tasks and for Inspect
   const waiting = useMyJobs().filter((j) => actionFor(j) !== "view")
-  const counts = { work: waiting.length, inspection: waiting.filter((j) => j.kind === "inspection").length }
+  // Each badge counts the screen it opens: Tasks is the maintenance book now
+  const counts = {
+    work: waiting.filter((j) => j.kind === "maintenance").length,
+    inspection: waiting.filter((j) => j.kind === "inspection").length,
+  }
 
   return (
     <nav

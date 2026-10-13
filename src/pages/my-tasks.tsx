@@ -9,7 +9,6 @@ import { ChipTabs, type ChipTab } from "@/components/common/chip-tabs"
 import { DateRangeFilter, TablePager } from "@/components/common/data-table"
 import { PageHeader } from "@/components/common/page-header"
 import { JobActionButton, JobStatusBadge } from "@/components/evita/job-action"
-import { FilterSelect } from "@/components/common/list-controls"
 import { CategoryIcon } from "@/components/common/category-icon"
 import { categoryLook, shortCategory } from "@/lib/category-icons"
 import { Button } from "@/components/ui/button"
@@ -65,11 +64,13 @@ const sortValue: Record<SortKey, (j: Job) => string | number> = {
   id: (j) => j.id,
 }
 
-const kinds: JobKind[] = ["inspection", "maintenance"]
-
 /**
- * The ELPREMAR's book of work from both queues: inspection tasks and
- * maintenance tasks, told apart by the Type chip and the Type filter.
+ * The ELPREMAR's maintenance book.
+ *
+ * Inspections are not here. They are not assigned work in the same sense - the
+ * engineer starts one by standing at an asset - so they have a section of their
+ * own, and My Tasks is left to the maintenance and cleaning that genuinely is
+ * handed out with a date on it.
  *
  * A card per task rather than a table row. On a tablet held at arm's length a
  * task is read as a block — what it is, where it is, when it is due — and the
@@ -95,7 +96,6 @@ function MyTasks({ only }: { only?: JobKind }) {
   const [params] = useSearchParams()
 
   const initialStatus = params.get("status")
-  const initialType = params.get("type")
   const [status, setStatus] = useState<FieldStatus | "all">(
     fieldStatuses.includes(initialStatus as FieldStatus) ? (initialStatus as FieldStatus) : "all"
   )
@@ -106,17 +106,19 @@ function MyTasks({ only }: { only?: JobKind }) {
     return { from: today, to: today }
   })
   const [query, setQuery] = useState("")
-  const [type, setType] = useState<JobKind | "all">(kinds.includes(initialType as JobKind) ? (initialType as JobKind) : "all")
-  /* A locked screen ignores both the filter and the query string: it only ever
-     shows its own kind of work */
-  const kind = only ?? type
+  /*
+   * One kind of work per screen. Inspections have a section of their own, so My
+   * Tasks is the maintenance book - there is nothing left for a Type filter to
+   * choose between, and the query string's ?type= is ignored with it.
+   */
+  const kind = only ?? "maintenance"
   const [sort, setSort] = useState<SortKey>("status")
   const [page, setPage] = useState(1)
   const [pageSize, setPageSize] = useState(10)
 
   /** The kind of work on view, before the status, date and search filters */
   const scoped = useMemo(() => {
-    const mine = jobs.filter((j) => kind === "all" || j.kind === kind)
+    const mine = jobs.filter((j) => j.kind === kind)
     /*
      * An inspection is never overdue. It is a visit the engineer starts when
      * they get to the plant, not a job with a deadline attached, so a booking
@@ -166,7 +168,7 @@ function MyTasks({ only }: { only?: JobKind }) {
       .map((s) => ({ value: s, label: fieldStatusLook[s].label, count: matched.filter((j) => j.field === s).length })),
   ]
 
-  const filtersOn = !!query || (!only && type !== "all") || status !== "all" || !!range?.from
+  const filtersOn = !!query || status !== "all" || !!range?.from
   const label = only === "inspection" ? "inspection" : "task"
   const reset = (fn: () => void) => {
     fn()
@@ -180,9 +182,7 @@ function MyTasks({ only }: { only?: JobKind }) {
         description={
           only === "inspection"
             ? "Each one covers a single area of a plant, whatever departments and assets sit in it. You can also start an inspection at any asset without being booked for it."
-            : only
-              ? `Everything assigned to you for ${jobKindLook[only].label.toLowerCase()}. They are on My Tasks too.`
-              : "Your assigned inspection and maintenance tasks."
+            : "The maintenance and cleaning assigned to you. Inspections have a section of their own."
         }
         breadcrumbs={[{ label: only === "inspection" ? "Inspections" : only ? `${jobKindLook[only].long}s` : "My Tasks" }]}
         actions={
@@ -206,15 +206,6 @@ function MyTasks({ only }: { only?: JobKind }) {
             className={cn(control, "bg-card pl-9")}
           />
         </div>
-        {/* No Type filter on a locked screen — the lock is the filter */}
-        {only ? null : (
-          <FilterSelect
-            label="Type"
-            value={type}
-            onChange={(v) => reset(() => setType(v as typeof type))}
-            options={kinds.map((k) => ({ value: k, label: jobKindLook[k].long }))}
-          />
-        )}
         <DateRangeFilter label="Due" range={range} onApply={(r) => reset(() => setRange(r))} />
         <Select value={sort} onValueChange={(v) => setSort(v as SortKey)}>
           <SelectTrigger aria-label={`Sort ${label}s`} className={cn(control, "w-auto min-w-36 bg-card")}>
@@ -236,7 +227,6 @@ function MyTasks({ only }: { only?: JobKind }) {
           onClick={() =>
             reset(() => {
               setQuery("")
-              setType("all")
               setStatus("all")
               setRange(undefined)
             })
