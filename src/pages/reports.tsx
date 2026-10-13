@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react"
-import { BookOpen, Download, Search, Sparkles, SprayCan, TriangleAlert, X } from "lucide-react"
+import { BookOpen, Search, Sparkles, SprayCan, TriangleAlert, X } from "lucide-react"
 import { cn } from "cn"
 import { toast } from "sonner"
 
@@ -23,10 +23,7 @@ import {
   type ReportRow,
 } from "@/data/report-data"
 import { assetCategories } from "@/data/master-data"
-import { control, PAGE_SIZES, sortRows, type Accessors, type Sort } from "@/lib/data-table"
-import { parseDmy } from "@/data/asset-data"
-
-type Column = "id" | "name" | "category" | "area" | "level" | "score" | "status" | "inspected" | "due"
+import { control, PAGE_SIZES } from "@/lib/data-table"
 
 const ANY = "all"
 
@@ -159,33 +156,6 @@ export function ReportsPage() {
 
 /* ---------- Contamination ---------- */
 
-const assetSorts: { column: Column; label: string }[] = [
-  { column: "id", label: "Asset ID" },
-  { column: "name", label: "Asset" },
-  { column: "category", label: "Category" },
-  { column: "area", label: "Location" },
-]
-
-const contaminationSorts = [
-  ...assetSorts,
-  { column: "level" as Column, label: "Contamination" },
-  { column: "score" as Column, label: "Health Score" },
-  { column: "status" as Column, label: "Status" },
-  { column: "inspected" as Column, label: "Last Inspection" },
-  { column: "due" as Column, label: "Next Due" },
-]
-
-const hygieneSorts = [
-  ...assetSorts,
-  { column: "status" as Column, label: "Hygiene Status" },
-  { column: "level" as Column, label: "Open Points" },
-  { column: "inspected" as Column, label: "Last Cleaned" },
-  { column: "due" as Column, label: "Next Cleaning Due" },
-]
-
-const contaminationOrder = ["Low", "Medium", "High"]
-const findingOrder: Finding[] = ["Healthy", "Alarming", "At Risk"]
-
 function ContaminationReport({
   rows,
   selected,
@@ -199,29 +169,14 @@ function ContaminationReport({
   onClose: () => void
   onClear: () => void
 }) {
-  const accessors: Accessors<ReportRow, Column> = {
-    id: (r) => r.asset.id,
-    name: (r) => r.asset.name,
-    category: (r) => r.asset.category,
-    area: (r) => r.asset.area,
-    level: (r) => contaminationOrder.indexOf(r.contamination),
-    score: (r) => r.healthScore ?? -1,
-    status: (r) => findingOrder.indexOf(r.contaminationStatus),
-    inspected: (r) => (r.lastInspection ? parseDmy(r.lastInspection).getTime() : 0),
-    due: (r) => (r.nextInspectionDue ? parseDmy(r.nextInspectionDue).getTime() : 0),
-  }
-
   return (
     <ReportCards
       report="contamination"
-      title="Assets (Contamination Analysis)"
       rows={rows}
-      accessors={accessors}
       selected={selected}
       onSelect={onSelect}
       onClose={onClose}
       onClear={onClear}
-      sorts={contaminationSorts}
       status={(r) => r.contaminationStatus}
       badge={(r) => (
         <span className={cn("rounded-full px-2 py-0.5 text-xs font-semibold", contaminationTone[r.contamination])}>
@@ -252,18 +207,6 @@ function HygieneReport({
   onClose: () => void
   onClear: () => void
 }) {
-  const accessors: Accessors<ReportRow, Column> = {
-    id: (r) => r.asset.id,
-    name: (r) => r.asset.name,
-    category: (r) => r.asset.category,
-    area: (r) => r.asset.area,
-    level: (r) => r.hygieneOpen,
-    score: (r) => r.hygieneOpen,
-    status: (r) => findingOrder.indexOf(r.hygieneStatus),
-    inspected: (r) => (r.lastCleaned ? parseDmy(r.lastCleaned).getTime() : 0),
-    due: (r) => (r.nextCleaningDue ? parseDmy(r.nextCleaningDue).getTime() : 0),
-  }
-
   return (
     <div className="space-y-3">
       {/* The client was explicit that this report carries no health score */}
@@ -274,14 +217,11 @@ function HygieneReport({
 
       <ReportCards
         report="hygiene"
-        title="Asset Hygiene Details"
         rows={rows}
-        accessors={accessors}
         selected={selected}
         onSelect={onSelect}
         onClose={onClose}
         onClear={onClear}
-        sorts={hygieneSorts}
         status={(r) => r.hygieneStatus}
         badge={(r) => (
           <span className="rounded-full bg-muted px-2 py-0.5 text-xs font-semibold tabular-nums">
@@ -306,19 +246,15 @@ type Fact = { label: string; value: string }
 /**
  * The assets a report covers, as cards rather than as a table.
  *
- * The engineer reads this on a tablet, standing up, and recognises the
- * equipment by its picture before they read its id - so each asset gets its own
- * card with its photograph, and the report's own figures sit underneath. What a
- * column heading used to sort by is a Sort control instead.
+ * The engineer reads this on a tablet, standing up: each asset gets its own
+ * card, led by the glyph for the kind of equipment it is, with the report's own
+ * figures underneath. The rows arrive in asset-id order and stay in it.
  *
  * The whole card opens the report; it is a button, so it is reachable by
  * keyboard and announces its own selected state.
  */
 function ReportCards({
-  title,
   rows,
-  accessors,
-  sorts,
   selected,
   onSelect,
   onClose,
@@ -328,11 +264,7 @@ function ReportCards({
   facts,
   report,
 }: {
-  title: string
   rows: ReportRow[]
-  accessors: Accessors<ReportRow, Column>
-  /** The columns this report can be ordered by, in the order they are offered */
-  sorts: { column: Column; label: string }[]
   selected?: ReportRow
   onSelect: (row: ReportRow) => void
   onClose: () => void
@@ -345,15 +277,11 @@ function ReportCards({
   /** Which report this grid is, so the drawer opens on the matching record */
   report: "contamination" | "hygiene"
 }) {
-  /* Asset ID ascending by default, which is the order the client asked for */
-  const [sort, setSort] = useState<Sort<Column>>(null)
   const [page, setPage] = useState(1)
   const [pageSize, setPageSize] = useState(PAGE_SIZES[0])
 
-  // The accessors are rebuilt by the caller each render, so there is nothing a
-  // memo could hold on to - and sorting a plant's register is cheap
-  const ordered = sortRows(rows, sort, accessors)
-  const pages = Math.max(1, Math.ceil(ordered.length / pageSize))
+  /* Asset ID ascending, which is the order the client asked for - see reportRows */
+  const pages = Math.max(1, Math.ceil(rows.length / pageSize))
 
   const key = `${rows.length}-${pageSize}`
   const [lastKey, setLastKey] = useState(key)
@@ -363,47 +291,10 @@ function ReportCards({
   }
 
   const start = (Math.min(page, pages) - 1) * pageSize
-  const shown = ordered.slice(start, start + pageSize)
+  const shown = rows.slice(start, start + pageSize)
 
   return (
     <div className="rounded-2xl bg-card p-3 shadow-xs ring-1 ring-foreground/10">
-      <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-        <h3 className="text-base font-semibold text-brand-navy dark:text-foreground">{title}</h3>
-        <div className="flex flex-wrap items-center gap-2">
-          <Select
-            value={sort ? `${sort.key}:${sort.dir}` : ""}
-            onValueChange={(v) => {
-              const [key, dir] = v.split(":")
-              setSort({ key: key as Column, dir: dir as "asc" | "desc" })
-            }}
-          >
-            <SelectTrigger size="sm" aria-label="Sort by" className={cn(control, "w-auto min-w-40 bg-card")}>
-              <SelectValue placeholder="Sort: Asset ID" />
-            </SelectTrigger>
-            <SelectContent>
-              {sorts.map((o) => (
-                <SelectItem key={o.column} value={`${o.column}:asc`}>
-                  {o.label} ↑
-                </SelectItem>
-              ))}
-              {sorts.map((o) => (
-                <SelectItem key={`${o.column}-desc`} value={`${o.column}:desc`}>
-                  {o.label} ↓
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <Button
-            variant="outline"
-            size="sm"
-            className={cn(control, "bg-card")}
-            onClick={() => toast.info("Export runs on the server and respects your filters and permissions.")}
-          >
-            <Download /> Export
-          </Button>
-        </div>
-      </div>
-
       {shown.length ? (
         <ul className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
           {shown.map((r) => {
@@ -478,7 +369,7 @@ function ReportCards({
         page={Math.min(page, pages)}
         pages={pages}
         pageSize={pageSize}
-        total={ordered.length}
+        total={rows.length}
         start={start}
         onPage={setPage}
         onPageSize={setPageSize}
