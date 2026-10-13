@@ -107,20 +107,21 @@ function AssetDetail({ asset, onBack }: { asset: AssetRecord; onBack: () => void
         </div>
 
         <div className="space-y-3">
-        {/* ---------- The code on the panel door ---------- */}
-        <DetailPanel icon={QrCode} title="Asset ID & QR Code">
-          <AssetQrPanel asset={asset} />
-        </DetailPanel>
+          {/* ---------- The code on the panel door ---------- */}
+          <DetailPanel icon={QrCode} title="Asset ID & QR Code">
+            <AssetQrPanel asset={asset} />
+          </DetailPanel>
 
-        {/* ---------- What it was photographed as ---------- */}
-        <DetailPanel icon={Images} title={`Asset Images (${profile.images.length})`}>
-          {profile.images.length ? (
-            <div className="grid grid-cols-3 gap-2">
-              {profile.images.map((image) => (
-                <figure key={image.id}>
-                  <div className="h-24 overflow-hidden rounded-md ring-1 ring-foreground/10">
-                    <AssetPhoto file={captures?.images[image.id]} label={image.name} caption={image.name} />
-                  </div>
+          {/* ---------- What it was photographed as ---------- */}
+          <DetailPanel icon={Images} title={`Asset Images (${profile.images.length})`}>
+            {profile.images.length ? (
+              <div className="grid grid-cols-3 gap-2">
+                {profile.images.map((image) => (
+                  <figure key={image.id}>
+                    <div className="h-24 overflow-hidden rounded-md ring-1 ring-foreground/10">
+                      <AssetPhoto file={captures?.images[image.id]} label={image.name} caption={image.name} />
+          
+        </div>
                   <figcaption className="mt-1 line-clamp-2 text-center text-xs leading-tight">{image.name}</figcaption>
                 </figure>
               ))}
