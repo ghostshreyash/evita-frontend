@@ -4,7 +4,7 @@ import { ChevronRight, ClipboardCheck, Plus, QrCode, type LucideIcon } from "luc
 import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { openPanel } from "@/lib/ui-store"
-import { actionFor, useMyJobs } from "@/lib/work"
+import { actionFor, jobPath, useMyJobs } from "@/lib/work"
 
 /**
  * How an inspection begins.
@@ -64,7 +64,7 @@ export function BeginInspectionDialog({ open, onOpenChange }: { open: boolean; o
                 <li key={job.id}>
                   <button
                     type="button"
-                    onClick={() => go(`/my-tasks/${job.id}`)}
+                    onClick={() => go(jobPath(job))}
                     className="flex min-h-14 w-full items-center gap-3 rounded-xl bg-muted/40 px-3 text-left hover:bg-muted"
                   >
                     <span className="min-w-0 flex-1">

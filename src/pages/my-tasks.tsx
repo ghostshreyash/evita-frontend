@@ -17,21 +17,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { priorityTone, slotLabel } from "@/data/occ-tables"
 import { control } from "@/lib/data-table"
 import { openPanel } from "@/lib/ui-store"
-import {
-  categoryFor,
-  fieldStatuses,
-  fieldStatusLook,
-  isOverdue,
-  isToday,
-  jobKindLook,
-  parseDay,
-  thisWeek,
-  useMyJobs,
-  when,
-  type FieldStatus,
-  type Job,
-  type JobKind,
-} from "@/lib/work"
+import { categoryFor, fieldStatuses, fieldStatusLook, isOverdue, isToday, jobKindLook, jobPath, parseDay, thisWeek, useMyJobs, when, type FieldStatus, type Job, type JobKind } from "@/lib/work"
 
 /** The bar down the left of a card, and the tint behind an overdue one */
 const statusEdge: Record<FieldStatus, string> = {
@@ -77,9 +63,8 @@ const sortValue: Record<SortKey, (j: Job) => string | number> = {
  * seven-column table it used to be made that a scan across the screen. The
  * status tabs along the top do the work the KPI tiles used to.
  *
- * `only` locks the screen to one kind of work, which is what the Inspection tab
- * is: the same book with the Type filter already made and taken away. Nothing
- * is removed from My Tasks itself — an inspection is on both.
+ * `only` locks the screen to one kind of work, which is what the Inspections
+ * section is: the same screen reading the other half of the book.
  *
  * The dashboard links here with `?status=` (Open, Overdue, In Progress,
  * Completed, Approved), `?type=` (inspection, maintenance) or `?date=today`,
@@ -340,7 +325,7 @@ function TaskCard({ job }: { job: Job }) {
       </div>
 
       <Link
-        to={`/my-tasks/${job.id}`}
+        to={jobPath(job)}
         aria-label={`Open task ${job.id}, ${job.asset}`}
         className="absolute inset-0 rounded-2xl outline-none"
       />
@@ -401,7 +386,7 @@ function VisitCard({ job }: { job: Job }) {
       </div>
 
       <Link
-        to={`/my-tasks/${job.id}`}
+        to={jobPath(job)}
         aria-label={`Open inspection ${job.id} at ${job.area || job.plant}, ${job.plant}`}
         className="absolute inset-0 rounded-2xl outline-none"
       />

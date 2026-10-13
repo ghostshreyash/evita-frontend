@@ -86,6 +86,15 @@ export function inspectionFor(jobs: Job[], asset: { category: string; plant: str
   )
 }
 
+/**
+ * Where a job's record lives.
+ *
+ * An inspection is not on My Tasks, so it does not open there either: it opens
+ * under Inspections, and the screen reads the same either way.
+ */
+export const jobPath = (job: Pick<Job, "id" | "kind">) =>
+  job.kind === "inspection" ? `/inspections/${job.id}` : `/my-tasks/${job.id}`
+
 /** What the ELPREMAR can do with a job right now */
 export type JobAction = "start" | "continue" | "view"
 

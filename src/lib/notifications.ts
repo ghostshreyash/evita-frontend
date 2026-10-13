@@ -4,7 +4,7 @@ import { format, formatDistanceToNowStrict, isToday, parse } from "date-fns"
 import { useMaintenanceDetails } from "@/data/maintenance-store"
 import { useTicketRows } from "@/data/ticket-store"
 import { useCurrentElpremar } from "@/lib/me"
-import { actionFor, parseDay, useMyJobs, when } from "@/lib/work"
+import { actionFor, jobPath, parseDay, useMyJobs, when } from "@/lib/work"
 import { workStatus } from "@/lib/status"
 
 /**
@@ -87,7 +87,7 @@ export function useNotifications() {
           title: `New task assigned: ${job.activity}`,
           detail: `${job.asset} · ${job.plant} · ${format(parseDay(job.date), "d MMM")}`,
           at: Math.min(at - 86_400_000, now),
-          to: `/my-tasks/${job.id}`,
+          to: jobPath(job),
           tone: "info",
         })
 
@@ -98,7 +98,7 @@ export function useNotifications() {
           title: review.outcome === "approved" ? `Approved: ${job.asset}` : `Sent back for correction: ${job.asset}`,
           detail: review.outcome === "approved" ? `${job.id} signed off by ${review.by}` : review.remarks,
           at: stamp(review.at),
-          to: `/my-tasks/${job.id}`,
+          to: jobPath(job),
           tone: review.outcome === "approved" ? "success" : "critical",
         })
     }

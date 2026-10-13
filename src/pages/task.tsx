@@ -110,6 +110,8 @@ export function TaskPage() {
   const category = categoryFor(job.asset)
   const look = categoryLook(category)
   const kind = jobKindLook[job.kind]
+  /* An inspection is not on My Tasks, so it does not say it came from there */
+  const home = job.kind === "inspection" ? { to: "/inspections", label: "Inspections" } : { to: "/my-tasks", label: "My Tasks" }
   const overdue = isOverdue(job)
   const timeline =
     job.kind === "inspection"
@@ -124,7 +126,10 @@ export function TaskPage() {
         <div className="min-w-0">
           <nav className="flex flex-wrap items-center gap-1.5 text-sm text-muted-foreground">
             <Link to="/" className="flex items-center gap-1 hover:text-foreground"><Home className="size-3.5" /> Home</Link>›
-            <Link to="/my-tasks" className="hover:text-foreground">My Tasks</Link>›
+            <Link to={home.to} className="hover:text-foreground">
+              {home.label}
+            </Link>
+            ›
             <span className="font-semibold text-primary">{job.id}</span>
           </nav>
           <h2 className="mt-1 text-2xl font-bold text-brand-navy dark:text-foreground">{job.asset}</h2>

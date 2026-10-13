@@ -49,8 +49,9 @@ export const router = createBrowserRouter([
           { path: "reports", element: <ReportsPage /> },
           { path: "my-tasks", element: <MyTasksPage /> },
           { path: "my-tasks/:id", element: <TaskPage /> },
-          /* The same book, locked to inspections; a task opens on its My Tasks route */
           { path: "inspections", element: <MyTasksPage only="inspection" /> },
+          /* The same screen, under the section the record belongs to - see `jobPath` */
+          { path: "inspections/:id", element: <TaskPage /> },
           /* Reached from the avatar in the top bar, not from the tab bar */
           { path: "more", element: <MorePage /> },
           /*

@@ -6,7 +6,7 @@ import { format } from "date-fns"
 import { AssetPhoto } from "@/components/common/asset-photo"
 import { JobActionButton, JobStatusBadge } from "@/components/evita/job-action"
 import { slotLabel } from "@/data/occ-tables"
-import { categoryFor, isOverdue, isToday, jobKindLook, parseDay, type FieldStatus, type Job } from "@/lib/work"
+import { categoryFor, isOverdue, isToday, jobKindLook, jobPath, parseDay, type FieldStatus, type Job } from "@/lib/work"
 
 /** The bar down the left of a row, and the tint behind an overdue one */
 const statusEdge: Record<FieldStatus, string> = {
@@ -95,7 +95,7 @@ export function WorkRow({ job }: { job: Job }) {
 
       {/* Stretched over the row, so the row opens and the action still fires */}
       <Link
-        to={`/my-tasks/${job.id}`}
+        to={jobPath(job)}
         aria-label={`Open ${job.id}, ${job.asset}`}
         className="absolute inset-0 outline-none"
       />

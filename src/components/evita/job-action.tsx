@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { startJob } from "@/lib/start-job"
 import { useCurrentElpremar } from "@/lib/me"
-import { actionFor, fieldStatusLook, type Job } from "@/lib/work"
+import { actionFor, fieldStatusLook, jobPath, type Job } from "@/lib/work"
 
 /**
  * The one button a job needs right now: Start (Open or Overdue), Continue
@@ -23,7 +23,7 @@ export function JobActionButton({ job, className }: { job: Job; className?: stri
   const run = (e: React.MouseEvent) => {
     e.stopPropagation()
     if (action === "start") startJob(job, me.name)
-    navigate(`/my-tasks/${job.id}`)
+    navigate(jobPath(job))
   }
 
   // One look for every action — the label and icon say what it does; the status badge carries the urgency
