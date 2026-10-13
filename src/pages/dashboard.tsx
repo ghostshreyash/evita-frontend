@@ -99,27 +99,26 @@ export function DashboardPage() {
 
   return (
     <div className="space-y-5">
-      {/* ---------- Welcome ---------- */}
-      <section className="relative overflow-hidden rounded-2xl text-brand-navy-foreground shadow-sm">
-        {/* The field photograph carries the whole banner, as the tablet design draws it */}
+      {/*
+        * Flush with the top bar rather than a card under it: the greeting is
+        * part of the header, and a rounded panel with its own margin pushed the
+        * work that matters further down the screen.
+        */}
+      <section className="relative -mx-3 -mt-4 overflow-hidden text-brand-navy-foreground sm:-mx-4">
         <img src="/brand/evita-login.jpg" alt="" className="absolute inset-0 size-full object-cover object-[center_30%]" />
         <div className="absolute inset-0 bg-gradient-to-r from-brand-navy via-brand-navy/90 to-brand-navy/30" />
 
-        <div className="relative p-5">
-          <h2 className="text-2xl font-bold tracking-tight sm:text-3xl">Hello, {me.name}!</h2>
-          <p className="mt-0.5 text-sm font-medium text-white/90">
-            {me.designation} · ELPREMAR <span className="tabular-nums">{me.id}</span>
-          </p>
-          <p className="mt-1 text-sm text-white/85 sm:text-base">Stay on top of your plant assets and tasks.</p>
-          <div className="mt-4 flex flex-wrap gap-2 text-sm">
-            <span className="flex items-center gap-1.5 rounded-full bg-white/10 px-3.5 py-1.5 ring-1 ring-white/25">
-              <MapPin className="size-4" /> {me.plant}, {me.enterprise}
+        <div className="relative flex flex-wrap items-center justify-between gap-x-4 gap-y-2 px-4 py-3 sm:px-5">
+          <h2 className="text-xl font-bold tracking-tight sm:text-2xl">Hello, {me.name} 👋</h2>
+
+          <div className="flex flex-wrap gap-2 text-sm">
+            <span className="flex items-center gap-1.5 rounded-full bg-white/10 px-3 py-1 ring-1 ring-white/25">
+              <MapPin className="size-4" /> {me.plant}
             </span>
-            {/* The date moved here when the top bar turned into the tab-design bar */}
-            <span className="flex items-center gap-1.5 rounded-full bg-white/10 px-3.5 py-1.5 tabular-nums ring-1 ring-white/25">
+            <span className="flex items-center gap-1.5 rounded-full bg-white/10 px-3 py-1 tabular-nums ring-1 ring-white/25">
               <CalendarDays className="size-4" /> {format(new Date(), "EEE d MMM")}
             </span>
-            <span className="flex items-center gap-1.5 rounded-full bg-primary px-3.5 py-1.5 font-medium ring-1 ring-white/25">
+            <span className="flex items-center gap-1.5 rounded-full bg-primary px-3 py-1 font-medium ring-1 ring-white/25">
               <ClipboardList className="size-4" /> {week.length} task{week.length === 1 ? "" : "s"} this week
             </span>
           </div>

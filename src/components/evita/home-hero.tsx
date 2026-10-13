@@ -248,7 +248,7 @@ export function UpcomingTasks() {
   const jobs = useMyJobs()
 
   const upcoming = useMemo(
-    () => [...jobs.filter((j) => actionFor(j) !== "view")].sort((a, b) => when(a) - when(b)).slice(1, 5),
+    () => [...jobs.filter((j) => actionFor(j) !== "view")].sort((a, b) => when(a) - when(b)).slice(1, 4),
     [jobs]
   )
 
