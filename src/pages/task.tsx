@@ -29,6 +29,7 @@ import { Timeline } from "@/components/common/detail-view"
 import { CategoryIcon } from "@/components/common/category-icon"
 import { HealthRing, TaskPanel } from "@/components/evita/field-kit"
 import { InspectionForm, ScoreBreakdown } from "@/components/evita/inspection-form"
+import { InspectionReports } from "@/components/evita/inspection-reports"
 import { JobStatusBadge } from "@/components/evita/job-action"
 import { MaintenanceForm } from "@/components/evita/maintenance-form"
 import { InspectionRecord, MaintenanceRecord } from "@/components/evita/work-summary"
@@ -244,6 +245,8 @@ export function TaskPage() {
           <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_19rem]">
             <div className="min-w-0 space-y-5">
               {inspection ? <InspectionRecord detail={inspection} activity={job.activity} /> : maintenance ? <MaintenanceRecord detail={maintenance} /> : null}
+              {/* The two reports the inspection produces, and the clean they ask for */}
+              {inspection ? <InspectionReports job={job} detail={inspection} /> : null}
             </div>
             <aside className="space-y-5">
               {inspection?.result ? (

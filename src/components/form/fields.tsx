@@ -172,6 +172,7 @@ export function SelectField<T extends FieldValues>({
   name,
   label,
   required,
+  description,
   className,
   options,
   placeholder = "Select",
@@ -210,6 +211,7 @@ export function SelectField<T extends FieldValues>({
               ))}
             </SelectContent>
           </Select>
+          {description ? <FieldDescription>{description}</FieldDescription> : null}
           <FieldError errors={[fieldState.error]} />
         </Field>
       )}

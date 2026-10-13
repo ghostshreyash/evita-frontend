@@ -1,81 +1,104 @@
 import { useMemo, useState } from "react"
-import { useNavigate, useSearchParams } from "react-router"
+import { Link, useSearchParams } from "react-router"
 import type { DateRange } from "react-day-picker"
 import { format, isAfter, isBefore, startOfDay } from "date-fns"
-import { Clock, MapPin, Search, X } from "lucide-react"
+import { ArrowDownUp, CalendarDays, Clock, Factory, MapPin, Play, Search, X } from "lucide-react"
 import { cn } from "cn"
 
-import { DateRangeFilter, SortHead, TablePager } from "@/components/common/data-table"
+import { ChipTabs, type ChipTab } from "@/components/common/chip-tabs"
+import { DateRangeFilter, TablePager } from "@/components/common/data-table"
 import { PageHeader } from "@/components/common/page-header"
 import { JobActionButton, JobStatusBadge } from "@/components/evita/job-action"
-import { CountTile, FilterSelect } from "@/components/common/list-controls"
+import { FilterSelect } from "@/components/common/list-controls"
 import { CategoryIcon } from "@/components/common/category-icon"
 import { categoryLook, shortCategory } from "@/lib/category-icons"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { priorityTone, slotLabel } from "@/data/occ-tables"
-import { control, nextSort, sortRows, td, th, type Sort } from "@/lib/data-table"
-import { categoryFor, fieldStatuses, fieldStatusLook, isOverdue, isToday, jobKindLook, parseDay, thisWeek, useMyJobs, when, type FieldStatus, type Job, type JobKind } from "@/lib/work"
+import { control } from "@/lib/data-table"
+import { openPanel } from "@/lib/ui-store"
+import {
+  categoryFor,
+  fieldStatuses,
+  fieldStatusLook,
+  isOverdue,
+  isToday,
+  jobKindLook,
+  parseDay,
+  thisWeek,
+  useMyJobs,
+  when,
+  type FieldStatus,
+  type Job,
+  type JobKind,
+} from "@/lib/work"
 
-/** Whether a task is an inspection or a maintenance, as a chip */
-function KindChip({ kind }: { kind: JobKind }) {
-  const look = jobKindLook[kind]
-  const Icon = look.icon
-  return (
-    <span className={cn("inline-flex items-center gap-1.5 rounded-md px-2 py-1 text-xs font-semibold whitespace-nowrap", look.tint)}>
-      <Icon className="size-3.5" /> {look.label}
-    </span>
-  )
+/** The bar down the left of a card, and the tint behind an overdue one */
+const statusEdge: Record<FieldStatus, string> = {
+  open: "bg-info",
+  overdue: "bg-critical",
+  in_progress: "bg-attention",
+  completed: "bg-healthy",
+  approved: "bg-highlight",
 }
 
-/** Tile tint per status, matching the status badges */
-const tileTone: Record<FieldStatus, string> = {
-  open: "bg-info-soft text-info",
-  overdue: "bg-critical-soft text-critical",
-  in_progress: "bg-attention-soft text-attention",
-  completed: "bg-healthy-soft text-healthy",
-  approved: "bg-highlight-soft text-highlight",
+type SortKey = "due" | "priority" | "status" | "asset" | "id"
+
+const sortLabels: Record<SortKey, string> = {
+  due: "Due date",
+  priority: "Priority",
+  status: "Status",
+  asset: "Asset",
+  id: "Task ID",
 }
 
-type SortKey = "id" | "asset" | "type" | "activity" | "due" | "priority" | "status"
 const priorityRank: Record<string, number> = { Low: 0, Medium: 1, High: 2, Critical: 3 }
 /** Work needing the engineer first (overdue, running, open), then finished */
 const statusRank: Record<FieldStatus, number> = { overdue: 0, in_progress: 1, open: 2, completed: 3, approved: 4 }
+
 const sortValue: Record<SortKey, (j: Job) => string | number> = {
-  id: (j) => j.id,
-  asset: (j) => j.asset,
-  type: (j) => jobKindLook[j.kind].label,
-  activity: (j) => j.activity,
   due: when,
-  priority: (j) => priorityRank[j.priority],
+  priority: (j) => -priorityRank[j.priority],
   status: (j) => statusRank[j.field],
+  asset: (j) => j.asset,
+  id: (j) => j.id,
 }
 
 const kinds: JobKind[] = ["inspection", "maintenance"]
 
 /**
- * The ELPREMAR's book of work from both OCC queues: inspection tasks and
- * maintenance tasks, told apart by the Type column and the Type filter.
+ * The ELPREMAR's book of work from both queues: inspection tasks and
+ * maintenance tasks, told apart by the Type chip and the Type filter.
+ *
+ * A card per task rather than a table row. On a tablet held at arm's length a
+ * task is read as a block — what it is, where it is, when it is due — and the
+ * seven-column table it used to be made that a scan across the screen. The
+ * status tabs along the top do the work the KPI tiles used to.
+ *
+ * `only` locks the screen to one kind of work, which is what the Inspection tab
+ * is: the same book with the Type filter already made and taken away. Nothing
+ * is removed from My Tasks itself — an inspection is on both.
  *
  * The dashboard links here with `?status=` (Open, Overdue, In Progress,
  * Completed, Approved), `?type=` (inspection, maintenance) or `?date=today`,
  * which preset the filters.
  */
-export function MyTasksPage() {
+export function MyTasksPage({ only }: { only?: JobKind }) {
   // The dashboard can link here while My Tasks is already open; a new query string resets the filters
   const [params] = useSearchParams()
-  return <MyTasks key={params.toString()} />
+  return <MyTasks key={`${only ?? "all"}-${params.toString()}`} only={only} />
 }
 
-function MyTasks() {
-  const navigate = useNavigate()
+function MyTasks({ only }: { only?: JobKind }) {
   const jobs = useMyJobs()
   const [params] = useSearchParams()
 
   const initialStatus = params.get("status")
   const initialType = params.get("type")
-  const [status, setStatus] = useState<FieldStatus | "all">(fieldStatuses.includes(initialStatus as FieldStatus) ? (initialStatus as FieldStatus) : "all")
+  const [status, setStatus] = useState<FieldStatus | "all">(
+    fieldStatuses.includes(initialStatus as FieldStatus) ? (initialStatus as FieldStatus) : "all"
+  )
   const [range, setRange] = useState<DateRange | undefined>(() => {
     if (params.get("date") === "week") return thisWeek()
     if (params.get("date") !== "today") return undefined
@@ -84,40 +107,67 @@ function MyTasks() {
   })
   const [query, setQuery] = useState("")
   const [type, setType] = useState<JobKind | "all">(kinds.includes(initialType as JobKind) ? (initialType as JobKind) : "all")
-  const [sort, setSort] = useState<Sort<SortKey>>(null)
+  /* A locked screen ignores both the filter and the query string: it only ever
+     shows its own kind of work */
+  const kind = only ?? type
+  const [sort, setSort] = useState<SortKey>("status")
   const [page, setPage] = useState(1)
   const [pageSize, setPageSize] = useState(10)
 
   /** The kind of work on view, before the status, date and search filters */
-  const scoped = useMemo(() => jobs.filter((j) => type === "all" || j.kind === type), [jobs, type])
+  const scoped = useMemo(() => {
+    const mine = jobs.filter((j) => kind === "all" || j.kind === kind)
+    /*
+     * An inspection is never overdue. It is a visit the engineer starts when
+     * they get to the plant, not a job with a deadline attached, so a booking
+     * that has gone past is still simply open.
+     */
+    return only === "inspection" ? mine.map((j) => (j.field === "overdue" ? { ...j, field: "open" as const } : j)) : mine
+  }, [jobs, kind, only])
 
-  const filtered = useMemo(() => {
+  /** Everything but the status filter, so the tab counts show what choosing one would give */
+  const matched = useMemo(() => {
     const q = query.trim().toLowerCase()
     const from = range?.from && startOfDay(range.from)
     const to = startOfDay(range?.to ?? range?.from ?? new Date(0))
     return scoped.filter((j) => {
-      if (status !== "all" && j.field !== status) return false
       if (from) {
         const on = parseDay(j.date)
         if (isBefore(on, from) || isAfter(on, to)) return false
       }
       if (!q) return true
-      return [j.id, j.asset, j.plant, j.enterprise, j.activity, j.date, j.priority, fieldStatusLook[j.field].label].some((f) => f.toLowerCase().includes(q))
+      return [j.id, j.asset, j.plant, j.enterprise, j.activity, j.date, j.priority, fieldStatusLook[j.field].label].some((f) =>
+        f.toLowerCase().includes(q)
+      )
     })
-  }, [scoped, status, range, query])
+  }, [scoped, range, query])
 
-  // Default order: what needs doing first, then by time
-  const sorted = useMemo(
-    () => (sort ? sortRows(filtered, sort, sortValue) : [...filtered].sort((a, b) => statusRank[a.field] - statusRank[b.field] || when(a) - when(b))),
-    [filtered, sort]
-  )
+  const filtered = useMemo(() => matched.filter((j) => status === "all" || j.field === status), [matched, status])
+
+  const sorted = useMemo(() => {
+    const value = sortValue[sort]
+    return [...filtered].sort((a, b) => {
+      const [x, y] = [value(a), value(b)]
+      const first = x < y ? -1 : x > y ? 1 : 0
+      // Within one group the earliest booking comes first, as it does on site
+      return first || when(a) - when(b)
+    })
+  }, [filtered, sort])
+
   const pages = Math.max(1, Math.ceil(sorted.length / pageSize))
   const current = Math.min(page, pages)
   const start = (current - 1) * pageSize
   const shown = sorted.slice(start, start + pageSize)
 
-  const filtersOn = !!query || type !== "all" || status !== "all" || !!range?.from
-  const onSort = (c: SortKey) => setSort(nextSort(sort, c))
+  const tabs: ChipTab[] = [
+    { value: "all", label: "All", count: matched.length },
+    ...fieldStatuses
+      .filter((s) => !(only === "inspection" && s === "overdue"))
+      .map((s) => ({ value: s, label: fieldStatusLook[s].label, count: matched.filter((j) => j.field === s).length })),
+  ]
+
+  const filtersOn = !!query || (!only && type !== "all") || status !== "all" || !!range?.from
+  const label = only === "inspection" ? "inspection" : "task"
   const reset = (fn: () => void) => {
     fn()
     setPage(1)
@@ -126,116 +176,245 @@ function MyTasks() {
   return (
     <div>
       <PageHeader
-        title="My Tasks"
-        description="Everything EMMS-E has assigned to you. Filter by Type for inspection tasks or maintenance tasks."
-        breadcrumbs={[{ label: "My Tasks" }]}
+        title={only === "inspection" ? "Inspections" : only ? `${jobKindLook[only].long}s` : "My Tasks"}
+        description={
+          only === "inspection"
+            ? "Each one covers a single area of a plant, whatever departments and assets sit in it. You can also start an inspection at any asset without being booked for it."
+            : only
+              ? `Everything assigned to you for ${jobKindLook[only].label.toLowerCase()}. They are on My Tasks too.`
+              : "Your assigned inspection and maintenance tasks."
+        }
+        breadcrumbs={[{ label: only === "inspection" ? "Inspections" : only ? `${jobKindLook[only].long}s` : "My Tasks" }]}
+        actions={
+          only === "inspection" ? (
+            <Button onClick={() => openPanel({ kind: "begin-inspection" })}>
+              <Play className="fill-current" /> Start Inspection
+            </Button>
+          ) : undefined
+        }
       />
 
-      {/* ---------- Where the work stands; a tile applies that status filter ---------- */}
-      <div className="mb-3 grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-5">
-        {fieldStatuses.map((s) => (
-          <CountTile
-            key={s}
-            label={fieldStatusLook[s].label}
-            value={scoped.filter((j) => j.field === s).length}
-            tone={tileTone[s]}
-            active={status === s}
-            onClick={() => reset(() => setStatus(status === s ? "all" : s))}
+      {/* ---------- Search, then the filters as chips ---------- */}
+      <div className="mb-3 flex flex-wrap items-center gap-2">
+        <div className="relative min-w-56 flex-1">
+          <Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            value={query}
+            onChange={(e) => reset(() => setQuery(e.target.value))}
+            placeholder={only === "inspection" ? "Search by plant, enterprise or ID" : "Search task, asset or location"}
+            aria-label={`Search ${label}s`}
+            className={cn(control, "bg-card pl-9")}
           />
-        ))}
-      </div>
-
-      <section className="rounded-2xl bg-card p-4 shadow-xs ring-1 ring-foreground/10">
-        <div className="flex flex-wrap items-center gap-2">
-          <div className="relative min-w-56 flex-1">
-            <Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
-            <Input value={query} onChange={(e) => reset(() => setQuery(e.target.value))} placeholder="Search task, asset or plant" aria-label="Search tasks" className={cn(control, "pl-9")} />
-          </div>
-          <FilterSelect
-            label="Status"
-            value={status}
-            onChange={(v) => reset(() => setStatus(v as typeof status))}
-            options={fieldStatuses.map((s) => ({ value: s, label: fieldStatusLook[s].label }))}
-          />
+        </div>
+        {/* No Type filter on a locked screen — the lock is the filter */}
+        {only ? null : (
           <FilterSelect
             label="Type"
             value={type}
             onChange={(v) => reset(() => setType(v as typeof type))}
             options={kinds.map((k) => ({ value: k, label: jobKindLook[k].long }))}
           />
-          <DateRangeFilter label="Due" range={range} onApply={(r) => reset(() => setRange(r))} />
-          <Button
-            variant="outline"
-            className={cn(control, "bg-card")}
-            disabled={!filtersOn}
-            onClick={() => reset(() => { setQuery(""); setType("all"); setStatus("all"); setRange(undefined) })}
-          >
-            <X /> Clear
-          </Button>
-        </div>
+        )}
+        <DateRangeFilter label="Due" range={range} onApply={(r) => reset(() => setRange(r))} />
+        <Select value={sort} onValueChange={(v) => setSort(v as SortKey)}>
+          <SelectTrigger aria-label={`Sort ${label}s`} className={cn(control, "w-auto min-w-36 bg-card")}>
+            <ArrowDownUp className="size-4 text-muted-foreground" />
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {(Object.keys(sortLabels) as SortKey[]).map((key) => (
+              <SelectItem key={key} value={key}>
+                {sortLabels[key]}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <Button
+          variant="outline"
+          className={cn(control, "bg-card")}
+          disabled={!filtersOn}
+          onClick={() =>
+            reset(() => {
+              setQuery("")
+              setType("all")
+              setStatus("all")
+              setRange(undefined)
+            })
+          }
+        >
+          <X /> Clear
+        </Button>
+      </div>
 
-        <div className="mt-3 overflow-x-auto">
-          <Table>
-            <TableHeader>
-              <TableRow className="bg-muted/60 hover:bg-muted/60">
-                <SortHead label="Task" column="id" sort={sort} onSort={onSort} className="max-lg:hidden" />
-                <SortHead label="Asset / Location" column="asset" sort={sort} onSort={onSort} />
-                <SortHead label="Type" column="type" sort={sort} onSort={onSort} />
-                <SortHead label="Activity" column="activity" sort={sort} onSort={onSort} />
-                <SortHead label="Due" column="due" sort={sort} onSort={onSort} />
-                <SortHead label="Priority" column="priority" sort={sort} onSort={onSort} className="max-md:hidden" />
-                <SortHead label="Status" column="status" sort={sort} onSort={onSort} />
-                <TableHead className={cn(th, "text-center")}>Action</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {shown.map((j) => (
-                <TableRow key={j.id} onClick={() => navigate(`/my-tasks/${j.id}`)} className={cn("h-20 cursor-pointer", isOverdue(j) && "bg-critical-soft/40 hover:bg-critical-soft/60")}>
-                  <TableCell className={cn(td, "tabular-nums font-bold whitespace-nowrap max-lg:hidden")}>{j.id}</TableCell>
-                  <TableCell className={cn(td, "whitespace-normal")}>
-                    <span className="block font-semibold text-brand-navy dark:text-foreground">{j.asset}</span>
-                    <span className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1">
-                      <span className={cn("inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-xs font-semibold", categoryLook(categoryFor(j.asset)).tint)}>
-                        <CategoryIcon category={categoryFor(j.asset)} className="size-3.5" />
-                        {shortCategory(categoryFor(j.asset))}
-                      </span>
-                      <span className="flex items-center gap-1 text-xs text-muted-foreground">
-                        <MapPin className="size-3" /> {j.plant}, {j.enterprise}
-                      </span>
-                    </span>
-                  </TableCell>
-                  <TableCell className={td}>
-                    <KindChip kind={j.kind} />
-                  </TableCell>
-                  <TableCell className={cn(td, "max-w-44 whitespace-normal")}>{j.activity}</TableCell>
-                  <TableCell className={cn(td, "whitespace-nowrap", isOverdue(j) && "font-semibold text-critical")}>
-                    <span className="flex items-center gap-1.5">
-                      <Clock className="size-4 shrink-0" />
-                      {isToday(j.date) ? "Today" : format(parseDay(j.date), "d MMM yyyy")}
-                    </span>
-                    <span className={cn("block pl-5.5 tabular-nums text-xs", isOverdue(j) ? "text-critical" : "text-muted-foreground")}>
-                      {slotLabel(j.slot)}
-                      {isOverdue(j) ? " · Overdue" : ""}
-                    </span>
-                  </TableCell>
-                  <TableCell className={cn(td, "max-md:hidden")}>
-                    <span className={cn("rounded-md px-2 py-1 text-xs font-bold tracking-wide uppercase", priorityTone[j.priority])}>{j.priority}</span>
-                  </TableCell>
-                  <TableCell className={td}><JobStatusBadge job={j} /></TableCell>
-                  <TableCell className={cn(td, "py-1.5 text-center")}><JobActionButton job={j} /></TableCell>
-                </TableRow>
-              ))}
-              {sorted.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={8} className="py-12 text-center text-sm text-muted-foreground">No tasks match these filters.</TableCell>
-                </TableRow>
-              ) : null}
-            </TableBody>
-          </Table>
+      <ChipTabs
+        label={only === "inspection" ? "Inspection status" : "Task status"}
+        tabs={tabs}
+        value={status}
+        onChange={(v) => reset(() => setStatus(v as typeof status))}
+        className="mb-3"
+      />
 
-          <TablePager page={current} pages={pages} pageSize={pageSize} total={sorted.length} start={start} onPage={setPage} onPageSize={(n) => { setPageSize(n); setPage(1) }} />
-        </div>
-      </section>
+      {/* ---------- A card per task ---------- */}
+      {shown.length ? (
+        <ul className="grid gap-2.5 xl:grid-cols-2">
+          {shown.map((job) =>
+            only === "inspection" ? <VisitCard key={job.id} job={job} /> : <TaskCard key={job.id} job={job} />
+          )}
+        </ul>
+      ) : (
+        <p className="rounded-2xl bg-card py-16 text-center text-sm text-muted-foreground shadow-xs ring-1 ring-foreground/10">
+          Nothing matches these filters.
+        </p>
+      )}
+
+      <TablePager
+        page={current}
+        pages={pages}
+        pageSize={pageSize}
+        total={sorted.length}
+        start={start}
+        onPage={setPage}
+        onPageSize={(n) => {
+          setPageSize(n)
+          setPage(1)
+        }}
+      />
     </div>
+  )
+}
+
+/**
+ * One task, as a block: the asset it is against, where it is, when it is due,
+ * and the one thing the engineer can do with it right now.
+ *
+ * The whole card opens the task. A link stretched over the card does that
+ * rather than a click handler on a wrapping button, so the card stays
+ * keyboard-reachable and the action button can sit above it without one button
+ * being nested inside another.
+ */
+function TaskCard({ job }: { job: Job }) {
+  const category = categoryFor(job.asset)
+  const kind = jobKindLook[job.kind]
+  const overdue = isOverdue(job)
+
+  return (
+    <li
+      className={cn(
+        "relative flex items-stretch overflow-hidden rounded-2xl bg-card shadow-xs ring-1 ring-foreground/10 transition-shadow hover:shadow-md focus-within:ring-2 focus-within:ring-primary",
+        overdue && "bg-critical-soft/40"
+      )}
+    >
+      <span aria-hidden className={cn("w-1.5 shrink-0", statusEdge[job.field])} />
+
+      <div className="flex min-w-0 flex-1 flex-wrap items-center gap-3 p-3">
+        <span className={cn("flex size-12 shrink-0 items-center justify-center rounded-xl", categoryLook(category).tint)}>
+          <CategoryIcon category={category} className="size-6" />
+        </span>
+
+        <div className="min-w-0 flex-1">
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="tabular-nums text-xs font-bold text-muted-foreground">{job.id}</span>
+            <span className={cn("flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[0.7rem] font-semibold", kind.tint)}>
+              <kind.icon className="size-3" /> {kind.label}
+            </span>
+            <span className={cn("rounded-md px-1.5 py-0.5 text-[0.7rem] font-bold tracking-wide uppercase", priorityTone[job.priority])}>
+              {job.priority}
+            </span>
+          </div>
+          <h3 className="mt-0.5 truncate text-base font-bold text-brand-navy dark:text-foreground">{job.asset}</h3>
+          <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
+            <span className="font-semibold">{shortCategory(category)}</span>
+            <span className="flex min-w-0 items-center gap-1">
+              <MapPin className="size-3 shrink-0" />
+              <span className="truncate">
+                {job.plant}, {job.enterprise}
+              </span>
+            </span>
+          </div>
+          <p className="mt-1 truncate text-sm">{job.activity}</p>
+        </div>
+
+        <div className="flex shrink-0 flex-col items-end gap-1.5">
+          <span className={cn("flex items-center gap-1.5 text-sm font-semibold whitespace-nowrap", overdue && "text-critical")}>
+            <Clock className="size-4" />
+            {isToday(job.date) ? "Today" : format(parseDay(job.date), "d MMM yyyy")}
+          </span>
+          <span className={cn("tabular-nums text-xs", overdue ? "text-critical" : "text-muted-foreground")}>
+            {slotLabel(job.slot)}
+            {overdue ? " · Overdue" : ""}
+          </span>
+          <JobStatusBadge job={job} />
+          {/* Above the stretched link, so the action fires instead of opening the task */}
+          <JobActionButton job={job} className="relative z-10 mt-1 w-28" />
+        </div>
+      </div>
+
+      <Link
+        to={`/my-tasks/${job.id}`}
+        aria-label={`Open task ${job.id}, ${job.asset}`}
+        className="absolute inset-0 rounded-2xl outline-none"
+      />
+    </li>
+  )
+}
+
+/**
+ * One inspection, as the visit it is.
+ *
+ * No asset on it: the client was clear on 12-10-2026 that an inspection sends
+ * the ELPREMAR to a place rather than to one asset, and which assets get
+ * inspected is settled on site, by onboarding them or scanning their labels.
+ *
+ * A visit covers a single area of a plant, whatever departments and assets
+ * happen to sit in it, so the card leads with the area and names the plant
+ * under it. Beyond that it carries only the day and the booked hour - nothing
+ * it cannot know yet.
+ *
+ * Nothing here is overdue: an inspection is started when the engineer gets to
+ * the plant, so a booking that has gone past is still simply open.
+ */
+function VisitCard({ job }: { job: Job }) {
+  return (
+    <li className="relative flex items-stretch overflow-hidden rounded-2xl bg-card shadow-xs ring-1 ring-foreground/10 transition-shadow hover:shadow-md focus-within:ring-2 focus-within:ring-primary">
+      <span aria-hidden className={cn("w-1.5 shrink-0", statusEdge[job.field])} />
+
+      <div className="flex min-w-0 flex-1 flex-wrap items-center gap-3 p-3">
+        <span className="flex size-12 shrink-0 items-center justify-center rounded-xl bg-info-soft text-primary">
+          <Factory className="size-6" />
+        </span>
+
+        <div className="min-w-0 flex-1">
+          {/* No priority on an inspection: it is a booked visit, not a job queue */}
+          <span className="tabular-nums text-xs font-bold text-muted-foreground">{job.id}</span>
+          <h3 className="mt-0.5 truncate text-base font-bold text-brand-navy dark:text-foreground">
+            {job.area || job.plant}
+          </h3>
+          <p className="truncate text-sm text-muted-foreground">
+            {job.plant}, {job.enterprise}
+          </p>
+          <p className="mt-1 truncate text-sm">{job.activity}</p>
+        </div>
+
+        <div className="flex shrink-0 flex-col items-end gap-1.5">
+          <span className="flex items-center gap-1.5 text-sm font-semibold whitespace-nowrap">
+            <CalendarDays className="size-4" />
+            {isToday(job.date) ? "Today" : format(parseDay(job.date), "d MMM yyyy")}
+          </span>
+          <span className="flex items-center gap-1.5 text-xs tabular-nums text-muted-foreground">
+            <Clock className="size-3.5" />
+            {slotLabel(job.slot)}
+          </span>
+          <JobStatusBadge job={job} />
+          {/* Above the stretched link, so the action fires instead of opening it */}
+          <JobActionButton job={job} className="relative z-10 mt-1 w-28" />
+        </div>
+      </div>
+
+      <Link
+        to={`/my-tasks/${job.id}`}
+        aria-label={`Open inspection ${job.id} at ${job.area || job.plant}, ${job.plant}`}
+        className="absolute inset-0 rounded-2xl outline-none"
+      />
+    </li>
   )
 }

@@ -123,11 +123,27 @@ function postingFor(e: EnterpriseRecord, s: number) {
 
 /* ---------- Registry ---------- */
 
+/**
+ * The country an ELPREMAR already has work in.
+ *
+ * The books are the authority on where someone works, so the register follows
+ * them rather than the other way round.
+ */
+const workCountryOf = (name: string) =>
+  [...inspectionActivities, ...maintenanceActivities].find((row) => row.elpremar === name)?.country
+
 export const elpremarRecords: ElpremarRecord[] = elpremarRoster.map((person, i) => {
   const id = `ELP-${String(1001 + i * 7).padStart(4, "0")}`
   const s = seedOf(id)
-  const enterprise = enterpriseRecords[s % enterpriseRecords.length]
   const name = person.name
+  /*
+   * An ELPREMAR is posted in the country they are sent to work in. The posting
+   * used to be picked by hash alone, which left people like the demo account
+   * registered at a plant on one continent and booked to inspect on another.
+   */
+  const home = workCountryOf(name)
+  const pool = home ? enterpriseRecords.filter((e) => e.country === home) : []
+  const enterprise = pool.length ? pool[s % pool.length] : enterpriseRecords[s % enterpriseRecords.length]
   const status: ElpremarStatus = elpremarLifecycle(i)
   // A suspended account keeps its posting; it just cannot be given new work
   const unassigned = false

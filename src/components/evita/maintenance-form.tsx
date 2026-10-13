@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react"
 import { format } from "date-fns"
-import { Activity, Camera, Check, Droplets, Flame, NotebookPen, Send, Timer } from "lucide-react"
+import { Activity, Camera, Check, Droplets, Flame, NotebookPen, Send, Sparkles, Timer } from "lucide-react"
 import { toast } from "sonner"
 import { cn } from "cn"
 
@@ -15,6 +15,8 @@ import { Checklist, CountPill, EvidenceStrip, FieldLabel, Segmented, StepCard } 
 import { TimeLog } from "@/components/evita/time-log"
 import type { EvidenceItem } from "@/data/evidence"
 import { fireSystems, pdMethods, products, type InstaProduct, type MaintenanceDetail } from "@/data/maintenance-detail"
+import { instaUse, recommendInsta, type InstaProduct as InstaName } from "@/data/insta"
+import { useInspectionDetails } from "@/data/inspection-store"
 import { resumeMaintenanceClock, saveMaintenanceDraft, stopMaintenanceClock, submitMaintenance, type MaintenanceDraft } from "@/data/maintenance-store"
 import type { Job } from "@/lib/work"
 
@@ -80,6 +82,10 @@ export function MaintenanceForm({ job, detail }: { job: Job; detail: Maintenance
   const thermal = evidence.filter((e) => e.kind === "thermal")
   const usedProducts = items.filter((p) => p.name && p.quantity > 0)
 
+  /* The inspection this cleaning came out of, and what it asked for */
+  const inspections = useInspectionDetails()
+  const advice = recommendInsta(job.inspectionId ? inspections[job.inspectionId]?.capture : undefined)
+
   const checklist = [
     { label: "Work time logged", done: timeLog.length > 0 },
     { label: "INSTA consumables booked", done: usedProducts.length > 0 },
@@ -108,9 +114,24 @@ export function MaintenanceForm({ job, detail }: { job: Job; detail: Maintenance
         </StepCard>
 
         {/* ---------- 3. Consumables ---------- */}
-        <StepCard title="Fluids & Consumables" icon={Droplets} done={usedProducts.length > 0 && cleaned.length === cleaningSteps.length} actions={<CountPill done={usedProducts.length > 0}>{usedProducts.length} Used</CountPill>}>
+        <StepCard title="INSTA CLEAN" icon={Droplets} done={usedProducts.length > 0 && cleaned.length === cleaningSteps.length} actions={<CountPill done={usedProducts.length > 0}>{usedProducts.length} Used</CountPill>}>
           <div className="space-y-3">
-            {/* INSTA products as cards: tap to add, then enter the quantity used */}
+            {/*
+              * What the inspection asked for. The client was explicit that the
+              * field judgement wins, so it is a recommendation on the card the
+              * engineer may well not take.
+              */}
+            {advice ? (
+              <p className="flex flex-wrap items-center gap-x-2 gap-y-1 rounded-xl bg-info-soft px-3 py-2.5 text-sm ring-1 ring-primary/20">
+                <Sparkles className="size-4 shrink-0 text-primary" />
+                <span>
+                  The inspection recommends <strong className="font-semibold">{advice.product}</strong> — {advice.because}.
+                </span>
+                <span className="text-muted-foreground">Pick another if the panel says otherwise.</span>
+              </p>
+            ) : null}
+
+            {/* The products as cards: tap to book one, then enter the quantity used */}
             <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
               {products.map((x) => {
                 const row = items.find((r) => r.name === x.name)
@@ -125,7 +146,19 @@ export function MaintenanceForm({ job, detail }: { job: Job; detail: Maintenance
                       <span className={cn("flex size-11 shrink-0 items-center justify-center rounded-lg", row ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground")}>
                         <Droplets className="size-5" />
                       </span>
-                      <span className="min-w-0 flex-1 text-sm leading-tight font-semibold">{x.name}</span>
+                      <span className="min-w-0 flex-1 leading-tight">
+                        <span className="block text-sm font-semibold">
+                          {x.name}
+                          {advice?.product === x.name ? (
+                            <span className="ml-1.5 rounded-full bg-primary px-1.5 py-0.5 text-[0.65rem] font-bold text-primary-foreground">
+                              Recommended
+                            </span>
+                          ) : null}
+                        </span>
+                        <span className="mt-0.5 block text-xs text-muted-foreground">
+                          {instaUse[x.name as InstaName].condition} · {instaUse[x.name as InstaName].detail}
+                        </span>
+                      </span>
                       <span className={cn("flex size-6 shrink-0 items-center justify-center rounded-md ring-2", row ? "bg-primary text-primary-foreground ring-primary" : "ring-foreground/20")}>
                         {row ? <Check className="size-4" strokeWidth={3} /> : null}
                       </span>

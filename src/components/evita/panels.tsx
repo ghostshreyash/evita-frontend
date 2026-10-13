@@ -1,4 +1,5 @@
 import { ScanQrDialog } from "@/components/evita/scan-qr-dialog"
+import { BeginInspectionDialog } from "@/components/evita/begin-inspection-dialog"
 import { ReportIssueDialog } from "@/components/evita/report-issue-dialog"
 import { SafetyDialog, SopDialog } from "@/components/evita/guidance-dialogs"
 import { NotificationsSheet } from "@/components/evita/notifications-sheet"
@@ -16,6 +17,7 @@ export function Panels() {
   return (
     <>
       {panel?.kind === "scan" ? <ScanQrDialog open onOpenChange={close} /> : null}
+      {panel?.kind === "begin-inspection" ? <BeginInspectionDialog open onOpenChange={close} /> : null}
       {panel?.kind === "issue" ? <ReportIssueDialog key={JSON.stringify(panel)} context={panel} onOpenChange={close} /> : null}
       {panel?.kind === "sop" ? <SopDialog key={panel.activity ?? "sop"} activity={panel.activity} onOpenChange={close} /> : null}
       {panel?.kind === "safety" ? <SafetyDialog onOpenChange={close} /> : null}

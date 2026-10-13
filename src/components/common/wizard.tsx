@@ -47,7 +47,7 @@ export function StepperBar({
 }) {
   const reachable = furthest ?? current
   return (
-    <ol className="mb-4 flex items-center gap-2 overflow-x-auto rounded-lg bg-card px-3 py-2.5 shadow-xs ring-1 ring-foreground/10">
+    <ol className="mb-4 flex items-center gap-2 overflow-x-auto rounded-2xl bg-card px-3 py-2.5 shadow-xs ring-1 ring-foreground/10">
       {steps.map((step, i) => {
         const state = stateOf(i, current)
         const clickable = onSelect !== undefined && i !== current && i <= reachable
@@ -96,7 +96,7 @@ export function StepCard({
   children: React.ReactNode
 }) {
   return (
-    <section className={cn("rounded-lg bg-card p-3 shadow-xs ring-1 ring-foreground/10", className)}>
+    <section className={cn("rounded-2xl bg-card p-3 shadow-xs ring-1 ring-foreground/10", className)}>
       <h3 className="text-lg font-bold text-brand-navy dark:text-foreground">{title}</h3>
       {description ? <p className="mt-0.5 mb-3 text-sm text-muted-foreground">{description}</p> : <div className="mb-3" />}
       {children}

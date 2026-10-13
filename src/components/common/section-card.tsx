@@ -38,7 +38,7 @@ export function SectionCard({
     <section
       aria-disabled={disabled || undefined}
       className={cn(
-        "group/card flex flex-col rounded-lg bg-card text-card-foreground shadow-xs ring-1 ring-foreground/10",
+        "group/card flex flex-col rounded-2xl bg-card text-card-foreground shadow-xs ring-1 ring-foreground/10",
         "transition-[transform,box-shadow,--tw-ring-color] duration-200 ease-out",
         // Live panels lift on hover; disabled ones stay put so they read as inert
         disabled

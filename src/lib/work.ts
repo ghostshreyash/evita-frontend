@@ -5,6 +5,7 @@ import { ClipboardCheck, Wrench, type LucideIcon } from "lucide-react"
 import { useInspectionDetails, useInspectionRows } from "@/data/inspection-store"
 import { useMaintenanceDetails, useMaintenanceRows, useStartedMaintenance } from "@/data/maintenance-store"
 import type { Priority } from "@/data/occ-tables"
+import { categoryFor } from "@/lib/asset-category"
 import { useCurrentElpremar } from "@/lib/me"
 import type { WorkStatus } from "@/lib/status"
 
@@ -66,6 +67,25 @@ export type Job = {
   inspectionId?: string
 }
 
+/**
+ * The inspection on the engineer's book for this asset, if there is one.
+ *
+ * Matched on the plant as well as the category, now that an ELPREMAR is posted
+ * where they are sent to work and the register and the book name the same
+ * plant.
+ *
+ * TODO: a task still carries no asset id. The book names its assets loosely
+ * ("LT Panel - Block A") while the register names them by series ("LT Panel -
+ * 01"), so the category is as close as this gets. Match on the asset id once
+ * the API carries one.
+ */
+export function inspectionFor(jobs: Job[], asset: { category: string; plant: string }) {
+  return jobs.find(
+    (j) =>
+      j.kind === "inspection" && actionFor(j) !== "view" && j.plant === asset.plant && categoryFor(j.asset) === asset.category
+  )
+}
+
 /** What the ELPREMAR can do with a job right now */
 export type JobAction = "start" | "continue" | "view"
 
@@ -125,7 +145,7 @@ export function useMyJobs(): Job[] {
   return useMemo(() => {
     const jobs: Job[] = [
       ...inspections
-        .filter((t) => t.elpremar === me.name)
+        .filter((t) => t.elpremar === me.name && t.country === me.country)
         .map((t) => ({
           id: t.id,
           kind: "inspection" as const,
@@ -142,7 +162,7 @@ export function useMyJobs(): Job[] {
           area: inspectionDetails[t.id]?.area ?? "",
         })),
       ...maintenance
-        .filter((m) => m.elpremar === me.name)
+        .filter((m) => m.elpremar === me.name && m.country === me.country)
         .map((m) => ({
           id: m.id,
           kind: "maintenance" as const,
@@ -177,4 +197,4 @@ export function summarise(jobs: Job[]) {
   }
 }
 
-export { categoryFor } from "@/lib/asset-category"
+export { categoryFor }

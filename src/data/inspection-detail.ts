@@ -18,10 +18,13 @@ import {
   angleSlotsFor,
   dustThickness,
   dustTypes,
+  contaminationKinds,
   hygieneChecks,
   inspectionReadingsFor,
   readingKeys,
   thermalPointsFor,
+  type ContaminationKind,
+  type ContaminationLevel,
   type DustThickness,
   type FpsStatus,
 } from "@/data/test-template"
@@ -64,6 +67,11 @@ export type InspectionCapture = {
   readings: Record<string, string>
   thickness?: DustThickness
   dustTypes: string[]
+  /**
+   * Carbon / dust / corrosion, each Low, Medium or High. Read off the
+   * photographs by AI after sync - see `contaminationKinds`.
+   */
+  contamination?: Partial<Record<ContaminationKind, ContaminationLevel>>
   /** Hygiene check key → OK or an issue, with a note when it is an issue */
   hygiene: Record<string, { ok: boolean; note: string }>
   fps: { installed?: "Yes" | "No"; status?: FpsStatus; remarks: string }
@@ -228,6 +236,14 @@ export function inspectionDetail(row: TaskRow): InspectionDetail {
   if (done) {
     capture.thickness = pick(dustThickness)
     capture.dustTypes = random() < 0.7 ? [pick(dustTypes)] : []
+    // What the AI read off the images; carbon is the rarer of the three
+    capture.contamination = Object.fromEntries(
+      contaminationKinds.map((kind) => {
+        const roll = random()
+        const level: ContaminationLevel = roll > (kind === "Carbon / soot" ? 0.82 : 0.66) ? "High" : roll > 0.4 ? "Medium" : "Low"
+        return [kind, level]
+      })
+    )
     for (const c of hygieneChecks) {
       const ok = random() > 0.15
       capture.hygiene[c.key] = { ok, note: ok ? "" : "Corrected on site where possible; rest listed for maintenance." }

@@ -13,6 +13,7 @@ import {
   readingKeys,
   readingPhases,
   thermalScore,
+  worstContamination,
   type ResultStatus,
 } from "@/data/test-template"
 
@@ -108,7 +109,7 @@ export function resultsFrom(capture: InspectionCapture, category: string, eviden
     })
   }
 
-  const level = contaminationLevel(capture.thickness, capture.dustTypes)
+  const level = levelOf(capture)
   if (level)
     rows.push({
       parameter: "Contamination level",
@@ -156,7 +157,7 @@ export function observationsFrom(capture: InspectionCapture): Observation[] {
         severity: r.status === "Fail" ? "High" : "Medium",
         remarks: "Re-scan under load after the intervention to confirm.",
       })
-  const level = contaminationLevel(capture.thickness, capture.dustTypes)
+  const level = levelOf(capture)
   if (level && level !== "Low")
     list.push({
       type: "Contamination",
@@ -176,13 +177,23 @@ export function observationsFrom(capture: InspectionCapture): Observation[] {
 }
 
 /**
+ * The contamination level an inspection is reported at.
+ *
+ * The AI's carbon / dust / corrosion breakdown is the client's model and is
+ * read first; the thickness and deposit types are the fallback for a record
+ * taken before the breakdown existed.
+ */
+export const levelOf = (capture: InspectionCapture) =>
+  worstContamination(capture.contamination) ?? contaminationLevel(capture.thickness, capture.dustTypes)
+
+/**
  * Health Score = Σ weight × input score, over the inputs that have a value.
  * Weights from master-data (Visual Contamination 70, Thermal 20, Fire
  * Prevention 10); an input not yet recorded drops out and the rest re-weight,
  * so the estimate on screen is fair while the sheet is half filled.
  */
 export function scoreCapture(capture: InspectionCapture): InspectionResult {
-  const level = contaminationLevel(capture.thickness, capture.dustTypes)
+  const level = levelOf(capture)
   const thermal = worst(thermalReadings(capture).map((r) => r.status))
   const fps = capture.fps.installed === "No" ? fpsScore["Not Installed"] : capture.fps.status ? fpsScore[capture.fps.status] : undefined
   const breakdown = {

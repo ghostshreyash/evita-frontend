@@ -15,8 +15,8 @@ import { emptyCapture } from "@/lib/testing"
  */
 type Snapshot = { rows: TaskRow[]; details: Record<string, InspectionDetail> }
 
-// v3: Alarming replaces Attention Required in the stored statuses
-const saved = loadSnapshot<Snapshot>("inspections.v4")
+// v5: inspection ids read INS-, not TSK- — an old snapshot would bring the task ids back
+const saved = loadSnapshot<Snapshot>("inspections.v5")
 let rows: TaskRow[] = saved?.rows ?? inspectionActivities
 let details: Record<string, InspectionDetail> = saved?.details ?? Object.fromEntries(rows.map((r) => [r.id, inspectionDetail(r)]))
 
@@ -26,7 +26,7 @@ const subscribe = (listener: () => void) => {
   return () => void listeners.delete(listener)
 }
 const emit = () => {
-  saveSnapshot("inspections.v4", { rows, details } satisfies Snapshot)
+  saveSnapshot("inspections.v5", { rows, details } satisfies Snapshot)
   listeners.forEach((listener) => listener())
 }
 
@@ -66,6 +66,60 @@ export function startInspection(id: string, by: string) {
 }
 
 /** Save what has been captured so far without finishing — the draft survives a refresh */
+/**
+ * Raise an inspection on the spot, against an asset the engineer is standing
+ * at, and start it.
+ *
+ * An inspection is not an assigned task. The client was explicit on
+ * 12-10-2026: an ELPREMAR walks up to a panel, onboards it or scans its label,
+ * and inspects it - "yeh pura task usne apne marzi se kiya". An assignment
+ * puts a visit on the book; it is not what permits the work.
+ *
+ * Returns the new id so the caller can open it.
+ */
+export function addInspectionForAsset(
+  asset: { id: string; name: string; category: string; plant: string; enterprise: string; area: string },
+  by: string
+) {
+  // INS-, not TSK-: an inspection is not a task, and the id is read on site
+  const id = `INS-${9000 + rows.filter((r) => r.id.startsWith("INS-9")).length}`
+  const today = stampNow().split(" ")[0]
+  const row: TaskRow = {
+    id,
+    elpremar: by,
+    enterprise: asset.enterprise,
+    plant: asset.plant,
+    asset: asset.name,
+    country: "India",
+    activity: "Visual Inspection",
+    due: today,
+    slot: new Date().getHours(),
+    priority: "Medium",
+    status: "in_progress",
+  }
+  rows = [row, ...rows]
+  details = {
+    ...details,
+    [id]: {
+      ...inspectionDetail(row),
+      // Raised at the asset, so what it is and where it stands are known
+      area: asset.area,
+      assetTag: asset.id,
+      assetCategory: asset.category,
+      createdBy: `${by} (on site)`,
+      execution: { performedBy: by, startedAt: stampNow(), remarks: "" },
+      measurements: [],
+      observations: [],
+      evidence: [],
+      capture: emptyCapture(),
+      result: undefined,
+      sync: { state: "draft", at: stampNow() },
+    },
+  }
+  emit()
+  return id
+}
+
 export function saveInspectionDraft(id: string, patch: Partial<InspectionDetail>) {
   details = { ...details, [id]: { ...details[id], ...patch, sync: { state: "draft", at: stampNow() } } }
   emit()

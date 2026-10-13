@@ -1,5 +1,6 @@
 import type { DetailRow } from "@/components/common/detail-list"
 import type { AssetProfile } from "@/data/asset-data"
+import { cleaningIntervalMonths, nextCleaningDue } from "@/data/maintenance-schedule"
 
 /**
  * The read-only blocks an asset is described by, as rows.
@@ -34,8 +35,24 @@ export const assetDetailRows = (p: AssetProfile): DetailRow[] => [
  * type, so these are read off the profile rather than named here — see
  * data/asset-parameters.ts.
  */
-export const assetTechnicalRows = (p: AssetProfile): DetailRow[] =>
-  p.parameters.map((param) => ({
+export const assetTechnicalRows = (p: AssetProfile): DetailRow[] => [
+  ...p.parameters.map((param) => ({
     label: param.label,
     value: param.value ? [param.value, param.unit].filter(Boolean).join(" ") : "",
-  }))
+  })),
+  /*
+   * Where the asset stands, and the cleaning interval that falls out of it.
+   * The interval is derived, never typed - see data/maintenance-schedule.ts.
+   */
+  { label: "Installation Environment", value: p.details.environment, always: true },
+  {
+    label: "Cleaning Interval",
+    value: p.details.environment
+      ? `Every ${cleaningIntervalMonths(p.details.category, p.details.environment)} months`
+      : "",
+  },
+]
+
+/** When this asset is next due a cleaning, counted from a given date */
+export const cleaningDue = (p: AssetProfile, from: string) =>
+  p.details.environment ? nextCleaningDue(from, p.details.category, p.details.environment) : ""

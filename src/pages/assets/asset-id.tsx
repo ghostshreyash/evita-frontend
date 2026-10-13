@@ -1,8 +1,9 @@
-import { ArrowLeft, Check, CircleCheckBig, Cog, Lightbulb, QrCode } from "lucide-react"
+import { ArrowLeft, Check, CircleCheckBig, ClipboardCheck, Cog, Lightbulb, QrCode } from "lucide-react"
 
 import { PageHeader } from "@/components/common/page-header"
 import { DetailList, DetailPanel } from "@/components/common/detail-list"
 import { AssetIdChip, AssetQrPanel, QrLabelPreview } from "@/components/assets/asset-qr"
+import { StartInspection } from "@/components/assets/start-inspection"
 import { Button } from "@/components/ui/button"
 import { profileOf } from "@/data/asset-store"
 import type { AssetRecord } from "@/data/asset-data"
@@ -102,6 +103,11 @@ export function AssetIdScreen({
 
           <DetailPanel title="QR Code Label Preview">
             <QrLabelPreview asset={asset} />
+          </DetailPanel>
+
+          {/* The client's next step: onboard the asset, then inspect it */}
+          <DetailPanel icon={ClipboardCheck} title="Inspect this asset">
+            <StartInspection asset={asset} />
           </DetailPanel>
         </div>
       </div>

@@ -75,7 +75,7 @@ export function DetailPanel({
   children: React.ReactNode
 }) {
   return (
-    <section className={cn("flex flex-col rounded-lg bg-card shadow-xs ring-1 ring-foreground/10", className)}>
+    <section className={cn("flex flex-col rounded-2xl bg-card shadow-xs ring-1 ring-foreground/10", className)}>
       <header className="flex min-h-11 items-center justify-between gap-2 px-3 pt-2.5 pb-1.5">
         <h3 className="flex min-w-0 items-center gap-2 text-base font-semibold text-brand-navy dark:text-foreground">
           {Icon ? <Icon className="size-5 shrink-0 text-primary" /> : null}

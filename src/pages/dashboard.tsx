@@ -4,41 +4,32 @@ import { format } from "date-fns"
 import {
   ArrowRight,
   BadgeCheck,
-  BookOpen,
   Building2,
   CalendarDays,
   ChevronRight,
-  CircleCheckBig,
   ClipboardList,
   Factory,
-  FileText,
-  Hourglass,
-  Layers,
   Mail,
   MapPin,
   Network,
   Phone,
-  QrCode,
   ShieldCheck,
-  TriangleAlert,
   type LucideIcon,
 } from "lucide-react"
 import { cn } from "cn"
 
 import { CategoryIcon } from "@/components/common/category-icon"
-import { JobActionButton, JobStatusBadge } from "@/components/evita/job-action"
+import { WorkRow } from "@/components/evita/work-row"
+import { QuickActions } from "@/components/evita/quick-actions"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { useAssetRows } from "@/data/asset-store"
 import { elpremarProfileFor } from "@/data/elpremar-data"
 import { assetCategories } from "@/data/master-data"
-import { slotLabel } from "@/data/occ-tables"
 import { categoryLook, shortCategory } from "@/lib/category-icons"
 import { useCurrentElpremar } from "@/lib/me"
 import { markRead, noticeTime, useNotifications } from "@/lib/notifications"
 import { openPanel } from "@/lib/ui-store"
-import { actionFor, categoryFor, isOverdue, isThisWeek, isToday, parseDay, summarise, useMyJobs, type Job } from "@/lib/work"
-
-const startTime = (slot: number) => slotLabel(slot).split(" - ")[0]
+import { isThisWeek, useMyJobs } from "@/lib/work"
 
 /** White panel with an icon tile, a navy title and an optional subtitle, as the tablet design draws its cards */
 function Panel({
@@ -75,76 +66,6 @@ function Panel({
   )
 }
 
-/** One of the four counters; each opens My Tasks on the matching view */
-function Counter({
-  icon: Icon,
-  label,
-  value,
-  note,
-  tone,
-  to,
-}: {
-  icon: LucideIcon
-  label: string
-  value: number
-  /** Line under the number; only Today's Tasks carries one */
-  note?: string
-  tone: string
-  to: string
-}) {
-  return (
-    <Link
-      to={to}
-      className="group/stat flex min-h-32 flex-col rounded-2xl bg-card p-4 shadow-xs ring-1 ring-foreground/10 transition-[transform,box-shadow] duration-200 hover:shadow-md motion-safe:hover:-translate-y-0.5 active:translate-y-0"
-    >
-      <div className="flex items-start justify-between gap-2">
-        <span className="text-xs font-semibold tracking-wide text-muted-foreground uppercase">{label}</span>
-        <span className={cn("flex size-12 shrink-0 items-center justify-center rounded-xl", tone)}>
-          <Icon className="size-6" />
-        </span>
-      </div>
-      <span className="-mt-3 text-4xl leading-none font-bold text-brand-navy tabular-nums dark:text-foreground">{value}</span>
-      {note ? <span className="mt-auto pt-2 text-sm text-primary">{note}</span> : null}
-    </Link>
-  )
-}
-
-/** One task as a row card: time chip, asset with its category tag, activity, status and the one action */
-function TaskRow({ job, onOpen }: { job: Job; onOpen: () => void }) {
-  const category = categoryFor(job.asset)
-  const look = categoryLook(category)
-  const overdue = isOverdue(job)
-  return (
-    <li>
-      <div
-        role="button"
-        tabIndex={0}
-        onClick={onOpen}
-        onKeyDown={(e) => e.key === "Enter" && onOpen()}
-        className="flex cursor-pointer items-center gap-4 px-5 py-4 transition-colors hover:bg-muted/40 active:bg-muted/60"
-      >
-        <span className={cn("shrink-0 rounded-lg px-2.5 py-1.5 text-center tabular-nums text-sm leading-tight font-semibold", overdue ? "bg-critical-soft text-critical" : "bg-muted text-foreground")}>
-          {isToday(job.date) ? "Today" : format(parseDay(job.date), "EEE d")}
-          <span className="block text-xs font-medium">{startTime(job.slot)}</span>
-        </span>
-        <div className="min-w-0 flex-1">
-          <div className="truncate text-base font-semibold text-brand-navy dark:text-foreground">{job.asset}</div>
-          <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm">
-            <span className={cn("inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-xs font-semibold ring-1 ring-current/20", look.tint)}>
-              <CategoryIcon category={category} className="size-3.5" />
-              {shortCategory(category)}
-            </span>
-            <span className="truncate text-primary">• {job.plant}</span>
-          </div>
-          <div className="mt-1 truncate text-sm text-foreground/80">{job.activity}</div>
-        </div>
-        <JobStatusBadge job={job} className="max-md:hidden" />
-        <JobActionButton job={job} className="h-12 border-2 border-primary/70 text-base" />
-      </div>
-    </li>
-  )
-}
-
 /** Icon + label on the left, value on the right — the profile tabs' rows */
 function InfoRows({ rows }: { rows: { icon: LucideIcon; label: string; value: React.ReactNode }[] }) {
   return (
@@ -172,16 +93,17 @@ export function DashboardPage() {
   const jobs = useMyJobs()
   const { notices } = useNotifications()
 
-  const counts = summarise(jobs)
-  // The week at a glance (Monday to Sunday), soonest first — the list the homepage leads with
+  // The week at a glance (Monday to Sunday), soonest first
   const week = useMemo(() => jobs.filter((j) => isThisWeek(j.date)), [jobs])
-  // The job to resume for "Log Test Results": one already running, else the next to start
-  const nextInspection = useMemo(
-    () =>
-      jobs.find((j) => j.kind === "inspection" && j.status === "in_progress") ??
-      jobs.find((j) => j.kind === "inspection" && actionFor(j) === "start"),
+  /*
+   * What the engineer walked away from. An inspection under way is the thing
+   * they are most likely to have come back to the tablet for, so it leads.
+   */
+  const running = useMemo(
+    () => jobs.filter((j) => j.field === "in_progress").sort((a, b) => (a.kind === b.kind ? 0 : a.kind === "inspection" ? -1 : 1)),
     [jobs]
   )
+
 
   /**
    * Assets at the location per category, counted from the same register the
@@ -197,73 +119,65 @@ export function DashboardPage() {
     [register]
   )
   const totalAssets = register.length
-  const email = `${me.name.toLowerCase().replace(/\s+/g, ".")}@olivineglobal.com`
 
-  const quickActions = [
-    { icon: QrCode, label: "Scan Asset QR", tone: "bg-info-soft text-info", run: () => openPanel({ kind: "scan" }) },
-    {
-      icon: FileText,
-      label: "Log Test Results",
-      tone: "bg-healthy-soft text-healthy",
-      run: () => navigate(nextInspection ? `/my-tasks/${nextInspection.id}` : "/my-tasks?type=inspection"),
-    },
-    { icon: TriangleAlert, label: "Report an Issue", tone: "bg-attention-soft text-attention", run: () => openPanel({ kind: "issue" }) },
-    { icon: BookOpen, label: "View SOP / Manual", tone: "bg-highlight-soft text-highlight", run: () => openPanel({ kind: "sop", activity: nextInspection?.activity }) },
-  ]
 
   return (
     <div className="space-y-5">
       {/* ---------- Welcome ---------- */}
-      <section className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-brand-navy via-brand-navy to-primary text-brand-navy-foreground shadow-sm">
-        <div className="relative flex items-center gap-5 p-5">
-          <div className="min-w-0 flex-1">
-            <h2 className="text-3xl font-bold tracking-tight">Welcome, {me.name}!</h2>
-            <div className="mt-4 flex flex-wrap gap-2 text-sm">
-              <span className="flex items-center gap-1.5 rounded-full bg-white/10 px-3.5 py-1.5 ring-1 ring-white/25">
-                <MapPin className="size-4" /> {me.plant}, {me.enterprise}
-              </span>
-              <span className="flex items-center gap-1.5 rounded-full bg-primary px-3.5 py-1.5 font-medium ring-1 ring-white/25">
-                <ClipboardList className="size-4" /> {week.length} task{week.length === 1 ? "" : "s"} this week
-              </span>
-            </div>
-          </div>
-          {/* Field photograph framed on the right */}
-          <div className="relative h-32 w-72 shrink-0 overflow-hidden rounded-xl ring-1 ring-white/20 max-md:hidden">
-            <img src="/brand/evita-login.jpg" alt="" className="size-full object-cover object-[center_30%]" />
-            <div className="absolute inset-0 bg-gradient-to-r from-brand-navy/70 to-transparent" />
+      <section className="relative overflow-hidden rounded-2xl text-brand-navy-foreground shadow-sm">
+        {/* The field photograph carries the whole banner, as the tablet design draws it */}
+        <img src="/brand/evita-login.jpg" alt="" className="absolute inset-0 size-full object-cover object-[center_30%]" />
+        <div className="absolute inset-0 bg-gradient-to-r from-brand-navy via-brand-navy/90 to-brand-navy/30" />
+
+        <div className="relative p-5">
+          <h2 className="text-2xl font-bold tracking-tight sm:text-3xl">Hello, {me.name}!</h2>
+          <p className="mt-1 text-sm text-white/85 sm:text-base">Stay on top of your plant assets and tasks.</p>
+          <div className="mt-4 flex flex-wrap gap-2 text-sm">
+            <span className="flex items-center gap-1.5 rounded-full bg-white/10 px-3.5 py-1.5 ring-1 ring-white/25">
+              <MapPin className="size-4" /> {me.plant}, {me.enterprise}
+            </span>
+            {/* The date moved here when the top bar turned into the tab-design bar */}
+            <span className="flex items-center gap-1.5 rounded-full bg-white/10 px-3.5 py-1.5 tabular-nums ring-1 ring-white/25">
+              <CalendarDays className="size-4" /> {format(new Date(), "EEE d MMM")}
+            </span>
+            <span className="flex items-center gap-1.5 rounded-full bg-primary px-3.5 py-1.5 font-medium ring-1 ring-white/25">
+              <ClipboardList className="size-4" /> {week.length} task{week.length === 1 ? "" : "s"} this week
+            </span>
           </div>
         </div>
       </section>
 
+      <QuickActions />
+
       <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_19rem]">
         <div className="min-w-0 space-y-5">
-          {/* ---------- The day at a glance ---------- */}
-          <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-            <Counter to="/my-tasks?date=today" icon={ClipboardList} label="Today's Tasks" value={counts.today} note={`${counts.pending} Pending • ${counts.running} In Progress`} tone="bg-info-soft text-info" />
-            <Counter to="/my-tasks?status=completed" icon={CircleCheckBig} label="Completed" value={counts.completed} tone="bg-healthy-soft text-healthy" />
-            <Counter to="/my-tasks?status=overdue" icon={Hourglass} label="Overdue" value={counts.overdue} tone="bg-critical-soft text-critical" />
-            <Counter to="/my-tasks" icon={Layers} label="Total Assigned" value={counts.total} tone="bg-highlight-soft text-highlight" />
-          </div>
-
-          {/* ---------- This week's work ---------- */}
+          {/* ---------- What is already open ---------- */}
           <Panel
             icon={ClipboardList}
-            title="This Week's Tasks"
-            subtitle="Monday to Sunday, soonest first"
+            title="Continue working on"
+            subtitle="Started and not yet submitted"
             action={
-              <Link to="/my-tasks?date=week" className="flex min-h-11 shrink-0 items-center gap-1 px-1 text-sm font-semibold text-primary hover:underline">
-                View All ({week.length}) <ArrowRight className="size-4" />
+              <Link to="/my-tasks?status=in_progress" className="flex min-h-11 shrink-0 items-center gap-1 px-1 text-sm font-semibold text-primary hover:underline">
+                View All ({running.length}) <ArrowRight className="size-4" />
               </Link>
             }
           >
-            {week.length ? (
+            {running.length ? (
               <ul className="divide-y">
-                {week.map((t) => <TaskRow key={t.id} job={t} onOpen={() => navigate(`/my-tasks/${t.id}`)} />)}
+                {running.map((job) => (
+                  <WorkRow key={job.id} job={job} />
+                ))}
               </ul>
             ) : (
               <p className="px-5 py-10 text-center text-sm text-muted-foreground">
-                Nothing booked this week.{" "}
-                <Link to="/my-tasks?status=open" className="font-medium text-primary underline-offset-4 hover:underline">See open work</Link>
+                Nothing is under way.{" "}
+                <button
+                  type="button"
+                  onClick={() => openPanel({ kind: "begin-inspection" })}
+                  className="font-medium text-primary underline-offset-4 hover:underline"
+                >
+                  Start an inspection
+                </button>
               </p>
             )}
           </Panel>
@@ -311,8 +225,25 @@ export function DashboardPage() {
                     { icon: CalendarDays, label: "Joined", value: me.joined },
                     // The ELPREMAR's own location (their address from onboarding), not the site they are posted to
                     { icon: MapPin, label: "Location", value: `${profile.basic.city}, ${profile.basic.state}` },
-                    { icon: Phone, label: "Phone", value: <a href="tel:+919876543210" className="tabular-nums text-primary">+91 98765 43210</a> },
-                    { icon: Mail, label: "Email", value: <a href={`mailto:${email}`} className="text-primary">{email}</a> },
+                    // The engineer's own, from the register - not a literal typed in here
+                    {
+                      icon: Phone,
+                      label: "Phone",
+                      value: (
+                        <a href={`tel:${profile.basic.phoneCode}${profile.basic.phone}`} className="tabular-nums text-primary">
+                          {profile.basic.phoneCode} {profile.basic.phone}
+                        </a>
+                      ),
+                    },
+                    {
+                      icon: Mail,
+                      label: "Email",
+                      value: (
+                        <a href={`mailto:${profile.basic.email}`} className="text-primary">
+                          {profile.basic.email}
+                        </a>
+                      ),
+                    },
                   ]}
                 />
               </TabsContent>
@@ -344,26 +275,6 @@ export function DashboardPage() {
               </div>
               <ChevronRight className="size-5 shrink-0 text-healthy" />
             </button>
-
-            <section className="rounded-2xl bg-card p-4 shadow-xs ring-1 ring-foreground/10">
-              <h3 className="mb-3 text-xs font-bold tracking-wide text-muted-foreground uppercase">Quick Actions</h3>
-              <div className="grid grid-cols-2 gap-2.5 lg:grid-cols-1">
-                {quickActions.map((a) => (
-                  <button
-                    key={a.label}
-                    type="button"
-                    onClick={a.run}
-                    className="flex min-h-14 w-full items-center gap-3 rounded-xl bg-muted/30 px-3 py-2 text-left ring-1 ring-foreground/10 transition-colors hover:bg-muted active:bg-muted"
-                  >
-                    <span className={cn("flex size-10 shrink-0 items-center justify-center rounded-lg", a.tone)}>
-                      <a.icon className="size-5" />
-                    </span>
-                    <span className="min-w-0 flex-1 text-sm font-semibold">{a.label}</span>
-                    <ChevronRight className="size-4 shrink-0 text-muted-foreground" />
-                  </button>
-                ))}
-              </div>
-            </section>
           </div>
 
           <section className="rounded-2xl bg-card p-4 shadow-xs ring-1 ring-foreground/10 md:col-span-2 lg:col-span-1">

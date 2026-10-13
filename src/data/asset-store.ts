@@ -79,6 +79,7 @@ export function profileFrom(values: AssetFormValues, dates: { onboarded: string 
       description: values.description ?? "",
       latitude: values.latitude ?? "",
       longitude: values.longitude ?? "",
+      environment: values.environment,
     },
     parameters: parametersFor(values.category)
       .filter((spec) => answers[spec.key]?.trim())
