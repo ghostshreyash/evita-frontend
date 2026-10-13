@@ -26,7 +26,7 @@ export type ReportRow = { label: string; value: string; tone?: "healthy" | "atte
 export type ReportSection = { title: string; rows: ReportRow[]; note?: string }
 
 export type InspectionReport = {
-  kind: "Contamination" | "Hygiene"
+  kind: "Contamination" | "Hygiene" | "Cleaning"
   title: string
   summary: string
   sections: ReportSection[]

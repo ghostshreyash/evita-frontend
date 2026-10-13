@@ -29,6 +29,7 @@ import { Timeline } from "@/components/common/detail-view"
 import { CategoryIcon } from "@/components/common/category-icon"
 import { HealthRing, TaskPanel } from "@/components/evita/field-kit"
 import { InspectionForm, ScoreBreakdown } from "@/components/evita/inspection-form"
+import { CleaningReportPanel } from "@/components/evita/cleaning-report-panel"
 import { InspectionReports } from "@/components/evita/inspection-reports"
 import { JobStatusBadge } from "@/components/evita/job-action"
 import { MaintenanceForm } from "@/components/evita/maintenance-form"
@@ -270,6 +271,8 @@ export function TaskPage() {
                   <Timeline steps={timeline} />
                 </TaskPanel>
               ) : null}
+              {/* What the clean changed, on every job that has been carried out */}
+              {maintenance?.execution?.endedAt ? <CleaningReportPanel job={job} detail={maintenance} /> : null}
             </aside>
           </div>
         </div>
