@@ -1,11 +1,10 @@
 import { useMemo } from "react"
 import { Link, useNavigate, useParams } from "react-router"
-import { Activity, ArrowLeft, Building2, CircleDashed, ClipboardCheck, FileText, Images, QrCode, Settings, TriangleAlert } from "lucide-react"
+import { ArrowLeft, Building2, CircleDashed, ClipboardCheck, FileText, Images, QrCode, Settings, TriangleAlert } from "lucide-react"
 import { cn } from "cn"
 
 import { PageHeader } from "@/components/common/page-header"
 import { AssetPhoto } from "@/components/common/asset-photo"
-import { HealthDial } from "@/components/common/health-dial"
 import { DetailList, DetailPanel } from "@/components/common/detail-list"
 import { assetDetailRows, assetTechnicalRows } from "@/components/assets/asset-sections"
 import { AssetQrPanel, QrLabelPreview } from "@/components/assets/asset-qr"
@@ -15,6 +14,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import type { AssetRecord } from "@/data/asset-data"
 import { capturesOf, findAsset, profileOf, useAssetRows } from "@/data/asset-store"
 import { healthBandFor } from "@/data/master-data"
+import { healthStatus } from "@/lib/status"
 import { td, th } from "@/lib/data-table"
 
 /**
@@ -53,6 +53,20 @@ function AssetDetail({ asset, onBack }: { asset: AssetRecord; onBack: () => void
     <div>
       <PageHeader
         title={asset.name}
+        /* The score belongs with the name: it is the first thing asked about an
+           asset, and it was taking a card of its own to say one number */
+        badge={
+          band ? (
+            <span className={cn("flex items-center gap-1.5 rounded-full px-3 py-1 text-sm font-semibold", healthStatus[band.tone].tile)}>
+              <span aria-hidden className={cn("size-2 rounded-full", healthStatus[band.tone].dot)} />
+              {band.label} · <span className="tabular-nums">{asset.health}/100</span>
+            </span>
+          ) : (
+            <span className="flex items-center gap-1.5 rounded-full bg-muted px-3 py-1 text-sm font-medium text-muted-foreground">
+              <CircleDashed className="size-4" /> Not inspected yet
+            </span>
+          )
+        }
         description={`${asset.category} · ${asset.area}`}
         breadcrumbs={[{ label: "Assets", to: "/assets" }, { label: asset.id }]}
         actions={
@@ -67,28 +81,17 @@ function AssetDetail({ asset, onBack }: { asset: AssetRecord; onBack: () => void
         }
       />
 
-      <div className="grid gap-3 lg:grid-cols-2 xl:grid-cols-[minmax(0,1.3fr)_minmax(0,1fr)_minmax(0,1fr)]">
-        {/* ---------- Identity and where it sits ---------- */}
-        <DetailPanel icon={Building2} title="Asset Information">
-          <DetailList rows={assetDetailRows(profile)} />
-        </DetailPanel>
-
-        {/* ---------- The code on the panel door ---------- */}
-        <DetailPanel icon={QrCode} title="Asset ID & QR Code">
-          <AssetQrPanel asset={asset} />
-        </DetailPanel>
-
-        {/* ---------- How it is doing ---------- */}
+      {/*
+        * Two columns rather than three. What is read runs down the left - what
+        * the asset is, the label that goes on its door, and its ratings - and
+        * the code and the photographs sit beside them. Three columns left the
+        * right-hand one half empty once the health card moved into the header.
+        */}
+      <div className="grid items-start gap-3 lg:grid-cols-[minmax(0,1.25fr)_minmax(0,1fr)]">
+        {/* ---------- What it is, where it stands, and what it is rated for ---------- */}
         <div className="space-y-3">
-          <DetailPanel icon={Activity} title={band ? "Health & Condition" : "Condition"}>
-            {band ? (
-              <HealthDial score={asset.health!} label={band.label} tone={band.tone} />
-            ) : (
-              <p className="flex items-start gap-2 rounded-md bg-muted/60 p-2.5 text-sm text-muted-foreground">
-                <CircleDashed className="mt-0.5 size-4 shrink-0" />
-                Not inspected yet. A health score appears once the first inspection report is in.
-              </p>
-            )}
+          <DetailPanel icon={Building2} title="Asset Information">
+            <DetailList rows={assetDetailRows(profile)} />
           </DetailPanel>
 
           <DetailPanel title="QR Code Label Preview">
@@ -97,14 +100,20 @@ function AssetDetail({ asset, onBack }: { asset: AssetRecord; onBack: () => void
               Onboarded <span className="font-medium tabular-nums text-foreground">{asset.onboarded}</span>
             </p>
           </DetailPanel>
+
+          <DetailPanel icon={Settings} title="Technical Details">
+            <DetailList rows={assetTechnicalRows(profile)} />
+          </DetailPanel>
         </div>
 
+        <div className="space-y-3">
+        {/* ---------- The code on the panel door ---------- */}
+        <DetailPanel icon={QrCode} title="Asset ID & QR Code">
+          <AssetQrPanel asset={asset} />
+        </DetailPanel>
+
         {/* ---------- What it was photographed as ---------- */}
-        <DetailPanel
-          icon={Images}
-          title={`Asset Images (${profile.images.length})`}
-          className="lg:col-span-2 xl:col-span-1"
-        >
+        <DetailPanel icon={Images} title={`Asset Images (${profile.images.length})`}>
           {profile.images.length ? (
             <div className="grid grid-cols-3 gap-2">
               {profile.images.map((image) => (
@@ -121,10 +130,6 @@ function AssetDetail({ asset, onBack }: { asset: AssetRecord; onBack: () => void
           )}
         </DetailPanel>
 
-        <DetailPanel icon={Settings} title="Technical Details">
-          <DetailList rows={assetTechnicalRows(profile)} />
-        </DetailPanel>
-
         {/* Walk up to the asset, open its record, inspect it */}
         <DetailPanel icon={ClipboardCheck} title="Inspect this asset">
           <StartInspection asset={asset} />
@@ -132,13 +137,14 @@ function AssetDetail({ asset, onBack }: { asset: AssetRecord; onBack: () => void
             Scanning the label on the panel door opens this record and offers the same inspection.
           </p>
         </DetailPanel>
+        </div>
 
         {/* ---------- The paperwork behind the ratings ---------- */}
         <DetailPanel
           icon={FileText}
           title={`Documents (${profile.documents.length})`}
           contentClassName="px-1"
-          className="lg:col-span-2 xl:col-span-3"
+          className="lg:col-span-2"
         >
           {profile.documents.length ? (
             <div className="overflow-x-auto">
