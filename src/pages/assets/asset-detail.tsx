@@ -82,27 +82,46 @@ function AssetDetail({ asset, onBack }: { asset: AssetRecord; onBack: () => void
       />
 
       {/*
-        * Two columns, evenly weighted. What the asset is and what it looks like
-        * run down the left; its code, the inspection it leads to and its
-        * ratings sit beside them. Three columns left the right-hand one half
-        * empty once the health card moved into the header.
+        * Three columns, each one a thing the engineer came for: what the asset
+        * is and the label that goes on its door; the code and the inspection
+        * that code leads to; what it is rated for and what it looks like.
         */}
-      <div className="grid items-start gap-3 lg:grid-cols-[minmax(0,1.15fr)_minmax(0,1fr)]">
+      <div className="grid items-start gap-3 lg:grid-cols-2 xl:grid-cols-3">
+        {/* ---------- What it is, and the label for its door ---------- */}
         <div className="space-y-3">
-          {/* ---------- Identity and where it sits ---------- */}
           <DetailPanel icon={Building2} title="Asset Information">
             <DetailList rows={assetDetailRows(profile)} />
           </DetailPanel>
 
-          {/* ---------- The label that goes on the panel door ---------- */}
           <DetailPanel title="QR Code Label Preview">
             <QrLabelPreview asset={asset} />
             <p className="mt-2 text-sm text-muted-foreground">
               Onboarded <span className="font-medium tabular-nums text-foreground">{asset.onboarded}</span>
             </p>
           </DetailPanel>
+        </div>
 
-          {/* ---------- What it was photographed as ---------- */}
+        {/* ---------- The code, and the inspection it opens ---------- */}
+        <div className="space-y-3">
+          <DetailPanel icon={QrCode} title="Asset ID & QR Code">
+            <AssetQrPanel asset={asset} />
+          </DetailPanel>
+
+          {/* Directly under the code, because scanning it is the other way in */}
+          <DetailPanel icon={ClipboardCheck} title="Inspect this asset">
+            <StartInspection asset={asset} />
+            <p className="mt-3 text-sm text-muted-foreground">
+              Scanning the label on the panel door opens this record and offers the same inspection.
+            </p>
+          </DetailPanel>
+        </div>
+
+        {/* ---------- What it is rated for, and what it looks like ---------- */}
+        <div className="space-y-3 max-lg:col-span-full lg:col-span-2 xl:col-span-1">
+          <DetailPanel icon={Settings} title="Technical Details">
+            <DetailList rows={assetTechnicalRows(profile)} />
+          </DetailPanel>
+
           <DetailPanel icon={Images} title={`Asset Images (${profile.images.length})`}>
             {profile.images.length ? (
               <div className="grid grid-cols-3 gap-2">
@@ -121,33 +140,12 @@ function AssetDetail({ asset, onBack }: { asset: AssetRecord; onBack: () => void
           </DetailPanel>
         </div>
 
-        <div className="space-y-3">
-          {/* ---------- The code on the panel door ---------- */}
-          <DetailPanel icon={QrCode} title="Asset ID & QR Code">
-            <AssetQrPanel asset={asset} />
-          </DetailPanel>
-
-          {/* Walk up to the asset, open its record, inspect it - directly under
-              the code, because scanning that code is the other way in */}
-          <DetailPanel icon={ClipboardCheck} title="Inspect this asset">
-            <StartInspection asset={asset} />
-            <p className="mt-3 text-sm text-muted-foreground">
-              Scanning the label on the panel door opens this record and offers the same inspection.
-            </p>
-          </DetailPanel>
-
-          {/* ---------- What it is rated for ---------- */}
-          <DetailPanel icon={Settings} title="Technical Details">
-            <DetailList rows={assetTechnicalRows(profile)} />
-          </DetailPanel>
-        </div>
-
         {/* ---------- The paperwork behind the ratings ---------- */}
         <DetailPanel
           icon={FileText}
           title={`Documents (${profile.documents.length})`}
           contentClassName="px-1"
-          className="lg:col-span-2"
+          className="lg:col-span-2 xl:col-span-3"
         >
           {profile.documents.length ? (
             <div className="overflow-x-auto">
