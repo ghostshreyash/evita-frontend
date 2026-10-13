@@ -79,7 +79,8 @@ function AssetDetail({ asset, onBack }: { asset: AssetRecord; onBack: () => void
       {/*
         * Three columns, each one a thing the engineer came for: what the asset
         * is and the label that goes on its door; the code on that door; what it
-        * is rated for, the inspection it leads to, and what it looks like.
+        * is rated for and the inspection it leads to. The photographs and the
+        * documents run the full width underneath.
         */}
       <div className="grid items-start gap-3 lg:grid-cols-2 xl:grid-cols-3">
         {/* ---------- What it is, and the label for its door ---------- */}
@@ -107,7 +108,7 @@ function AssetDetail({ asset, onBack }: { asset: AssetRecord; onBack: () => void
         </div>
 
         {/* ---------- What it is rated for, and what it looks like ---------- */}
-        <div className="space-y-3 max-lg:col-span-full lg:col-span-2 xl:col-span-1">
+        <div className="space-y-3">
           <DetailPanel icon={Settings} title="Technical Details">
             <DetailList rows={assetTechnicalRows(profile)} />
           </DetailPanel>
@@ -116,24 +117,31 @@ function AssetDetail({ asset, onBack }: { asset: AssetRecord; onBack: () => void
           <DetailPanel icon={ClipboardCheck} title="Inspect this asset">
             <StartInspection asset={asset} />
           </DetailPanel>
-
-          <DetailPanel icon={Images} title={`Asset Images (${profile.images.length})`}>
-            {profile.images.length ? (
-              <div className="grid grid-cols-3 gap-2">
-                {profile.images.map((image) => (
-                  <figure key={image.id}>
-                    <div className="h-24 overflow-hidden rounded-md ring-1 ring-foreground/10">
-                      <AssetPhoto file={captures?.images[image.id]} label={image.name} caption={image.name} />
-                    </div>
-                    <figcaption className="mt-1 line-clamp-2 text-center text-xs leading-tight">{image.name}</figcaption>
-                  </figure>
-                ))}
-              </div>
-            ) : (
-              <p className="py-3 text-center text-sm text-muted-foreground">No photographs held for this asset.</p>
-            )}
-          </DetailPanel>
         </div>
+
+        {/* ---------- What it was photographed as ---------- */}
+        <DetailPanel
+          icon={Images}
+          title={`Asset Images (${profile.images.length})`}
+          className="lg:col-span-2 xl:col-span-3"
+        >
+          {profile.images.length ? (
+            /* A row of five across the page: the angles were shot as a set and
+               read as one, and the three-up grid in a column cut them too small */
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
+              {profile.images.map((image) => (
+                <figure key={image.id}>
+                  <div className="h-36 overflow-hidden rounded-lg ring-1 ring-foreground/10">
+                    <AssetPhoto file={captures?.images[image.id]} label={image.name} caption={image.name} />
+                  </div>
+                  <figcaption className="mt-1 line-clamp-2 text-center text-xs leading-tight">{image.name}</figcaption>
+                </figure>
+              ))}
+            </div>
+          ) : (
+            <p className="py-3 text-center text-sm text-muted-foreground">No photographs held for this asset.</p>
+          )}
+        </DetailPanel>
 
         {/* ---------- The paperwork behind the ratings ---------- */}
         <DetailPanel
