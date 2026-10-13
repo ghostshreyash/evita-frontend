@@ -289,27 +289,6 @@ export function assetReport(row: ReportRow): AssetReport {
 
 /* ---------- Aggregates ---------- */
 
-/**
- * Counts for the tiles. The client confirmed these recalculate for the active
- * filter and search context rather than always showing the whole plant, so they
- * take the rows actually on screen.
- */
-export const contaminationKpis = (rows: ReportRow[]) => ({
-  total: rows.length,
-  healthy: rows.filter((r) => r.contaminationStatus === "Healthy").length,
-  attention: rows.filter((r) => r.contaminationStatus === "Alarming").length,
-  atRisk: rows.filter((r) => r.contaminationStatus === "At Risk").length,
-})
-
-export const hygieneKpis = (rows: ReportRow[]) => ({
-  total: rows.length,
-  clear: rows.filter((r) => r.hygieneStatus === "Healthy").length,
-  attention: rows.filter((r) => r.hygieneStatus === "Alarming").length,
-  atRisk: rows.filter((r) => r.hygieneStatus === "At Risk").length,
-  /** Every failing point across the rows, which is what the crew actually works through */
-  openPoints: rows.reduce((n, r) => n + r.hygieneOpen, 0),
-})
-
 /* ---------- The register, as the reports read it ---------- */
 
 /*
@@ -330,6 +309,3 @@ export const reportRows: ReportRow[] = assetRegister
   .map((asset, i) => reportFor(asset, i))
   .filter((r) => r.healthScore !== null)
   .sort((a, b) => a.asset.id.localeCompare(b.asset.id, undefined, { numeric: true }))
-
-/** How many assets the reports leave out because nobody has inspected them yet */
-export const uninspectedCount = assetRegister.filter((a) => a.health === null).length

@@ -1,32 +1,29 @@
 import { useMemo, useState } from "react"
-import { BookOpen, Download, HardDrive, Search, Sparkles, SprayCan, TriangleAlert, X } from "lucide-react"
+import { BookOpen, Download, Search, Sparkles, SprayCan, TriangleAlert, X } from "lucide-react"
 import { cn } from "cn"
 import { toast } from "sonner"
 
 import { PageHeader } from "@/components/common/page-header"
-import { SortHead, TablePager } from "@/components/common/data-table"
+import { TablePager } from "@/components/common/data-table"
 import { CategoryIcon } from "@/components/common/category-icon"
+import { AssetPhoto } from "@/components/common/asset-photo"
 import { AssetReportPanel } from "@/components/reports/asset-report-panel"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Sheet, SheetContent, SheetDescription, SheetTitle } from "@/components/ui/sheet"
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import {
-  contaminationKpis,
   contaminationTone,
   findingLook,
   findings,
-  hygieneKpis,
   reportRows,
-  uninspectedCount,
   type Finding,
   type ReportRow,
 } from "@/data/report-data"
 import { assetCategories } from "@/data/master-data"
-import { control, nextSort, PAGE_SIZES, sortRows, td, th, type Accessors, type Sort } from "@/lib/data-table"
+import { control, PAGE_SIZES, sortRows, type Accessors, type Sort } from "@/lib/data-table"
 import { parseDmy } from "@/data/asset-data"
 
 type Column = "id" | "name" | "category" | "area" | "level" | "score" | "status" | "inspected" | "due"
@@ -61,7 +58,6 @@ export function ReportsPage() {
   const departments = useMemo(() => [...new Set(reportRows.map((r) => r.asset.department))].sort(), [])
   const categories = useMemo(() => assetCategories.filter((c) => reportRows.some((r) => r.asset.category === c)), [])
 
-  const site = reportRows[0].asset
   const filtersOn = [query, department, category, status].some((v) => v && v !== ANY)
 
   const rows = useMemo(() => {
@@ -92,7 +88,6 @@ export function ReportsPage() {
     <div>
       <PageHeader
         title="Asset Health Reports"
-        description="Contamination and hygiene reporting from inspection, testing and historical data."
         breadcrumbs={[{ label: "Reports" }]}
         actions={
           <Button
@@ -103,19 +98,6 @@ export function ReportsPage() {
           </Button>
         }
       />
-
-      {/* The scope an ELPREMAR reports on is their own posting and nothing wider */}
-      <p className="mb-3 flex flex-wrap items-center gap-x-2 gap-y-0.5 rounded-lg bg-info-soft px-3 py-2 text-sm">
-        <HardDrive className="size-4 text-primary" />
-        <span className="font-semibold">{site.plant}</span>
-        <span className="text-muted-foreground">·</span>
-        <span>{site.enterprise}</span>
-        <span className="ml-auto text-xs text-muted-foreground">
-          {uninspectedCount
-            ? `Your assigned scope · ${uninspectedCount} not yet inspected, so not reported on`
-            : "Your assigned scope"}
-        </span>
-      </p>
 
       <Tabs defaultValue="contamination">
         {/* An underline rather than a segmented control: these are views of one
@@ -177,6 +159,30 @@ export function ReportsPage() {
 
 /* ---------- Contamination ---------- */
 
+const assetSorts: { column: Column; label: string }[] = [
+  { column: "id", label: "Asset ID" },
+  { column: "name", label: "Asset" },
+  { column: "category", label: "Category" },
+  { column: "area", label: "Location" },
+]
+
+const contaminationSorts = [
+  ...assetSorts,
+  { column: "level" as Column, label: "Contamination" },
+  { column: "score" as Column, label: "Health Score" },
+  { column: "status" as Column, label: "Status" },
+  { column: "inspected" as Column, label: "Last Inspection" },
+  { column: "due" as Column, label: "Next Due" },
+]
+
+const hygieneSorts = [
+  ...assetSorts,
+  { column: "status" as Column, label: "Hygiene Status" },
+  { column: "level" as Column, label: "Open Points" },
+  { column: "inspected" as Column, label: "Last Cleaned" },
+  { column: "due" as Column, label: "Next Cleaning Due" },
+]
+
 const contaminationOrder = ["Low", "Medium", "High"]
 const findingOrder: Finding[] = ["Healthy", "Alarming", "At Risk"]
 
@@ -193,8 +199,6 @@ function ContaminationReport({
   onClose: () => void
   onClear: () => void
 }) {
-  const kpis = contaminationKpis(rows)
-
   const accessors: Accessors<ReportRow, Column> = {
     id: (r) => r.asset.id,
     name: (r) => r.asset.name,
@@ -208,7 +212,7 @@ function ContaminationReport({
   }
 
   return (
-    <ReportTable
+    <ReportCards
       report="contamination"
       title="Assets (Contamination Analysis)"
       rows={rows}
@@ -217,42 +221,18 @@ function ContaminationReport({
       onSelect={onSelect}
       onClose={onClose}
       onClear={onClear}
-      kpis={
-        <>
-          <Kpi label="Total Assets" value={kpis.total} note="In this scope" tone="bg-info-soft text-info" />
-          <Kpi label="Healthy" value={kpis.healthy} note="Score 70 and above" tone="bg-healthy-soft text-healthy" />
-          <Kpi label="Alarming" value={kpis.attention} note="Score 50 – 69" tone="bg-attention-soft text-attention" />
-          <Kpi label="At Risk" value={kpis.atRisk} note="Score below 50" tone="bg-critical-soft text-critical" />
-        </>
-      }
-      head={(sort, onSort) => (
-        <>
-          <SortHead label="Contamination" column="level" sort={sort} onSort={onSort} />
-          <SortHead label="Health Score" column="score" sort={sort} onSort={onSort} />
-          <SortHead label="Status" column="status" sort={sort} onSort={onSort} />
-          <SortHead label="Last Inspection" column="inspected" sort={sort} onSort={onSort} />
-          <SortHead label="Next Due" column="due" sort={sort} onSort={onSort} />
-        </>
+      sorts={contaminationSorts}
+      status={(r) => r.contaminationStatus}
+      badge={(r) => (
+        <span className={cn("rounded-full px-2 py-0.5 text-xs font-semibold", contaminationTone[r.contamination])}>
+          {r.contamination} contamination
+        </span>
       )}
-      cells={(r) => (
-        <>
-          <TableCell className={td}>
-            <span className={cn("rounded px-2 py-1 text-xs font-semibold", contaminationTone[r.contamination])}>
-              {r.contamination}
-            </span>
-          </TableCell>
-          <TableCell className={cn(td, "font-semibold tabular-nums")}>
-            {r.healthScore ?? <span className="font-normal text-muted-foreground">—</span>}
-          </TableCell>
-          <TableCell className={td}>
-            <Badge variant={findingLook[r.contaminationStatus].badge} className="h-auto rounded px-2 py-1 text-xs">
-              {r.contaminationStatus}
-            </Badge>
-          </TableCell>
-          <TableCell className={cn(td, "whitespace-nowrap tabular-nums")}>{r.lastInspection || "—"}</TableCell>
-          <TableCell className={cn(td, "whitespace-nowrap tabular-nums")}>{r.nextInspectionDue || "—"}</TableCell>
-        </>
-      )}
+      facts={(r) => [
+        { label: "Health Score", value: r.healthScore === null ? "—" : `${r.healthScore} / 100` },
+        { label: "Last Inspection", value: r.lastInspection || "—" },
+        { label: "Next Due", value: r.nextInspectionDue || "—" },
+      ]}
     />
   )
 }
@@ -272,8 +252,6 @@ function HygieneReport({
   onClose: () => void
   onClear: () => void
 }) {
-  const kpis = hygieneKpis(rows)
-
   const accessors: Accessors<ReportRow, Column> = {
     id: (r) => r.asset.id,
     name: (r) => r.asset.name,
@@ -294,7 +272,7 @@ function HygieneReport({
         contamination report's job.
       </p>
 
-      <ReportTable
+      <ReportCards
         report="hygiene"
         title="Asset Hygiene Details"
         rows={rows}
@@ -303,66 +281,68 @@ function HygieneReport({
         onSelect={onSelect}
         onClose={onClose}
         onClear={onClear}
-        kpis={
-          <>
-            <Kpi label="All Points Clear" value={kpis.clear} note="Nothing outstanding" tone="bg-healthy-soft text-healthy" />
-            <Kpi label="Alarming" value={kpis.attention} note="Minor points open" tone="bg-attention-soft text-attention" />
-            <Kpi label="At Risk" value={kpis.atRisk} note="Needs acting on" tone="bg-critical-soft text-critical" />
-            <Kpi label="Open Points" value={kpis.openPoints} note="Across this scope" tone="bg-info-soft text-info" />
-          </>
-        }
-        head={(sort, onSort) => (
-          <>
-            <SortHead label="Hygiene Status" column="status" sort={sort} onSort={onSort} />
-            <SortHead label="Open Points" column="level" sort={sort} onSort={onSort} />
-            <SortHead label="Last Cleaned" column="inspected" sort={sort} onSort={onSort} />
-            <SortHead label="Next Cleaning Due" column="due" sort={sort} onSort={onSort} />
-          </>
+        sorts={hygieneSorts}
+        status={(r) => r.hygieneStatus}
+        badge={(r) => (
+          <span className="rounded-full bg-muted px-2 py-0.5 text-xs font-semibold tabular-nums">
+            {r.hygieneOpen} of 8 points open
+          </span>
         )}
-        cells={(r) => (
-          <>
-            <TableCell className={td}>
-              <Badge variant={findingLook[r.hygieneStatus].badge} className="h-auto rounded px-2 py-1 text-xs">
-                {r.hygieneStatus}
-              </Badge>
-            </TableCell>
-            <TableCell className={cn(td, "tabular-nums")}>{r.hygieneOpen} of 8</TableCell>
-            <TableCell className={cn(td, "whitespace-nowrap tabular-nums")}>{r.lastCleaned || "—"}</TableCell>
-            <TableCell className={cn(td, "whitespace-nowrap tabular-nums")}>{r.nextCleaningDue || "—"}</TableCell>
-          </>
-        )}
+        facts={(r) => [
+          { label: "Open Points", value: `${r.hygieneOpen} of 8` },
+          { label: "Last Cleaned", value: r.lastCleaned || "—" },
+          { label: "Next Cleaning Due", value: r.nextCleaningDue || "—" },
+        ]}
       />
     </div>
   )
 }
 
-/* ---------- Shared table ---------- */
+/* ---------- Shared card grid ---------- */
 
-function ReportTable({
+/** One labelled figure under a card's heading */
+type Fact = { label: string; value: string }
+
+/**
+ * The assets a report covers, as cards rather than as a table.
+ *
+ * The engineer reads this on a tablet, standing up, and recognises the
+ * equipment by its picture before they read its id - so each asset gets its own
+ * card with its photograph, and the report's own figures sit underneath. What a
+ * column heading used to sort by is a Sort control instead.
+ *
+ * The whole card opens the report; it is a button, so it is reachable by
+ * keyboard and announces its own selected state.
+ */
+function ReportCards({
   title,
   rows,
   accessors,
+  sorts,
   selected,
   onSelect,
   onClose,
   onClear,
-  kpis,
-  head,
-  cells,
+  status,
+  badge,
+  facts,
   report,
 }: {
   title: string
   rows: ReportRow[]
   accessors: Accessors<ReportRow, Column>
+  /** The columns this report can be ordered by, in the order they are offered */
+  sorts: { column: Column; label: string }[]
   selected?: ReportRow
   onSelect: (row: ReportRow) => void
   onClose: () => void
   onClear: () => void
-  kpis: React.ReactNode
-  /** The columns that differ between the two reports */
-  head: (sort: Sort<Column>, onSort: (c: Column) => void) => React.ReactNode
-  cells: (row: ReportRow) => React.ReactNode
-  /** Which report this table is, so the drawer opens on the matching record */
+  /** The finding the card's badge reports */
+  status: (row: ReportRow) => Finding
+  /** The one chip that differs between the two reports */
+  badge: (row: ReportRow) => React.ReactNode
+  facts: (row: ReportRow) => Fact[]
+  /** Which report this grid is, so the drawer opens on the matching record */
   report: "contamination" | "hygiene"
 }) {
   /* Asset ID ascending by default, which is the order the client asked for */
@@ -384,98 +364,114 @@ function ReportTable({
 
   const start = (Math.min(page, pages) - 1) * pageSize
   const shown = ordered.slice(start, start + pageSize)
-  const onSort = (c: Column) => setSort(nextSort(sort, c))
 
   return (
     <div className="rounded-2xl bg-card p-3 shadow-xs ring-1 ring-foreground/10">
-      <div className="mb-3 grid grid-cols-2 gap-3 lg:grid-cols-5">{kpis}</div>
-
-      <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+      <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
         <h3 className="text-base font-semibold text-brand-navy dark:text-foreground">{title}</h3>
-        <Button
-          variant="outline"
-          size="sm"
-          className={cn(control, "bg-card")}
-          onClick={() => toast.info("Export runs on the server and respects your filters and permissions.")}
-        >
-          <Download /> Export
-        </Button>
+        <div className="flex flex-wrap items-center gap-2">
+          <Select
+            value={sort ? `${sort.key}:${sort.dir}` : ""}
+            onValueChange={(v) => {
+              const [key, dir] = v.split(":")
+              setSort({ key: key as Column, dir: dir as "asc" | "desc" })
+            }}
+          >
+            <SelectTrigger size="sm" aria-label="Sort by" className={cn(control, "w-auto min-w-40 bg-card")}>
+              <SelectValue placeholder="Sort: Asset ID" />
+            </SelectTrigger>
+            <SelectContent>
+              {sorts.map((o) => (
+                <SelectItem key={o.column} value={`${o.column}:asc`}>
+                  {o.label} ↑
+                </SelectItem>
+              ))}
+              {sorts.map((o) => (
+                <SelectItem key={`${o.column}-desc`} value={`${o.column}:desc`}>
+                  {o.label} ↓
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Button
+            variant="outline"
+            size="sm"
+            className={cn(control, "bg-card")}
+            onClick={() => toast.info("Export runs on the server and respects your filters and permissions.")}
+          >
+            <Download /> Export
+          </Button>
+        </div>
       </div>
 
-      <div className="overflow-x-auto">
-        <Table>
-          <TableHeader>
-            <TableRow className="bg-muted/60 hover:bg-muted/60">
-              <SortHead label="Asset ID" column="id" sort={sort} onSort={onSort} />
-              <SortHead label="Asset" column="name" sort={sort} onSort={onSort} />
-              <SortHead label="Category" column="category" sort={sort} onSort={onSort} />
-              <SortHead label="Location" column="area" sort={sort} onSort={onSort} />
-              {head(sort, onSort)}
-              <TableHead className={cn(th, "text-right")}>Action</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {shown.map((r) => (
-              <TableRow
-                key={r.asset.id}
-                aria-selected={selected?.asset.id === r.asset.id}
-                /* The whole row opens the report; View stays for keyboard reach */
-                onClick={() => onSelect(r)}
-                className={cn(
-                  "cursor-pointer",
-                  selected?.asset.id === r.asset.id && "bg-info-soft hover:bg-info-soft"
-                )}
-              >
-                {/* Colour alone would not carry the selection, so the row also
-                    takes an accent bar down its left edge */}
-                <TableCell
+      {shown.length ? (
+        <ul className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+          {shown.map((r) => {
+            const on = selected?.asset.id === r.asset.id
+            const look = findingLook[status(r)]
+            return (
+              <li key={r.asset.id}>
+                <button
+                  type="button"
+                  aria-pressed={on}
+                  onClick={() => onSelect(r)}
                   className={cn(
-                    td,
-                    "border-l-4 font-semibold whitespace-nowrap text-primary tabular-nums",
-                    selected?.asset.id === r.asset.id ? "border-l-primary" : "border-l-transparent"
+                    "flex h-full w-full flex-col overflow-hidden rounded-2xl bg-card text-left ring-1 transition-[transform,box-shadow] duration-200 hover:shadow-md focus-visible:ring-2 focus-visible:ring-primary motion-safe:hover:-translate-y-0.5 active:translate-y-0",
+                    on ? "ring-2 ring-primary" : "ring-foreground/10"
                   )}
                 >
-                  {r.asset.id}
-                </TableCell>
-                <TableCell className={cn(td, "max-w-56 whitespace-normal")}>
-                  <span className="font-medium">{r.asset.name}</span>
-                  <span className="block text-xs text-muted-foreground">{r.asset.tag}</span>
-                </TableCell>
-                <TableCell className={cn(td, "max-w-44 whitespace-normal")}>
-                  <span className="flex items-center gap-1.5">
-                    <CategoryIcon category={r.asset.category} className="size-5 shrink-0 text-muted-foreground" />
-                    {r.asset.category}
+                  {/* The equipment first: it is recognised before it is read */}
+                  <span className="relative block h-28 bg-muted/40">
+                    <AssetPhoto label={r.asset.category} />
+                    <Badge variant={look.badge} className="absolute top-2 right-2 h-auto rounded-full px-2 py-1 text-xs">
+                      {status(r)}
+                    </Badge>
                   </span>
-                </TableCell>
-                <TableCell className={cn(td, "max-w-40 whitespace-normal")}>{r.asset.area}</TableCell>
-                {cells(r)}
-                <TableCell className={cn(td, "text-right")}>
-                  <Button
-                    variant={selected?.asset.id === r.asset.id ? "default" : "outline"}
-                    size="sm"
-                    className={cn(selected?.asset.id !== r.asset.id && "bg-card")}
-                    onClick={() => onSelect(r)}
-                  >
-                    {selected?.asset.id === r.asset.id ? "Viewing" : "View"}
-                  </Button>
-                </TableCell>
-              </TableRow>
-            ))}
 
-            {shown.length === 0 ? (
-              <TableRow className="hover:bg-transparent">
-                <TableCell colSpan={10} className="py-12 text-center">
-                  <TriangleAlert className="mx-auto mb-2 size-6 text-muted-foreground" />
-                  <p className="text-sm font-medium">No asset matches these filters.</p>
-                  <Button variant="link" onClick={onClear}>
-                    Clear the filters
-                  </Button>
-                </TableCell>
-              </TableRow>
-            ) : null}
-          </TableBody>
-        </Table>
-      </div>
+                  <span className="flex min-w-0 flex-1 flex-col p-3">
+                    <span className="truncate text-sm font-bold tabular-nums text-primary">{r.asset.id}</span>
+                    <span className="truncate text-base leading-tight font-bold text-brand-navy dark:text-foreground">
+                      {r.asset.name}
+                    </span>
+                    <span className="mt-0.5 flex items-center gap-1.5 text-xs text-muted-foreground">
+                      <CategoryIcon category={r.asset.category} className="size-4 shrink-0" />
+                      <span className="truncate">{r.asset.area}</span>
+                    </span>
+
+                    <span className="mt-2 block">{badge(r)}</span>
+
+                    <dl className="mt-2 divide-y border-t text-sm">
+                      {facts(r).map((f) => (
+                        <div key={f.label} className="flex items-center justify-between gap-2 py-1.5">
+                          <dt className="text-muted-foreground">{f.label}</dt>
+                          <dd className="truncate font-semibold tabular-nums">{f.value}</dd>
+                        </div>
+                      ))}
+                    </dl>
+
+                    <span
+                      className={cn(
+                        "mt-auto flex min-h-11 items-center justify-center gap-1.5 rounded-lg pt-3 text-sm font-semibold",
+                        on ? "text-primary" : "text-foreground"
+                      )}
+                    >
+                      {on ? "Viewing report" : "View report"}
+                    </span>
+                  </span>
+                </button>
+              </li>
+            )
+          })}
+        </ul>
+      ) : (
+        <div className="py-12 text-center">
+          <TriangleAlert className="mx-auto mb-2 size-6 text-muted-foreground" />
+          <p className="text-sm font-medium">No asset matches these filters.</p>
+          <Button variant="link" onClick={onClear}>
+            Clear the filters
+          </Button>
+        </div>
+      )}
 
       <TablePager
         page={Math.min(page, pages)}
@@ -488,8 +484,8 @@ function ReportTable({
       />
 
       {/* The report is a drawer down the full height of the screen. It is not
-          modal: the table stays readable and clickable behind it, so another
-          row can be opened without closing this one first. */}
+          modal: the cards stay readable and clickable behind it, so another
+          asset can be opened without closing this one first. */}
       <Sheet open={!!selected} onOpenChange={(open) => !open && onClose()} modal={false}>
         <SheetContent side="right" className="w-full gap-0 p-0 sm:max-w-[32rem]">
           <SheetTitle className="sr-only">Asset details and health report</SheetTitle>
@@ -504,20 +500,6 @@ function ReportTable({
 }
 
 /* ---------- Pieces ---------- */
-
-function Kpi({ label, value, note, tone }: { label: string; value: number; note: string; tone: string }) {
-  return (
-    <div className="rounded-2xl bg-card px-3 py-2.5 ring-1 ring-foreground/10">
-      <div className="text-sm text-muted-foreground">{label}</div>
-      <div className="mt-1 flex items-center gap-2.5">
-        <span className={cn("flex size-9 shrink-0 items-center justify-center rounded-lg text-sm font-bold tabular-nums", tone)}>
-          {value}
-        </span>
-        <span className="text-xs leading-tight text-muted-foreground">{note}</span>
-      </div>
-    </div>
-  )
-}
 
 function Filter({
   label,
