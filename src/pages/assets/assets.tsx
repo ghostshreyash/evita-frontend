@@ -146,7 +146,6 @@ export function AssetsPage() {
     <div>
       <PageHeader
         title="Assets"
-        description="Every asset registered at your plant, and the condition it was last left in."
         breadcrumbs={[{ label: "Assets" }]}
         actions={
           <Button asChild>
@@ -327,16 +326,15 @@ function AssetCard({ asset }: { asset: AssetRecord }) {
         <div className="p-3">
           <h3 className="truncate text-base font-bold text-brand-navy dark:text-foreground">{asset.name}</h3>
           <p className="mt-0.5 truncate text-sm tabular-nums font-medium text-primary">{asset.id}</p>
+          {/* Where it stands, and how much it matters - one line, the level on the end */}
           <p className="mt-1 flex items-center gap-1.5 text-xs text-muted-foreground">
             <CategoryIcon category={asset.category} className="size-4 shrink-0" />
             <span className="truncate">{asset.area}</span>
-          </p>
-          <div className="mt-2 flex items-center justify-between gap-2 border-t pt-2">
-            <span className={cn("rounded-md px-2 py-0.5 text-xs font-semibold", criticalityTone[asset.criticality])}>
-              {asset.criticality} criticality
+            <span className={cn("ml-auto shrink-0 rounded-md px-2 py-0.5 font-semibold", criticalityTone[asset.criticality])}>
+              {asset.criticality}
             </span>
-            {health ? null : <span className="text-xs text-muted-foreground">Not inspected yet</span>}
-          </div>
+          </p>
+          {health ? null : <span className="mt-2 block border-t pt-2 text-xs text-muted-foreground">Not inspected yet</span>}
         </div>
       </Link>
     </li>
