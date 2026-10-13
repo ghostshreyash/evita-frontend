@@ -50,8 +50,8 @@ export function WorkRow({ job }: { job: Job }) {
 
       <div className="flex min-w-0 flex-1 items-center gap-3 py-2.5 pr-2 pl-3">
         {/* What it is */}
-        <span className="flex size-12 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-muted/50">
-          <AssetPhoto label={category} />
+        <span className="flex size-12 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-muted/50 ring-1 ring-foreground/10 shadow-2xs">
+          <AssetPhoto label={`${job.asset} ${category} ${job.activity}`} />
         </span>
 
         <span className="w-24 shrink-0 text-sm font-bold tabular-nums max-lg:hidden">{job.id}</span>

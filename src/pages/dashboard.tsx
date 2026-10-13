@@ -3,16 +3,10 @@ import { Link, useNavigate } from "react-router"
 import { format } from "date-fns"
 import {
   ArrowRight,
-  BadgeCheck,
-  Building2,
   CalendarDays,
   ChevronRight,
   ClipboardList,
-  Factory,
-  Mail,
   MapPin,
-  Network,
-  Phone,
   ShieldCheck,
   type LucideIcon,
 } from "lucide-react"
@@ -20,12 +14,11 @@ import { cn } from "cn"
 
 import { CategoryIcon } from "@/components/common/category-icon"
 import { WorkRow } from "@/components/evita/work-row"
-import { HomeHero } from "@/components/evita/home-hero"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { NextTask, QuickActions, UpcomingTasks } from "@/components/evita/home-hero"
 import { useAssetRows } from "@/data/asset-store"
-import { elpremarProfileFor } from "@/data/elpremar-data"
 import { assetCategories } from "@/data/master-data"
 import { categoryLook, shortCategory } from "@/lib/category-icons"
+import { categoryImage } from "@/lib/asset-images"
 import { useCurrentElpremar } from "@/lib/me"
 import { markRead, noticeTime, useNotifications } from "@/lib/notifications"
 import { openPanel } from "@/lib/ui-store"
@@ -66,21 +59,6 @@ function Panel({
   )
 }
 
-/** Icon + label on the left, value on the right — the profile tabs' rows */
-function InfoRows({ rows }: { rows: { icon: LucideIcon; label: string; value: React.ReactNode }[] }) {
-  return (
-    <dl className="divide-y">
-      {rows.map(({ icon: Icon, label, value }) => (
-        <div key={label} className="flex min-h-12 items-center gap-3 py-2 text-sm">
-          <Icon className="size-4 shrink-0 text-muted-foreground" />
-          <dt className="text-muted-foreground">{label}</dt>
-          <dd className="ml-auto min-w-0 truncate text-right font-semibold">{value}</dd>
-        </div>
-      ))}
-    </dl>
-  )
-}
-
 /**
  * The ELPREMAR's own screen: the work in front of them this week, the assets
  * at their site, and who they are. Laid out after the EVITA tablet design; the
@@ -89,7 +67,6 @@ function InfoRows({ rows }: { rows: { icon: LucideIcon; label: string; value: Re
 export function DashboardPage() {
   const navigate = useNavigate()
   const me = useCurrentElpremar()
-  const profile = useMemo(() => elpremarProfileFor(me), [me])
   const jobs = useMyJobs()
   const { notices } = useNotifications()
 
@@ -131,6 +108,9 @@ export function DashboardPage() {
 
         <div className="relative p-5">
           <h2 className="text-2xl font-bold tracking-tight sm:text-3xl">Hello, {me.name}!</h2>
+          <p className="mt-0.5 text-sm font-medium text-white/90">
+            {me.designation} · ELPREMAR <span className="tabular-nums">{me.id}</span>
+          </p>
           <p className="mt-1 text-sm text-white/85 sm:text-base">Stay on top of your plant assets and tasks.</p>
           <div className="mt-4 flex flex-wrap gap-2 text-sm">
             <span className="flex items-center gap-1.5 rounded-full bg-white/10 px-3.5 py-1.5 ring-1 ring-white/25">
@@ -147,7 +127,13 @@ export function DashboardPage() {
         </div>
       </section>
 
-      <HomeHero />
+      <QuickActions />
+
+      {/* The work in hand on the left; who they are and what is next on the right */}
+      <div className="grid gap-3 lg:grid-cols-2">
+        <NextTask />
+        <UpcomingTasks />
+      </div>
 
       <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_19rem]">
         <div className="min-w-0 space-y-5">
@@ -188,21 +174,49 @@ export function DashboardPage() {
             subtitle="Select a category to see its assets"
             action={<span className="shrink-0 rounded-md bg-muted px-2.5 py-1 text-sm font-medium text-muted-foreground">{totalAssets} Total Registered</span>}
           >
-            <div className="grid grid-cols-3 gap-3 p-5 sm:grid-cols-4 lg:grid-cols-6">
+            <div className="grid grid-cols-2 gap-3 p-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6">
               {categories.map((c) => {
                 const look = categoryLook(c.name)
+                const img = categoryImage(c.name)
                 return (
                   <Link
                     key={c.name}
                     to={`/assets?category=${encodeURIComponent(c.name)}`}
                     title={c.name}
-                    className="group/cat flex min-h-32 flex-col items-center justify-center gap-2 rounded-xl bg-card px-2 py-3 text-center ring-1 ring-foreground/10 transition-[transform,box-shadow] duration-200 hover:shadow-md motion-safe:hover:-translate-y-0.5 active:translate-y-0"
+                    className="group/cat relative flex min-h-36 flex-col overflow-hidden rounded-2xl bg-card text-left ring-1 ring-foreground/10 transition-all duration-200 hover:shadow-lg hover:ring-primary/40 motion-safe:hover:-translate-y-1 active:scale-[0.97] active:translate-y-0"
                   >
-                    <span className={cn("flex size-11 items-center justify-center rounded-lg transition-transform motion-safe:group-hover/cat:scale-110", look.tint)}>
-                      <CategoryIcon category={c.name} className="size-6" />
-                    </span>
-                    <span className="line-clamp-2 text-sm leading-tight font-semibold">{shortCategory(c.name)}</span>
-                    <span className="text-xs text-muted-foreground tabular-nums">{c.count} Assets</span>
+                    {img ? (
+                      <div className="relative h-20 w-full overflow-hidden bg-slate-900/10">
+                        <img
+                          src={img}
+                          alt=""
+                          className="size-full object-cover transition-transform duration-300 group-hover/cat:scale-108"
+                        />
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-black/10 to-transparent" />
+                        <span className={cn("absolute bottom-1.5 left-1.5 flex size-6 items-center justify-center rounded-md shadow-xs", look.tint)}>
+                          <CategoryIcon category={c.name} className="size-3.5" />
+                        </span>
+                        <span className="absolute bottom-1.5 right-1.5 rounded-md bg-black/60 px-1.5 py-0.5 text-[0.65rem] font-bold text-white backdrop-blur-xs">
+                          {c.count}
+                        </span>
+                      </div>
+                    ) : (
+                      <div className="flex h-20 w-full items-center justify-center bg-muted/40">
+                        <span className={cn("flex size-11 items-center justify-center rounded-xl transition-transform group-hover/cat:scale-110", look.tint)}>
+                          <CategoryIcon category={c.name} className="size-6" />
+                        </span>
+                      </div>
+                    )}
+
+                    <div className="flex flex-1 flex-col justify-between p-2.5">
+                      <span className="line-clamp-2 text-xs font-bold leading-tight text-brand-navy group-hover/cat:text-primary dark:text-foreground">
+                        {shortCategory(c.name)}
+                      </span>
+                      <span className="mt-1 flex items-center justify-between text-[0.7rem] text-muted-foreground">
+                        <span className="tabular-nums font-medium">{c.count} Assets</span>
+                        <ChevronRight className="size-3 text-muted-foreground/60 transition-transform group-hover/cat:translate-x-0.5 group-hover/cat:text-primary" />
+                      </span>
+                    </div>
                   </Link>
                 )
               })}
@@ -212,54 +226,6 @@ export function DashboardPage() {
 
         {/* ---------- Who they are, and the shortcuts they use ---------- */}
         <div className="grid content-start gap-5 md:grid-cols-2 lg:grid-cols-1">
-          <section className="rounded-2xl bg-card p-4 shadow-xs ring-1 ring-foreground/10">
-            <Tabs defaultValue="details">
-              <TabsList variant="line" className="w-full justify-start gap-4 border-b">
-                <TabsTrigger value="details" className="flex-none px-0">My Details</TabsTrigger>
-                <TabsTrigger value="assignment" className="flex-none px-0">Assignment Info</TabsTrigger>
-              </TabsList>
-              <TabsContent value="details" className="pt-2">
-                <InfoRows
-                  rows={[
-                    { icon: BadgeCheck, label: "Role", value: me.designation },
-                    { icon: CalendarDays, label: "Joined", value: me.joined },
-                    // The ELPREMAR's own location (their address from onboarding), not the site they are posted to
-                    { icon: MapPin, label: "Location", value: `${profile.basic.city}, ${profile.basic.state}` },
-                    // The engineer's own, from the register - not a literal typed in here
-                    {
-                      icon: Phone,
-                      label: "Phone",
-                      value: (
-                        <a href={`tel:${profile.basic.phoneCode}${profile.basic.phone}`} className="tabular-nums text-primary">
-                          {profile.basic.phoneCode} {profile.basic.phone}
-                        </a>
-                      ),
-                    },
-                    {
-                      icon: Mail,
-                      label: "Email",
-                      value: (
-                        <a href={`mailto:${profile.basic.email}`} className="text-primary">
-                          {profile.basic.email}
-                        </a>
-                      ),
-                    },
-                  ]}
-                />
-              </TabsContent>
-              <TabsContent value="assignment" className="pt-2">
-                <InfoRows
-                  rows={[
-                    // Where they are assigned: the enterprise, its plant and the department they sit in
-                    { icon: Building2, label: "Enterprise", value: profile.posting.enterprise },
-                    { icon: Factory, label: "Location", value: `${profile.posting.plant}, ${profile.posting.city}` },
-                    { icon: Network, label: "Department", value: profile.posting.department },
-                  ]}
-                />
-              </TabsContent>
-            </Tabs>
-          </section>
-
           <div className="space-y-5">
             <button
               type="button"

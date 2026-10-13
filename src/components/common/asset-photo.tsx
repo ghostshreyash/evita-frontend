@@ -3,6 +3,7 @@ import { Image as ImageIcon, ScanLine } from "lucide-react"
 import { cn } from "cn"
 
 import { urlFor } from "@/lib/object-url"
+import { categoryImage } from "@/lib/asset-images"
 
 /**
  * One asset photograph.
@@ -35,6 +36,18 @@ export function AssetPhoto({
         src={url}
         alt={caption ?? label ?? "Asset photograph"}
         onError={() => setBroken(file)}
+        className={cn("size-full object-cover", className)}
+      />
+    )
+  }
+
+  const imageFallback = categoryImage(label)
+  if (imageFallback && !broken) {
+    return (
+      <img
+        src={imageFallback}
+        alt={caption ?? label ?? "Equipment photograph"}
+        onError={() => setBroken(file ?? ({} as File))}
         className={cn("size-full object-cover", className)}
       />
     )

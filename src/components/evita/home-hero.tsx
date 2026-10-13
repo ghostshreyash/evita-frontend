@@ -1,250 +1,353 @@
-import { useMemo } from "react"
+import { useMemo, useState } from "react"
 import { useNavigate } from "react-router"
 import {
+  ArrowRight,
   CalendarDays,
+  ChevronLeft,
   ChevronRight,
   ClipboardCheck,
   ClipboardList,
-  MapPin,
+  Clock,
+  Factory,
+  ListChecks,
   Play,
   Plus,
   QrCode,
+  UserRound,
+  Zap,
   type LucideIcon,
 } from "lucide-react"
 import { cn } from "cn"
 import { format } from "date-fns"
 
-import { CategoryIcon } from "@/components/common/category-icon"
+import { AssetPhoto } from "@/components/common/asset-photo"
 import { JobStatusBadge } from "@/components/evita/job-action"
 import { Button } from "@/components/ui/button"
-import { slotLabel } from "@/data/occ-tables"
+import { criticalityTone, slotLabel } from "@/data/occ-tables"
+import { useInspectionDetails } from "@/data/inspection-store"
+import { hygieneChecks } from "@/data/test-template"
 import { useCurrentElpremar } from "@/lib/me"
 import { startJob } from "@/lib/start-job"
 import { openPanel } from "@/lib/ui-store"
 import { actionFor, categoryFor, isToday, jobKindLook, jobPath, parseDay, useMyJobs, when, type Job } from "@/lib/work"
 
 /**
- * The head of the home screen: the piece of work the engineer should be on,
- * and the four ways into the app either side of it.
+ * The ways into the app, across the top of the home screen.
  *
- * Laid out as the client asked at the review — two cards left, the task in the
- * middle, two cards right — and the three columns share one height so the row
- * reads as a row. On a tablet in portrait the task goes first and the four fall
- * under it in pairs.
+ * Four, not six. Report an Issue belongs on the task screen where a problem is
+ * actually found, and on Contact & Help; and there is nothing to press for
+ * syncing - records go up on their own and the top bar already says whether
+ * they have.
  */
-export function HomeHero() {
+export function QuickActions() {
   const navigate = useNavigate()
-  const jobs = useMyJobs()
-
-  /**
-   * The job to put in front of the engineer: anything already running, and
-   * failing that the soonest booking that still needs their hands.
-   */
-  const latest = useMemo(() => {
-    const open = jobs.filter((j) => actionFor(j) !== "view")
-    return open.find((j) => actionFor(j) === "continue") ?? [...open].sort((a, b) => when(a) - when(b))[0]
-  }, [jobs])
 
   const actions: Action[] = [
-    {
-      icon: QrCode,
-      title: "Scan Asset QR",
-      detail: "Open an asset by its label",
-      tone: "bg-info-soft text-info",
-      run: () => openPanel({ kind: "scan" }),
-    },
+    { icon: QrCode, title: "Scan\nAsset QR", tint: "bg-info-soft", mark: "text-info", run: () => openPanel({ kind: "scan" }) },
     {
       icon: Plus,
-      title: "Asset Onboarding",
-      detail: "Register an asset that is not on the book",
-      tone: "bg-highlight-soft text-highlight",
+      title: "Onboard\nAsset",
+      tint: "bg-highlight-soft",
+      mark: "text-highlight",
       run: () => navigate("/assets/onboarding"),
     },
     {
       icon: ClipboardCheck,
-      title: "Start Inspection",
-      detail: "Scan an asset, or onboard a new one",
-      tone: "bg-healthy-soft text-healthy",
+      title: "Start\nInspection",
+      tint: "bg-healthy-soft",
+      mark: "text-healthy",
       run: () => openPanel({ kind: "begin-inspection" }),
     },
     {
       icon: ClipboardList,
-      title: "My Tasks",
-      detail: "The maintenance assigned to you",
-      tone: "bg-attention-soft text-attention",
+      title: "View\nMy Tasks",
+      tint: "bg-attention-soft",
+      mark: "text-attention",
       run: () => navigate("/my-tasks"),
     },
   ]
 
   return (
     <section>
-      <div className="mb-2 flex flex-wrap items-baseline justify-between gap-x-3">
+      <div className="mb-2 flex flex-wrap items-center justify-between gap-x-3">
         <h3 className="text-lg font-semibold text-brand-navy dark:text-foreground">Quick Actions</h3>
-        <p className="text-sm text-muted-foreground">Everything you need for field work</p>
+        <button
+          type="button"
+          onClick={() => navigate("/my-tasks")}
+          className="flex min-h-9 items-center gap-1 text-sm font-semibold text-primary hover:underline"
+        >
+          See All <ArrowRight className="size-4" />
+        </button>
       </div>
 
-      {/*
-        * Three columns of one height. The stacked pairs set it and the asset
-        * card fills it, so nothing in the row is left hanging - which is what
-        * a tall photograph in the middle did.
-        */}
-      <div className="grid items-stretch gap-2.5 lg:grid-cols-[minmax(0,1fr)_minmax(0,21rem)_minmax(0,1fr)]">
-        <ul className="grid gap-2.5 sm:grid-cols-2 lg:grid-cols-1 lg:grid-rows-2">
-          {actions.slice(0, 2).map((action) => (
-            <ActionCard key={action.title} action={action} />
-          ))}
-        </ul>
-
-        {latest ? <TaskSpotlight job={latest} className="max-lg:order-first" /> : <NothingOpen className="max-lg:order-first" />}
-
-        <ul className="grid gap-2.5 sm:grid-cols-2 lg:grid-cols-1 lg:grid-rows-2">
-          {actions.slice(2).map((action) => (
-            <ActionCard key={action.title} action={action} />
-          ))}
-        </ul>
-      </div>
+      <ul className="grid gap-2.5 sm:grid-cols-2 lg:grid-cols-4">
+        {actions.map((action) => (
+          <li key={action.title}>
+            <button
+              type="button"
+              onClick={action.run}
+              className={cn(
+                "flex min-h-28 w-full flex-col justify-between rounded-2xl p-3 text-left ring-1 ring-foreground/10 transition-[transform,box-shadow] duration-200 hover:shadow-md motion-safe:hover:-translate-y-0.5 active:translate-y-0",
+                action.tint
+              )}
+            >
+              <span className={cn("flex size-11 items-center justify-center rounded-xl bg-card", action.mark)}>
+                <action.icon className="size-6" />
+              </span>
+              <span className="mt-2 flex items-end justify-between gap-2">
+                <span className="text-base leading-tight font-bold whitespace-pre-line text-brand-navy dark:text-foreground">
+                  {action.title}
+                </span>
+                <span className={cn("flex size-7 shrink-0 items-center justify-center rounded-full bg-card", action.mark)}>
+                  <ArrowRight className="size-4" />
+                </span>
+              </span>
+            </button>
+          </li>
+        ))}
+      </ul>
     </section>
   )
 }
 
+type Action = { icon: LucideIcon; title: string; tint: string; mark: string; run: () => void }
+
 /**
- * The work in the middle: the one piece the engineer should be on.
+ * The work in front of the engineer, one at a time.
  *
- * "Latest" on a book of work is whatever is open: anything already started
- * comes first, and failing that the soonest booking that still needs their
- * hands. A task further down the week is not the one to put in front of them.
- *
- * The button follows the job rather than being chosen here, so an inspection
- * reads Start Inspection and a maintenance Start Maintenance, and either reads
- * Continue once it is running.
- *
- * No photograph. A seeded asset has none, so it drew a placeholder glyph the
- * height of the whole card and left the row lopsided for no information; the
- * category tile says the same thing in a corner.
+ * Whatever is already running leads, and after it the soonest bookings that
+ * still need their hands. The pager steps through them rather than listing
+ * them: on site there is only ever one asset in front of you.
  */
-function TaskSpotlight({ job, className }: { job: Job; className?: string }) {
+export function NextTask() {
   const navigate = useNavigate()
   const me = useCurrentElpremar()
+  const jobs = useMyJobs()
+  const details = useInspectionDetails()
+  const [at, setAt] = useState(0)
+
+  const open = useMemo(() => {
+    const waiting = jobs.filter((j) => actionFor(j) !== "view")
+    const running = (j: Job) => (actionFor(j) === "continue" ? 0 : 1)
+    return [...waiting].sort((a, b) => running(a) - running(b) || when(a) - when(b))
+  }, [jobs])
+
+  if (!open.length) return <NothingOpen />
+
+  const index = Math.min(at, open.length - 1)
+  const job = open[index]
   const kind = jobKindLook[job.kind]
   const running = actionFor(job) === "continue"
   const inspection = job.kind === "inspection"
+  const tag = details[job.id]?.assetTag
 
   return (
-    <article className={cn("flex h-full flex-col gap-2 rounded-2xl bg-card p-3 shadow-xs ring-1 ring-primary/25", className)}>
-      <div className="flex items-start gap-2.5">
-        <span className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-info-soft text-primary">
-          {inspection ? (
-            <kind.icon className="size-6" />
-          ) : (
-            <CategoryIcon category={categoryFor(job.asset)} className="size-6" />
-          )}
+    <section className="flex flex-col rounded-2xl bg-card p-3 shadow-xs ring-1 ring-foreground/10">
+      <header className="mb-3 flex flex-wrap items-center gap-2">
+        <span className="flex items-center gap-1.5 text-base font-semibold text-brand-navy dark:text-foreground">
+          <Zap className="size-5 text-attention" /> Next Task
         </span>
+        <JobStatusBadge job={job} />
+        <span className="ml-auto flex items-center gap-1">
+          <PagerButton label="Previous task" disabled={index === 0} onClick={() => setAt(index - 1)} icon={ChevronLeft} />
+          <span className="min-w-14 text-center text-xs font-semibold tabular-nums text-muted-foreground">
+            {index + 1} of {open.length}
+          </span>
+          <PagerButton
+            label="Next task"
+            disabled={index >= open.length - 1}
+            onClick={() => setAt(index + 1)}
+            icon={ChevronRight}
+          />
+        </span>
+      </header>
+
+      <div className="flex flex-wrap gap-3">
+        <div className="h-40 w-44 shrink-0 overflow-hidden rounded-xl bg-muted/40 max-sm:w-full">
+          <AssetPhoto label={categoryFor(job.asset)} caption={job.asset} />
+        </div>
+
         <div className="min-w-0 flex-1">
-          <p className="text-xs font-semibold tracking-wide text-muted-foreground uppercase">
-            {running ? "Under way" : "Next up"}
-          </p>
-          <h4 className="truncate text-base leading-tight font-bold text-brand-navy dark:text-foreground">
+          <h4 className="truncate text-lg font-bold text-brand-navy dark:text-foreground">
             {inspection ? job.area || job.plant : job.asset}
           </h4>
           <p className="truncate text-sm font-medium tabular-nums text-primary">{job.id}</p>
+
+          <div className="mt-2 flex flex-wrap gap-1.5">
+            <Chip className={kind.tint}>
+              <kind.icon className="size-3.5" /> {kind.label}
+            </Chip>
+            <Chip className="bg-info-soft text-info">{job.activity}</Chip>
+            <Chip className={criticalityTone[job.priority === "Low" ? "Low" : job.priority === "Medium" ? "Medium" : "High"]}>
+              {job.priority}
+            </Chip>
+          </div>
+
+          <dl className="mt-2.5 space-y-1.5 text-sm">
+            <Line icon={Factory}>
+              {job.plant}, {job.enterprise}
+            </Line>
+            <Line icon={CalendarDays}>
+              {isToday(job.date) ? "Today" : format(parseDay(job.date), "d MMM yyyy")}, {slotLabel(job.slot)}
+            </Line>
+            {inspection ? <Line icon={ListChecks}>{hygieneChecks.length} hygiene points</Line> : null}
+            {tag ? <Line icon={QrCode}>{tag}</Line> : null}
+            <Line icon={UserRound}>Assigned by EMMS-E</Line>
+          </dl>
         </div>
-        <JobStatusBadge job={job} />
       </div>
 
-      <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
-        <span className={cn("flex items-center gap-1 rounded-md px-2 py-0.5 font-semibold", kind.tint)}>
-          <kind.icon className="size-3.5 shrink-0" /> {kind.label}
-        </span>
-        <span className="flex min-w-0 items-center gap-1">
-          <MapPin className="size-3.5 shrink-0" />
-          <span className="truncate">{job.plant}</span>
-        </span>
-      </div>
-
-      <p className="truncate text-sm">{job.activity}</p>
-
-      <p className="flex flex-wrap items-center gap-x-3 text-xs text-muted-foreground">
-        <span className="flex items-center gap-1.5">
-          <CalendarDays className="size-3.5 shrink-0" />
-          {isToday(job.date) ? "Today" : format(parseDay(job.date), "d MMM yyyy")}
-        </span>
-        <span className="tabular-nums">{slotLabel(job.slot)}</span>
-      </p>
-
-      <div className="mt-auto pt-1">
-        <Button
-          size="lg"
-          className="h-14 w-full text-base font-semibold shadow-md shadow-primary/25"
-          onClick={() => {
-            if (!running) startJob(job, me.name)
-            navigate(jobPath(job))
-          }}
-        >
-          <Play className="fill-current" />
-          {running ? `Continue ${kind.label}` : `Start ${kind.label}`}
-        </Button>
-      </div>
-    </article>
+      <Button
+        size="lg"
+        className="mt-3 h-14 w-full text-base font-semibold shadow-md shadow-primary/25"
+        onClick={() => {
+          if (!running) startJob(job, me.name)
+          navigate(jobPath(job))
+        }}
+      >
+        <Play className="fill-current" /> {running ? `Continue ${kind.label}` : `Start ${kind.label}`}
+      </Button>
+    </section>
   )
 }
 
-/** Nothing on the book: the engineer can still start an inspection at any asset */
-function NothingOpen({ className }: { className?: string }) {
+/** Nothing on the book: an inspection can still be started at any asset */
+function NothingOpen() {
   return (
-    <article
-      className={cn(
-        "flex h-full flex-col items-start gap-2 rounded-2xl bg-card p-3 shadow-xs ring-1 ring-foreground/10",
-        className
-      )}
-    >
-      <span className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-healthy-soft text-healthy">
+    <section className="flex flex-col items-start gap-2 rounded-2xl bg-card p-4 shadow-xs ring-1 ring-foreground/10">
+      <span className="flex size-11 items-center justify-center rounded-xl bg-healthy-soft text-healthy">
         <ClipboardCheck className="size-6" />
       </span>
-      <h4 className="text-base leading-tight font-bold text-brand-navy dark:text-foreground">Nothing open</h4>
-      <p className="text-xs leading-snug text-muted-foreground">
-        No task is waiting on you. An inspection can still be started at any asset — scan its label, or onboard
-        it first.
+      <h4 className="text-base font-bold text-brand-navy dark:text-foreground">Nothing open</h4>
+      <p className="text-sm text-muted-foreground">
+        No task is waiting on you. An inspection can still be started at any asset — scan its label, or onboard it first.
       </p>
-      <div className="mt-auto w-full pt-1">
-        <Button
-          size="lg"
-          className="h-14 w-full text-base font-semibold shadow-md shadow-primary/25"
-          onClick={() => openPanel({ kind: "begin-inspection" })}
-        >
-          <Play className="fill-current" /> Start Inspection
-        </Button>
-      </div>
-    </article>
-  )
-}
-
-function ActionCard({ action }: { action: Action }) {
-  return (
-    <li>
-      <button
-        type="button"
-        onClick={action.run}
-        className="flex h-full min-h-28 w-full flex-col gap-2 rounded-2xl bg-card p-3 text-left shadow-xs ring-1 ring-foreground/10 transition-[transform,box-shadow] duration-200 hover:shadow-md motion-safe:hover:-translate-y-0.5 active:translate-y-0"
+      <Button
+        size="lg"
+        className="mt-3 h-14 w-full text-base font-semibold"
+        onClick={() => openPanel({ kind: "begin-inspection" })}
       >
-        <span className="flex items-start gap-2.5">
-          <span className={cn("flex size-10 shrink-0 items-center justify-center rounded-xl", action.tone)}>
-            <action.icon className="size-5" />
-          </span>
-          <span className="min-w-0 flex-1 text-base leading-tight font-bold text-brand-navy dark:text-foreground">
-            {action.title}
-          </span>
-          <ChevronRight className="size-4 shrink-0 text-muted-foreground" />
-        </span>
-        <span className="text-xs leading-snug text-muted-foreground">{action.detail}</span>
-      </button>
-    </li>
+        <Play className="fill-current" /> Start Inspection
+      </Button>
+    </section>
   )
 }
 
-type Action = {
+/** The work after the one in hand, as rows */
+export function UpcomingTasks() {
+  const navigate = useNavigate()
+  const jobs = useMyJobs()
+
+  const upcoming = useMemo(
+    () => [...jobs.filter((j) => actionFor(j) !== "view")].sort((a, b) => when(a) - when(b)).slice(1, 5),
+    [jobs]
+  )
+
+  return (
+    <section className="rounded-2xl bg-card p-3 shadow-xs ring-1 ring-foreground/10">
+      <div className="mb-2 flex flex-wrap items-center justify-between gap-x-3">
+        <h3 className="flex items-center gap-1.5 text-base font-semibold text-brand-navy dark:text-foreground">
+          <CalendarDays className="size-5 text-primary" /> Upcoming Tasks ({upcoming.length})
+        </h3>
+        <button
+          type="button"
+          onClick={() => navigate("/my-tasks")}
+          className="flex min-h-9 items-center gap-1 text-sm font-semibold text-primary hover:underline"
+        >
+          View All <ArrowRight className="size-4" />
+        </button>
+      </div>
+
+      {upcoming.length ? (
+        <ul className="divide-y">
+          {upcoming.map((job) => {
+            const kind = jobKindLook[job.kind]
+            return (
+              <li key={job.id}>
+                <button
+                  type="button"
+                  onClick={() => navigate(jobPath(job))}
+                  className="flex min-h-16 w-full items-center gap-3 py-2 text-left hover:bg-muted/40"
+                >
+                  <span className="size-12 shrink-0 overflow-hidden rounded-xl bg-muted/40 ring-1 ring-foreground/10 shadow-2xs">
+                    <AssetPhoto label={`${job.asset} ${categoryFor(job.asset)} ${job.activity}`} />
+                  </span>
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate text-sm font-bold text-brand-navy dark:text-foreground">
+                      {job.kind === "inspection" ? job.area || job.plant : job.asset}
+                    </span>
+                    <span className="block truncate text-xs tabular-nums text-muted-foreground">{job.id}</span>
+                    <span
+                      className={cn(
+                        "mt-1 inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[0.7rem] font-semibold",
+                        kind.tint
+                      )}
+                    >
+                      <kind.icon className="size-3" /> {kind.label}
+                    </span>
+                  </span>
+                  <span className="shrink-0 text-right max-sm:hidden">
+                    <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                      <CalendarDays className="size-3.5" />
+                      {isToday(job.date) ? "Today" : format(parseDay(job.date), "d MMM yyyy")}
+                    </span>
+                    <span className="mt-0.5 flex items-center gap-1.5 text-xs tabular-nums text-muted-foreground">
+                      <Clock className="size-3.5" /> {slotLabel(job.slot)}
+                    </span>
+                  </span>
+                  <JobStatusBadge job={job} className="shrink-0 max-md:hidden" />
+                  <ChevronRight className="size-5 shrink-0 text-muted-foreground" />
+                </button>
+              </li>
+            )
+          })}
+        </ul>
+      ) : (
+        <p className="py-8 text-center text-sm text-muted-foreground">Nothing else booked.</p>
+      )}
+    </section>
+  )
+}
+
+/* ---------- Pieces ---------- */
+
+function Chip({ children, className }: { children: React.ReactNode; className?: string }) {
+  return (
+    <span className={cn("flex items-center gap-1 rounded-md px-2 py-0.5 text-xs font-semibold", className)}>
+      {children}
+    </span>
+  )
+}
+
+function Line({ icon: Icon, children }: { icon: LucideIcon; children: React.ReactNode }) {
+  return (
+    <div className="flex min-w-0 items-center gap-2 text-muted-foreground">
+      <Icon className="size-4 shrink-0" />
+      <span className="truncate text-foreground/85">{children}</span>
+    </div>
+  )
+}
+
+function PagerButton({
+  label,
+  disabled,
+  onClick,
+  icon: Icon,
+}: {
+  label: string
+  disabled: boolean
+  onClick: () => void
   icon: LucideIcon
-  title: string
-  detail: string
-  tone: string
-  run: () => void
+}) {
+  return (
+    <button
+      type="button"
+      aria-label={label}
+      disabled={disabled}
+      onClick={onClick}
+      className="flex size-9 items-center justify-center rounded-lg ring-1 ring-foreground/10 transition-colors hover:bg-muted disabled:opacity-35"
+    >
+      <Icon className="size-4" />
+    </button>
+  )
 }
