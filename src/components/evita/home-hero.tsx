@@ -38,47 +38,48 @@ import { actionFor, categoryFor, isToday, jobKindLook, jobPath, parseDay, useMyJ
  * actually found, and on Contact & Help; and there is nothing to press for
  * syncing - records go up on their own and the top bar already says whether
  * they have.
+ *
+ * One card shape: a tinted glyph, what it does, and what that means. No arrow
+ * in the corner - the whole card is the button, and a chevron only repeated
+ * what the cursor already says.
  */
 export function QuickActions() {
   const navigate = useNavigate()
 
   const actions: Action[] = [
-    { icon: QrCode, title: "Scan\nAsset QR", tint: "bg-info-soft", mark: "text-info", run: () => openPanel({ kind: "scan" }) },
+    {
+      icon: QrCode,
+      title: "Scan Asset QR",
+      detail: "Open an asset by its label",
+      tint: "bg-info-soft text-info",
+      run: () => openPanel({ kind: "scan" }),
+    },
     {
       icon: Plus,
-      title: "Onboard\nAsset",
-      tint: "bg-highlight-soft",
-      mark: "text-highlight",
+      title: "Onboard Asset",
+      detail: "Register one that is not on the book",
+      tint: "bg-highlight-soft text-highlight",
       run: () => navigate("/assets/onboarding"),
     },
     {
       icon: ClipboardCheck,
-      title: "Start\nInspection",
-      tint: "bg-healthy-soft",
-      mark: "text-healthy",
+      title: "Start Inspection",
+      detail: "Scan an asset, or onboard a new one",
+      tint: "bg-healthy-soft text-healthy",
       run: () => openPanel({ kind: "begin-inspection" }),
     },
     {
       icon: ClipboardList,
-      title: "View\nMy Tasks",
-      tint: "bg-attention-soft",
-      mark: "text-attention",
+      title: "My Tasks",
+      detail: "The maintenance assigned to you",
+      tint: "bg-attention-soft text-attention",
       run: () => navigate("/my-tasks"),
     },
   ]
 
   return (
     <section>
-      <div className="mb-2 flex flex-wrap items-center justify-between gap-x-3">
-        <h3 className="text-lg font-semibold text-brand-navy dark:text-foreground">Quick Actions</h3>
-        <button
-          type="button"
-          onClick={() => navigate("/my-tasks")}
-          className="flex min-h-9 items-center gap-1 text-sm font-semibold text-primary hover:underline"
-        >
-          See All <ArrowRight className="size-4" />
-        </button>
-      </div>
+      <h3 className="mb-2 text-lg font-semibold text-brand-navy dark:text-foreground">Quick Actions</h3>
 
       <ul className="grid gap-2.5 sm:grid-cols-2 lg:grid-cols-4">
         {actions.map((action) => (
@@ -86,21 +87,21 @@ export function QuickActions() {
             <button
               type="button"
               onClick={action.run}
-              className={cn(
-                "flex min-h-28 w-full flex-col justify-between rounded-2xl p-3 text-left ring-1 ring-foreground/10 transition-[transform,box-shadow] duration-200 hover:shadow-md motion-safe:hover:-translate-y-0.5 active:translate-y-0",
-                action.tint
-              )}
+              className="group/qa flex min-h-24 w-full items-center gap-3 rounded-2xl bg-card p-3 text-left ring-1 ring-foreground/10 transition-[transform,box-shadow] duration-200 hover:shadow-md focus-visible:ring-2 focus-visible:ring-primary motion-safe:hover:-translate-y-0.5 active:translate-y-0"
             >
-              <span className={cn("flex size-11 items-center justify-center rounded-xl bg-card", action.mark)}>
+              <span
+                className={cn(
+                  "flex size-12 shrink-0 items-center justify-center rounded-2xl transition-transform motion-safe:group-hover/qa:scale-105",
+                  action.tint
+                )}
+              >
                 <action.icon className="size-6" />
               </span>
-              <span className="mt-2 flex items-end justify-between gap-2">
-                <span className="text-base leading-tight font-bold whitespace-pre-line text-brand-navy dark:text-foreground">
+              <span className="min-w-0">
+                <span className="block text-base leading-tight font-bold text-brand-navy dark:text-foreground">
                   {action.title}
                 </span>
-                <span className={cn("flex size-7 shrink-0 items-center justify-center rounded-full bg-card", action.mark)}>
-                  <ArrowRight className="size-4" />
-                </span>
+                <span className="mt-0.5 block text-xs leading-snug text-muted-foreground">{action.detail}</span>
               </span>
             </button>
           </li>
@@ -110,7 +111,7 @@ export function QuickActions() {
   )
 }
 
-type Action = { icon: LucideIcon; title: string; tint: string; mark: string; run: () => void }
+type Action = { icon: LucideIcon; title: string; detail: string; tint: string; run: () => void }
 
 /**
  * The work in front of the engineer, one at a time.
@@ -142,11 +143,17 @@ export function NextTask() {
   const tag = details[job.id]?.assetTag
 
   return (
-    <section className="flex flex-col rounded-2xl bg-card p-3 shadow-xs ring-1 ring-foreground/10">
-      <header className="mb-3 flex flex-wrap items-center gap-2">
-        <span className="flex items-center gap-1.5 text-base font-semibold text-brand-navy dark:text-foreground">
-          <Zap className="size-5 text-attention" /> Next Task
+    /*
+     * The card the whole screen is for, and it is built to read that way: a
+     * tinted head, a ring in the brand colour, a lifted shadow and the one
+     * button at full width. Everything else on the page is quieter than this.
+     */
+    <section className="flex flex-col overflow-hidden rounded-2xl bg-card shadow-lg shadow-primary/5 ring-1 ring-primary/20">
+      <header className="flex flex-wrap items-center gap-2 border-b border-primary/10 bg-gradient-to-r from-info-soft via-info-soft/60 to-transparent px-3 py-2.5">
+        <span className="flex size-8 items-center justify-center rounded-lg bg-attention-soft text-attention">
+          <Zap className="size-4.5" />
         </span>
+        <span className="text-base font-bold text-brand-navy dark:text-foreground">Next Task</span>
         <JobStatusBadge job={job} />
         <span className="ml-auto flex items-center gap-1">
           <PagerButton label="Previous task" disabled={index === 0} onClick={() => setAt(index - 1)} icon={ChevronLeft} />
@@ -162,18 +169,18 @@ export function NextTask() {
         </span>
       </header>
 
-      <div className="flex flex-wrap gap-3">
-        <div className="h-40 w-44 shrink-0 overflow-hidden rounded-xl bg-muted/40 max-sm:w-full">
-          <AssetPhoto label={categoryFor(job.asset)} caption={job.asset} />
+      <div className="flex flex-wrap gap-3.5 p-3">
+        <div className="h-44 w-48 shrink-0 overflow-hidden rounded-xl bg-muted/40 ring-1 ring-foreground/10 max-sm:h-40 max-sm:w-full">
+          <AssetPhoto label={`${job.asset} ${categoryFor(job.asset)} ${job.activity}`} caption={job.asset} />
         </div>
 
         <div className="min-w-0 flex-1">
-          <h4 className="truncate text-lg font-bold text-brand-navy dark:text-foreground">
+          <h4 className="truncate text-xl leading-tight font-bold text-brand-navy dark:text-foreground">
             {inspection ? job.area || job.plant : job.asset}
           </h4>
-          <p className="truncate text-sm font-medium tabular-nums text-primary">{job.id}</p>
+          <p className="mt-0.5 truncate text-sm font-semibold tabular-nums text-primary">{job.id}</p>
 
-          <div className="mt-2 flex flex-wrap gap-1.5">
+          <div className="mt-2.5 flex flex-wrap gap-1.5">
             <Chip className={kind.tint}>
               <kind.icon className="size-3.5" /> {kind.label}
             </Chip>
@@ -183,7 +190,7 @@ export function NextTask() {
             </Chip>
           </div>
 
-          <dl className="mt-2.5 space-y-1.5 text-sm">
+          <dl className="mt-3 space-y-2 text-sm">
             <Line icon={Factory}>
               {job.plant}, {job.enterprise}
             </Line>
@@ -197,16 +204,18 @@ export function NextTask() {
         </div>
       </div>
 
-      <Button
-        size="lg"
-        className="mt-3 h-14 w-full text-base font-semibold shadow-md shadow-primary/25"
-        onClick={() => {
-          if (!running) startJob(job, me.name)
-          navigate(jobPath(job))
-        }}
-      >
-        <Play className="fill-current" /> {running ? `Continue ${kind.label}` : `Start ${kind.label}`}
-      </Button>
+      <div className="px-3 pb-3">
+        <Button
+          size="lg"
+          className="h-14 w-full bg-gradient-to-r from-primary to-[#0f3fae] text-base font-bold shadow-lg shadow-primary/30 transition-transform motion-safe:hover:-translate-y-0.5 active:translate-y-0"
+          onClick={() => {
+            if (!running) startJob(job, me.name)
+            navigate(jobPath(job))
+          }}
+        >
+          <Play className="fill-current" /> {running ? `Continue ${kind.label}` : `Start ${kind.label}`}
+        </Button>
+      </div>
     </section>
   )
 }
@@ -313,7 +322,7 @@ export function UpcomingTasks() {
 
 function Chip({ children, className }: { children: React.ReactNode; className?: string }) {
   return (
-    <span className={cn("flex items-center gap-1 rounded-md px-2 py-0.5 text-xs font-semibold", className)}>
+    <span className={cn("flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-semibold", className)}>
       {children}
     </span>
   )
@@ -321,9 +330,9 @@ function Chip({ children, className }: { children: React.ReactNode; className?: 
 
 function Line({ icon: Icon, children }: { icon: LucideIcon; children: React.ReactNode }) {
   return (
-    <div className="flex min-w-0 items-center gap-2 text-muted-foreground">
-      <Icon className="size-4 shrink-0" />
-      <span className="truncate text-foreground/85">{children}</span>
+    <div className="flex min-w-0 items-center gap-2.5">
+      <Icon className="size-4 shrink-0 text-primary/70" />
+      <span className="truncate font-medium text-foreground/90">{children}</span>
     </div>
   )
 }
