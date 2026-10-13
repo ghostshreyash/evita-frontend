@@ -6,7 +6,7 @@ import { toast } from "sonner"
 import { PageHeader } from "@/components/common/page-header"
 import { TablePager } from "@/components/common/data-table"
 import { CategoryIcon } from "@/components/common/category-icon"
-import { AssetPhoto } from "@/components/common/asset-photo"
+import { categoryLook } from "@/lib/category-icons"
 import { AssetReportPanel } from "@/components/reports/asset-report-panel"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -420,23 +420,24 @@ function ReportCards({
                     on ? "ring-2 ring-primary" : "ring-foreground/10"
                   )}
                 >
-                  {/* The equipment first: it is recognised before it is read */}
-                  <span className="relative block h-28 bg-muted/40">
-                    <AssetPhoto label={r.asset.category} />
-                    <Badge variant={look.badge} className="absolute top-2 right-2 h-auto rounded-full px-2 py-1 text-xs">
-                      {status(r)}
-                    </Badge>
-                  </span>
-
                   <span className="flex min-w-0 flex-1 flex-col p-3">
-                    <span className="truncate text-sm font-bold tabular-nums text-primary">{r.asset.id}</span>
-                    <span className="truncate text-base leading-tight font-bold text-brand-navy dark:text-foreground">
-                      {r.asset.name}
+                    {/* The kind of equipment as a glyph, the finding on the end */}
+                    <span className="flex items-start gap-2.5">
+                      <span className={cn("flex size-10 shrink-0 items-center justify-center rounded-xl", categoryLook(r.asset.category).tint)}>
+                        <CategoryIcon category={r.asset.category} className="size-5" />
+                      </span>
+                      <span className="min-w-0 flex-1">
+                        <span className="block truncate text-sm font-bold tabular-nums text-primary">{r.asset.id}</span>
+                        <span className="block truncate text-base leading-tight font-bold text-brand-navy dark:text-foreground">
+                          {r.asset.name}
+                        </span>
+                      </span>
+                      <Badge variant={look.badge} className="h-auto shrink-0 rounded-full px-2 py-1 text-xs">
+                        {status(r)}
+                      </Badge>
                     </span>
-                    <span className="mt-0.5 flex items-center gap-1.5 text-xs text-muted-foreground">
-                      <CategoryIcon category={r.asset.category} className="size-4 shrink-0" />
-                      <span className="truncate">{r.asset.area}</span>
-                    </span>
+
+                    <span className="mt-2 truncate text-xs text-muted-foreground">{r.asset.area}</span>
 
                     <span className="mt-2 block">{badge(r)}</span>
 
