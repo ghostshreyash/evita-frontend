@@ -53,7 +53,7 @@ const prepare: { icon: LucideIcon; tone: string; title: string; detail: string }
   { icon: Gauge, tone: "text-healthy", title: "Instruments ready", detail: "calibrated, charged and to hand" },
 ]
 
-/** A label above its value, in the Task Details grid */
+/** A label above its value, in the details grid */
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div className="min-w-0">
@@ -63,7 +63,7 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
   )
 }
 
-/** One titled run of fields inside Task Details: the task, the place, the asset */
+/** One titled run of fields inside the details panel: the work, the place, the asset */
 function Group({ title, last, children }: { title: string; last?: boolean; children: React.ReactNode }) {
   return (
     <section className={cn(!last && "mb-4 border-b pb-4")}>
@@ -112,6 +112,8 @@ export function TaskPage() {
   const kind = jobKindLook[job.kind]
   /* An inspection is not on My Tasks, so it does not say it came from there */
   const home = job.kind === "inspection" ? { to: "/inspections", label: "Inspections" } : { to: "/my-tasks", label: "My Tasks" }
+  /* On an inspection's own screen the word is "inspection", never "task" */
+  const noun = job.kind === "inspection" ? "Inspection" : "Task"
   const overdue = isOverdue(job)
   const timeline =
     job.kind === "inspection"
@@ -188,10 +190,10 @@ export function TaskPage() {
       </section>
 
       {/* ---------- What EMMS-E assigned, and where the asset is ---------- */}
-      <TaskPanel icon={SlidersHorizontal} title="Task Details">
-        <Group title="Task">
-          <Field label="Task ID"><span className="tabular-nums font-semibold text-primary">{job.id}</span></Field>
-          <Field label="Task Type">
+      <TaskPanel icon={SlidersHorizontal} title={`${noun} Details`}>
+        <Group title={noun}>
+          <Field label={`${noun} ID`}><span className="tabular-nums font-semibold text-primary">{job.id}</span></Field>
+          <Field label={`${noun} Type`}>
             <span className={cn("inline-flex items-center gap-1.5 rounded-md px-2 py-0.5 text-sm font-semibold", kind.tint)}>
               <kind.icon className="size-4" /> {kind.label}
             </span>
@@ -280,6 +282,7 @@ export function TaskPage() {
 function StartSection({ job, onStart }: { job: Job; onStart: () => void }) {
   // The ticks are the engineer's own reminder on site; they are not stored
   const [checked, setChecked] = useState<string[]>([])
+  const noun = job.kind === "inspection" ? "Inspection" : "Task"
   return (
     <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_20rem]">
       <section className="rounded-2xl bg-card shadow-xs ring-1 ring-foreground/10">
@@ -329,7 +332,7 @@ function StartSection({ job, onStart }: { job: Job; onStart: () => void }) {
           <span className="tabular-nums font-semibold">{format(parseDay(job.date), "d MMM")}, {slotLabel(job.slot)}</span>
         </div>
         <Button size="lg" className="mt-auto h-14 w-full text-lg shadow-lg shadow-primary/30 max-lg:mt-5" onClick={onStart}>
-          <Play className="fill-current" /> Start Task
+          <Play className="fill-current" /> Start {noun}
         </Button>
       </section>
     </div>

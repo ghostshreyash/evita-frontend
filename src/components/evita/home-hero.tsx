@@ -9,7 +9,6 @@ import {
   ClipboardList,
   Clock,
   Factory,
-  ListChecks,
   Play,
   Plus,
   QrCode,
@@ -24,8 +23,6 @@ import { AssetPhoto } from "@/components/common/asset-photo"
 import { JobStatusBadge } from "@/components/evita/job-action"
 import { Button } from "@/components/ui/button"
 import { criticalityTone, slotLabel } from "@/data/occ-tables"
-import { useInspectionDetails } from "@/data/inspection-store"
-import { hygieneChecks } from "@/data/test-template"
 import { useCurrentElpremar } from "@/lib/me"
 import { startJob } from "@/lib/start-job"
 import { openPanel } from "@/lib/ui-store"
@@ -124,7 +121,6 @@ export function NextTask() {
   const navigate = useNavigate()
   const me = useCurrentElpremar()
   const jobs = useMyJobs()
-  const details = useInspectionDetails()
   const [at, setAt] = useState(0)
 
   const open = useMemo(() => {
@@ -140,7 +136,6 @@ export function NextTask() {
   const kind = jobKindLook[job.kind]
   const running = actionFor(job) === "continue"
   const inspection = job.kind === "inspection"
-  const tag = details[job.id]?.assetTag
 
   return (
     /*
@@ -197,8 +192,6 @@ export function NextTask() {
             <Line icon={CalendarDays}>
               {isToday(job.date) ? "Today" : format(parseDay(job.date), "d MMM yyyy")}, {slotLabel(job.slot)}
             </Line>
-            {inspection ? <Line icon={ListChecks}>{hygieneChecks.length} hygiene points</Line> : null}
-            {tag ? <Line icon={QrCode}>{tag}</Line> : null}
             <Line icon={UserRound}>Assigned by EMMS-E</Line>
           </dl>
         </div>

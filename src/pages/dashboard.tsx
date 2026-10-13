@@ -99,12 +99,8 @@ export function DashboardPage() {
 
   return (
     <div className="space-y-5">
-      {/*
-        * Flush with the top bar rather than a card under it: the greeting is
-        * part of the header, and a rounded panel with its own margin pushed the
-        * work that matters further down the screen.
-        */}
-      <section className="relative -mx-3 -mt-4 overflow-hidden text-brand-navy-foreground sm:-mx-4">
+      {/* ---------- Welcome ---------- */}
+      <section className="relative overflow-hidden rounded-2xl text-brand-navy-foreground shadow-sm">
         <img src="/brand/evita-login.jpg" alt="" className="absolute inset-0 size-full object-cover object-[center_30%]" />
         <div className="absolute inset-0 bg-gradient-to-r from-brand-navy via-brand-navy/90 to-brand-navy/30" />
 

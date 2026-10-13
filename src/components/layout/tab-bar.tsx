@@ -36,13 +36,13 @@ type Tab = { path: string; title: string; icon: LucideIcon; badge?: "work" | "in
 const left: Tab[] = [
   { path: "/", title: "Home", icon: LayoutDashboard },
   { path: "/my-tasks", title: "Tasks", icon: ClipboardList, badge: "work" },
-  { path: "/inspections", title: "Inspect", icon: ClipboardCheck, badge: "inspection" },
+  { path: "/inspections", title: "Inspection", icon: ClipboardCheck, badge: "inspection" },
 ]
 
 const right: Tab[] = [
   { path: "/assets", title: "Assets", icon: HardDrive },
   { path: "/reports", title: "Reports", icon: FileText },
-  { path: "/contact", title: "Contact", icon: Headset },
+  { path: "/contact", title: "Help", icon: Headset },
 ]
 
 const under = (current: string, path: string) =>

@@ -27,5 +27,5 @@ export const navigation: NavItem[] = [
   { title: "My Tasks", path: "/my-tasks", icon: ClipboardList },
   { title: "Inspections", path: "/inspections", icon: ClipboardCheck },
   { title: "Reports", path: "/reports", icon: FileText },
-  { title: "Contact & Help", path: "/contact", icon: Headset },
+  { title: "Help & Contact", path: "/contact", icon: Headset },
 ]

@@ -4,7 +4,8 @@ import { ChevronRight, HardDrive, LayoutGrid, List, Plus, Search, SlidersHorizon
 import { cn } from "cn"
 
 import { PageHeader } from "@/components/common/page-header"
-import { ChipTabs, type ChipTab } from "@/components/common/chip-tabs"
+import type { ChipTab } from "@/components/common/chip-tabs"
+import { categoryLook, shortCategory } from "@/lib/category-icons"
 import { AssetPhoto } from "@/components/common/asset-photo"
 import { SortHead, TablePager } from "@/components/common/data-table"
 import { CategoryIcon } from "@/components/common/category-icon"
@@ -14,7 +15,7 @@ import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { parseDmy, type AssetRecord } from "@/data/asset-data"
-import { kpisFor, useAssetRows } from "@/data/asset-store"
+import { useAssetRows } from "@/data/asset-store"
 import { assetCategories, assetCriticality, healthBandFor } from "@/data/master-data"
 import { control, nextSort, PAGE_SIZES, sortRows, td, th, type Accessors, type Sort } from "@/lib/data-table"
 import { criticalityTone } from "@/data/occ-tables"
@@ -77,8 +78,6 @@ export function AssetsPage() {
 
   const narrowed = [area, criticality, band].filter((v) => v !== ANY).length
   const filtersOn = [query, category, area, criticality, band].some((v) => v && v !== ANY)
-
-  const kpis = useMemo(() => kpisFor(register), [register])
 
   /* Only the areas actually on site, so a filter can never come up empty */
   const areas = useMemo(() => [...new Set(register.map((a) => a.area))].sort(), [register])
@@ -166,14 +165,6 @@ export function AssetsPage() {
         <span>{site.enterprise}</span>
       </p>
 
-      {/* ---------- What the register adds up to ---------- */}
-      <div className="mb-3 grid grid-cols-2 gap-2.5 lg:grid-cols-4">
-        <Kpi label="Total Assets" value={kpis.total} note={`${kpis.categories} categories`} tone="bg-info-soft text-info" />
-        <Kpi label={healthStatus.healthy.label} value={kpis.healthy} note="Score 70 and above" tone="bg-healthy-soft text-healthy" />
-        <Kpi label={healthStatus.attention.label} value={kpis.attention} note="Score 50 – 69" tone="bg-attention-soft text-attention" />
-        <Kpi label={healthStatus.critical.label} value={kpis.critical} note="Score below 50" tone="bg-critical-soft text-critical" />
-      </div>
-
       {/* ---------- Search, the rest of the filters behind a toggle, and the view ---------- */}
       <div className="mb-3 flex flex-wrap items-center gap-2">
         <div className="relative min-w-56 flex-1">
@@ -215,7 +206,7 @@ export function AssetsPage() {
         </div>
       ) : null}
 
-      <ChipTabs label="Asset category" tabs={categoryTabs} value={category} onChange={setCategory} className="mb-3" />
+      <CategoryFilter tabs={categoryTabs} value={category} onChange={setCategory} />
 
       {/* ---------- The register ---------- */}
       {shown.length === 0 ? (
@@ -245,6 +236,65 @@ export function AssetsPage() {
         onPage={setPage}
         onPageSize={setPageSize}
       />
+    </div>
+  )
+}
+
+/**
+ * The categories on site, as a row of glyphs rather than a dropdown.
+ *
+ * The same tile the home screen uses for its category picker, so an engineer
+ * learns one mapping from glyph to equipment and it holds everywhere. The row
+ * scrolls sideways rather than wrapping, so the register below it never jumps
+ * down a line as the counts change.
+ */
+function CategoryFilter({
+  tabs,
+  value,
+  onChange,
+}: {
+  tabs: ChipTab[]
+  value: string
+  onChange: (value: string) => void
+}) {
+  return (
+    <div
+      role="tablist"
+      aria-label="Asset category"
+      className="-mx-3 mb-3 flex gap-2 overflow-x-auto px-3 pb-1 [scrollbar-width:none] sm:mx-0 sm:px-0 [&::-webkit-scrollbar]:hidden"
+    >
+      {tabs.map((tab) => {
+        const on = tab.value === value
+        const all = tab.value === ANY
+        const look = all ? undefined : categoryLook(tab.value)
+        return (
+          <button
+            key={tab.value}
+            type="button"
+            role="tab"
+            aria-selected={on}
+            title={tab.label}
+            onClick={() => onChange(tab.value)}
+            className={cn(
+              "group/cf flex w-24 shrink-0 flex-col items-center gap-1.5 rounded-xl bg-card px-2 py-2.5 text-center ring-1 transition-[transform,box-shadow] duration-200 hover:shadow-md motion-safe:hover:-translate-y-0.5 active:translate-y-0",
+              on ? "ring-2 ring-primary" : "ring-foreground/10"
+            )}
+          >
+            <span
+              className={cn(
+                "flex size-10 items-center justify-center rounded-lg transition-transform motion-safe:group-hover/cf:scale-110",
+                all ? "bg-info-soft text-primary" : look?.tint
+              )}
+            >
+              {all ? <LayoutGrid className="size-5" /> : <CategoryIcon category={tab.value} className="size-5" />}
+            </span>
+            <span className={cn("line-clamp-2 text-[0.7rem] leading-tight font-semibold", on && "text-primary")}>
+              {all ? "All" : shortCategory(tab.value)}
+            </span>
+            <span className="text-[0.65rem] tabular-nums text-muted-foreground">{tab.count} Assets</span>
+          </button>
+        )
+      })}
     </div>
   )
 }
@@ -370,6 +420,8 @@ function AssetTable({ rows, sort, onSort }: { rows: AssetRecord[]; sort: Sort<Co
   )
 }
 
+
+
 /** Grid or list, as a pair of segmented buttons */
 function ViewToggle({
   current,
@@ -395,20 +447,6 @@ function ViewToggle({
     >
       <Icon className="size-5" />
     </button>
-  )
-}
-
-function Kpi({ label, value, note, tone }: { label: string; value: number; note: string; tone: string }) {
-  return (
-    <div className="rounded-2xl bg-card px-3 py-2.5 shadow-xs ring-1 ring-foreground/10">
-      <div className="text-sm text-muted-foreground">{label}</div>
-      <div className="mt-1 flex items-center gap-2.5">
-        <span className={cn("flex size-10 shrink-0 items-center justify-center rounded-xl text-base font-bold tabular-nums", tone)}>
-          {value}
-        </span>
-        <span className="text-xs leading-tight text-muted-foreground">{note}</span>
-      </div>
-    </div>
   )
 }
 

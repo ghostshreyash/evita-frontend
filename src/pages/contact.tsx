@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react"
-import { Clock, ChevronRight, Factory, Headset, Mail, MessageCircleQuestion, Network, Phone, Search, TriangleAlert, UserRound, X } from "lucide-react"
+import { Clock, ChevronRight, Factory, Headset, Mail, Network, Phone, Search, TriangleAlert, UserRound, X } from "lucide-react"
 import { cn } from "cn"
 
 import { PageHeader } from "@/components/common/page-header"
@@ -13,11 +13,12 @@ import { control } from "@/lib/data-table"
 import { useCurrentElpremar } from "@/lib/me"
 import { openPanel } from "@/lib/ui-store"
 
-/** The support questions worth having on the page before anything is searched */
-const SUPPORT = "Support & Helpdesk"
-
 /**
  * Who to contact, and the answers before anyone has to be contacted.
+ *
+ * The answers come first, because most questions end there. Under them the
+ * reporting line, and last the ticket - the thing to do only once the answers
+ * have not helped.
  *
  * The FAQ is the client's own `Olivine_APP_AI_Chatbot_FAQ_` sheet, unedited —
  * see data/faq.ts, which holds the rows the sheet marks for EVITA. It is
@@ -52,7 +53,6 @@ export function ContactPage() {
     return map
   }, [])
 
-  const support = useMemo(() => faqEntries.filter((entry) => entry.category === SUPPORT), [])
   const browsing = !searching && !category
 
   return (
@@ -63,68 +63,7 @@ export function ContactPage() {
         breadcrumbs={[{ label: "Contact & Help" }]}
       />
 
-      {/* ---------- Raising it with OCC ---------- */}
-      <section className="mb-3 rounded-2xl bg-card p-4 shadow-xs ring-1 ring-foreground/10">
-        <h3 className="flex items-center gap-2 text-lg font-semibold text-brand-navy dark:text-foreground">
-          <Headset className="size-5 text-primary" /> Get help
-        </h3>
-        <p className="mt-1 text-sm text-muted-foreground">
-          A ticket is the channel to OCC. Raise one with a photograph and what you were doing, and it is tracked until it
-          is closed.
-        </p>
-        <div className="mt-3 grid gap-2 sm:grid-cols-2">
-          <Button className="h-14 text-base" onClick={() => openPanel({ kind: "issue" })}>
-            <TriangleAlert /> Report an Issue
-          </Button>
-          {/* Only when the sheet still has that topic for EVITA */}
-          {support.length ? (
-            <Button variant="outline" className="h-14 text-base" onClick={() => setCategory(SUPPORT)}>
-              <MessageCircleQuestion /> Support questions
-              <span className="rounded-full bg-muted px-1.5 text-xs tabular-nums">{support.length}</span>
-            </Button>
-          ) : null}
-        </div>
-        {/* Placeholder details until OLIVINE publish theirs — see data/support.ts */}
-        <dl className="mt-3 divide-y border-t">
-          <Line
-            icon={Phone}
-            label="Support line"
-            value={
-              <a href={`tel:${olivineSupport.phoneDial}`} className="tabular-nums text-primary">
-                {olivineSupport.phone}
-              </a>
-            }
-          />
-          <Line
-            icon={Mail}
-            label="Support email"
-            value={
-              <a href={`mailto:${olivineSupport.email}`} className="text-primary">
-                {olivineSupport.email}
-              </a>
-            }
-          />
-          <Line icon={Clock} label="Hours" value={olivineSupport.hours} />
-        </dl>
-        <p className="mt-2 text-xs text-muted-foreground">{olivineSupport.note}</p>
-      </section>
-
-      {/* ---------- The reporting line, from the register ---------- */}
-      <section className="mb-3 rounded-2xl bg-card p-4 shadow-xs ring-1 ring-foreground/10">
-        <h3 className="text-lg font-semibold text-brand-navy dark:text-foreground">Your reporting line</h3>
-        <dl className="mt-2 divide-y">
-          <Line icon={UserRound} label="Reporting supervisor" value={profile.posting.supervisor || "Not assigned"} />
-          <Line icon={Network} label="Department" value={profile.posting.department} />
-          <Line icon={Factory} label="Plant" value={`${profile.posting.plant}, ${profile.posting.city}`} />
-          <Line icon={Factory} label="Enterprise" value={profile.posting.enterprise} />
-        </dl>
-        <p className="mt-3 text-xs text-muted-foreground">
-          Anything about an assignment — a task you cannot reach, a plant that is shut — goes to your supervisor, not to
-          OCC.
-        </p>
-      </section>
-
-      {/* ---------- The FAQ ---------- */}
+      {/* ---------- The answers first: most questions end here ---------- */}
       <section className="rounded-2xl bg-card p-4 shadow-xs ring-1 ring-foreground/10">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <h3 className="text-lg font-semibold text-brand-navy dark:text-foreground">
@@ -211,6 +150,61 @@ export function ContactPage() {
           </>
         )}
       </section>
+
+      {/* ---------- The reporting line, from the register ---------- */}
+      <section className="mb-3 rounded-2xl bg-card p-4 shadow-xs ring-1 ring-foreground/10">
+        <h3 className="text-lg font-semibold text-brand-navy dark:text-foreground">Your reporting line</h3>
+        <dl className="mt-2 divide-y">
+          <Line icon={UserRound} label="Reporting supervisor" value={profile.posting.supervisor || "Not assigned"} />
+          <Line icon={Network} label="Department" value={profile.posting.department} />
+          <Line icon={Factory} label="Plant" value={`${profile.posting.plant}, ${profile.posting.city}`} />
+          <Line icon={Factory} label="Enterprise" value={profile.posting.enterprise} />
+        </dl>
+        <p className="mt-3 text-xs text-muted-foreground">
+          Anything about an assignment — a task you cannot reach, a plant that is shut — goes to your supervisor, not to
+          OCC.
+        </p>
+      </section>
+
+      {/* ---------- Raising it with OCC ---------- */}
+      <section className="mb-3 rounded-2xl bg-card p-4 shadow-xs ring-1 ring-foreground/10">
+        <h3 className="flex items-center gap-2 text-lg font-semibold text-brand-navy dark:text-foreground">
+          <Headset className="size-5 text-primary" /> Get help
+        </h3>
+        <p className="mt-1 text-sm text-muted-foreground">
+          Still stuck after the answers above? A ticket is the channel to OCC. Raise one with a photograph and what you
+          were doing, and it is tracked until it is closed.
+        </p>
+        <div className="mt-3">
+          <Button className="h-14 text-base" onClick={() => openPanel({ kind: "issue" })}>
+            <TriangleAlert /> Report an Issue
+          </Button>
+        </div>
+        {/* Placeholder details until OLIVINE publish theirs — see data/support.ts */}
+        <dl className="mt-3 divide-y border-t">
+          <Line
+            icon={Phone}
+            label="Support line"
+            value={
+              <a href={`tel:${olivineSupport.phoneDial}`} className="tabular-nums text-primary">
+                {olivineSupport.phone}
+              </a>
+            }
+          />
+          <Line
+            icon={Mail}
+            label="Support email"
+            value={
+              <a href={`mailto:${olivineSupport.email}`} className="text-primary">
+                {olivineSupport.email}
+              </a>
+            }
+          />
+          <Line icon={Clock} label="Hours" value={olivineSupport.hours} />
+        </dl>
+        <p className="mt-2 text-xs text-muted-foreground">{olivineSupport.note}</p>
+      </section>
+
     </div>
   )
 }
