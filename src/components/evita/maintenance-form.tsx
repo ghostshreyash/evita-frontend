@@ -55,7 +55,8 @@ export function MaintenanceForm({ job, detail }: { job: Job; detail: Maintenance
       notes: [notes, cleaned.length ? `Checklist: ${cleaned.join("; ")}.` : ""].filter(Boolean).join(" "),
       products: items.filter((p) => p.name && p.quantity > 0),
       evidence,
-      firePrevention: fire.done === "Yes" && fire.system ? { system: fire.system, remarks: fire.remarks } : undefined,
+      // The type is optional: answering Yes is what the record needs
+      firePrevention: fire.done === "Yes" ? { system: fire.system, remarks: fire.remarks } : undefined,
       pdMitigation:
         pd.done === "Yes" && pd.method
           ? { method: pd.method, remarks: [pd.before && pd.after ? `PD ${pd.before} dB before, ${pd.after} dB after.` : "", pd.remarks].filter(Boolean).join(" ") }
@@ -91,7 +92,7 @@ export function MaintenanceForm({ job, detail }: { job: Job; detail: Maintenance
     { label: "INSTA consumables booked", done: usedProducts.length > 0 },
     { label: "Cleaning checklist complete", done: cleaned.length === cleaningSteps.length },
     { label: "After-maintenance photos uploaded", done: after.length > 0 },
-    { label: "Fire prevention answered", done: !!fire.done && (fire.done === "No" || !!fire.system) },
+    { label: "Fire prevention answered", done: !!fire.done },
     { label: "PD mitigation answered", done: !!pd.done && (pd.done === "No" || !!pd.method) },
   ]
   const ready = checklist.every((c) => c.done)
@@ -220,7 +221,7 @@ export function MaintenanceForm({ job, detail }: { job: Job; detail: Maintenance
 
         {/* ---------- 5 & 6. Add-ons ---------- */}
         <div className="grid gap-4 lg:grid-cols-2">
-          <StepCard title="Fire Prevention System" icon={Flame} done={!!fire.done && (fire.done === "No" || !!fire.system)}>
+          <StepCard title="Fire Prevention System" icon={Flame} done={!!fire.done}>
             <div className="space-y-3">
               <div>
                 <FieldLabel required>Installed or serviced on this job?</FieldLabel>
@@ -229,7 +230,8 @@ export function MaintenanceForm({ job, detail }: { job: Job; detail: Maintenance
               {fire.done === "Yes" ? (
                 <>
                   <div>
-                    <FieldLabel required>System type</FieldLabel>
+                    {/* Optional: the crew does not always know which system is fitted */}
+                    <FieldLabel>System type</FieldLabel>
                     <Select value={fire.system} onValueChange={(v) => setFire((f) => ({ ...f, system: v }))}>
                       <SelectTrigger className="w-full"><SelectValue placeholder="Choose system" /></SelectTrigger>
                       <SelectContent>{fireSystems.map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent>

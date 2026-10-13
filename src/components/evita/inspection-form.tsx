@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react"
-import { Camera, Check, Flame, Gauge, Lock, Save, Send, Thermometer, Zap, type LucideIcon } from "lucide-react"
+import { ArrowLeft, ArrowRight, Camera, Check, Flame, Gauge, Lock, Save, Send, Thermometer, Zap, type LucideIcon } from "lucide-react"
 import { toast } from "sonner"
 import { format } from "date-fns"
 import { cn } from "cn"
@@ -104,6 +104,9 @@ export function InspectionForm({ job, detail }: { job: Job; detail: InspectionDe
   const done = sectionsDone(capture, category, ids)
   const tabDone: Record<Section, boolean> = { images: done.images, thermal: done.thermal, technical: done.readings, fps: done.fps, pd: false }
   const ready = done.images && done.thermal && done.readings && done.fps
+  /* The sections that can actually be worked on, in order - Phase 2 is locked */
+  const steps = sections.filter((sec) => !sec.phase2)
+  const at = Math.max(0, steps.findIndex((sec) => sec.key === section))
   const set: Setter = (p) => setCapture((c) => ({ ...c, ...p }))
   const removeEvidence = (id: string) => setEvidence((ev) => ev.filter((e) => e.id !== id))
 
@@ -164,6 +167,35 @@ export function InspectionForm({ job, detail }: { job: Job; detail: InspectionDe
           ) : (
             <FpsSection capture={capture} set={set} />
           )}
+
+          {/*
+            * Step through them rather than only tapping the tabs. On a tablet
+            * held in two hands the tab row is at the top of a scrolled page by
+            * the time a section is filled in, and the next thing to do is at
+            * the bottom where the thumbs already are.
+            */}
+          <nav aria-label="Inspection sections" className="flex items-center justify-between gap-3">
+            <Button
+              variant="outline"
+              size="lg"
+              className="h-12 bg-card"
+              disabled={at === 0}
+              onClick={() => setSection(steps[at - 1].key)}
+            >
+              <ArrowLeft /> {at === 0 ? "Back" : steps[at - 1].title}
+            </Button>
+            <span className="text-sm font-medium text-muted-foreground tabular-nums">
+              {at + 1} of {steps.length}
+            </span>
+            <Button
+              size="lg"
+              className="h-12"
+              disabled={at === steps.length - 1}
+              onClick={() => setSection(steps[at + 1].key)}
+            >
+              {at === steps.length - 1 ? "Next" : steps[at + 1].title} <ArrowRight />
+            </Button>
+          </nav>
         </div>
 
         {/* ---------- Score estimate and submit ---------- */}
