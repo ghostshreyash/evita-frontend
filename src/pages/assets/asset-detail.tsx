@@ -83,8 +83,8 @@ function AssetDetail({ asset, onBack }: { asset: AssetRecord; onBack: () => void
 
       {/*
         * Three columns, each one a thing the engineer came for: what the asset
-        * is and the label that goes on its door; the code and the inspection
-        * that code leads to; what it is rated for and what it looks like.
+        * is and the label that goes on its door; the code on that door; what it
+        * is rated for, the inspection it leads to, and what it looks like.
         */}
       <div className="grid items-start gap-3 lg:grid-cols-2 xl:grid-cols-3">
         {/* ---------- What it is, and the label for its door ---------- */}
@@ -101,18 +101,10 @@ function AssetDetail({ asset, onBack }: { asset: AssetRecord; onBack: () => void
           </DetailPanel>
         </div>
 
-        {/* ---------- The code, and the inspection it opens ---------- */}
+        {/* ---------- The code on the panel door ---------- */}
         <div className="space-y-3">
           <DetailPanel icon={QrCode} title="Asset ID & QR Code">
             <AssetQrPanel asset={asset} />
-          </DetailPanel>
-
-          {/* Directly under the code, because scanning it is the other way in */}
-          <DetailPanel icon={ClipboardCheck} title="Inspect this asset">
-            <StartInspection asset={asset} />
-            <p className="mt-3 text-sm text-muted-foreground">
-              Scanning the label on the panel door opens this record and offers the same inspection.
-            </p>
           </DetailPanel>
         </div>
 
@@ -120,6 +112,14 @@ function AssetDetail({ asset, onBack }: { asset: AssetRecord; onBack: () => void
         <div className="space-y-3 max-lg:col-span-full lg:col-span-2 xl:col-span-1">
           <DetailPanel icon={Settings} title="Technical Details">
             <DetailList rows={assetTechnicalRows(profile)} />
+          </DetailPanel>
+
+          {/* Walk up to the asset, open its record, inspect it */}
+          <DetailPanel icon={ClipboardCheck} title="Inspect this asset">
+            <StartInspection asset={asset} />
+            <p className="mt-3 text-sm text-muted-foreground">
+              Scanning the label on the panel door opens this record and offers the same inspection.
+            </p>
           </DetailPanel>
 
           <DetailPanel icon={Images} title={`Asset Images (${profile.images.length})`}>
