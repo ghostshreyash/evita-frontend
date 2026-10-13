@@ -3,6 +3,7 @@ import { Outlet } from "react-router"
 import { AppBar } from "@/components/layout/app-bar"
 import { TabBar } from "@/components/layout/tab-bar"
 import { Panels } from "@/components/evita/panels"
+import { HelpBot } from "@/components/evita/help-bot"
 
 /**
  * App shell for the tablet: a light bar at the top and the sections along the
@@ -14,6 +15,9 @@ import { Panels } from "@/components/evita/panels"
  *
  * The bottom bar is fixed, so the page reserves room for it rather than
  * letting the last card disappear behind it.
+ *
+ * The help assistant is docked here rather than on a screen, so the same
+ * conversation is in reach from every one of them.
  */
 export function AppLayout() {
   return (
@@ -23,6 +27,7 @@ export function AppLayout() {
         <Outlet />
       </main>
       <TabBar />
+      <HelpBot />
       <Panels />
     </div>
   )
