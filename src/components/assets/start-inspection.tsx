@@ -55,15 +55,11 @@ export function StartInspection({
       >
         <Play className="fill-current" /> {running ? "Continue Inspection" : "Start Inspection"}
       </Button>
-      <p className="mt-1.5 text-center text-xs text-muted-foreground">
-        {assigned ? (
-          <>
-            <span className="tabular-nums font-medium">{assigned.id}</span> · {assigned.activity}
-          </>
-        ) : (
-          "Not on your book — this raises the inspection against this asset"
-        )}
-      </p>
+      {assigned ? (
+        <p className="mt-1.5 text-center text-xs text-muted-foreground">
+          <span className="tabular-nums font-medium">{assigned.id}</span> · {assigned.activity}
+        </p>
+      ) : null}
     </div>
   )
 }
