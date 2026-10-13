@@ -1,41 +1,49 @@
 import { useMemo } from "react"
 import { useNavigate } from "react-router"
-import { ChevronRight, ClipboardCheck, ClipboardList, MapPin, Play, Plus, QrCode, type LucideIcon } from "lucide-react"
+import {
+  CalendarDays,
+  ChevronRight,
+  ClipboardCheck,
+  ClipboardList,
+  MapPin,
+  Play,
+  Plus,
+  QrCode,
+  type LucideIcon,
+} from "lucide-react"
 import { cn } from "cn"
+import { format } from "date-fns"
 
-import { AssetPhoto } from "@/components/common/asset-photo"
 import { CategoryIcon } from "@/components/common/category-icon"
-import { StartInspection } from "@/components/assets/start-inspection"
-import { Badge } from "@/components/ui/badge"
+import { JobStatusBadge } from "@/components/evita/job-action"
 import { Button } from "@/components/ui/button"
-import { parseDmy, type AssetRecord } from "@/data/asset-data"
-import { useAssetRows } from "@/data/asset-store"
-import { healthBandFor } from "@/data/master-data"
-import { criticalityTone } from "@/data/occ-tables"
+import { slotLabel } from "@/data/occ-tables"
 import { useCurrentElpremar } from "@/lib/me"
 import { startJob } from "@/lib/start-job"
-import { healthStatus } from "@/lib/status"
 import { openPanel } from "@/lib/ui-store"
-import { actionFor, jobPath, maintenanceFor, useMyJobs } from "@/lib/work"
+import { actionFor, categoryFor, isToday, jobKindLook, jobPath, parseDay, useMyJobs, when, type Job } from "@/lib/work"
 
 /**
- * The head of the home screen: the asset last registered at this plant, with
- * the work it is waiting for, and the four ways into the app either side of it.
+ * The head of the home screen: the piece of work the engineer should be on,
+ * and the four ways into the app either side of it.
  *
- * Laid out as the client asked at the review — two cards left, the asset
- * standing tall in the middle, two cards right. On a tablet in portrait the
- * asset goes first and the four fall under it in pairs, because the asset is
- * the thing the engineer is standing in front of.
+ * Laid out as the client asked at the review — two cards left, the task in the
+ * middle, two cards right — and the three columns share one height so the row
+ * reads as a row. On a tablet in portrait the task goes first and the four fall
+ * under it in pairs.
  */
 export function HomeHero() {
   const navigate = useNavigate()
-  const register = useAssetRows()
+  const jobs = useMyJobs()
 
-  /** The latest asset on the register: the one just onboarded, most of the time */
-  const latest = useMemo(
-    () => [...register].sort((a, b) => parseDmy(b.onboarded).getTime() - parseDmy(a.onboarded).getTime())[0],
-    [register]
-  )
+  /**
+   * The job to put in front of the engineer: anything already running, and
+   * failing that the soonest booking that still needs their hands.
+   */
+  const latest = useMemo(() => {
+    const open = jobs.filter((j) => actionFor(j) !== "view")
+    return open.find((j) => actionFor(j) === "continue") ?? [...open].sort((a, b) => when(a) - when(b))[0]
+  }, [jobs])
 
   const actions: Action[] = [
     {
@@ -75,16 +83,21 @@ export function HomeHero() {
         <p className="text-sm text-muted-foreground">Everything you need for field work</p>
       </div>
 
-      <div className="grid gap-2.5 lg:grid-cols-[minmax(0,1fr)_minmax(0,22rem)_minmax(0,1fr)]">
-        <ul className="grid content-start gap-2.5 sm:grid-cols-2 lg:grid-cols-1">
+      {/*
+        * Three columns of one height. The stacked pairs set it and the asset
+        * card fills it, so nothing in the row is left hanging - which is what
+        * a tall photograph in the middle did.
+        */}
+      <div className="grid items-stretch gap-2.5 lg:grid-cols-[minmax(0,1fr)_minmax(0,21rem)_minmax(0,1fr)]">
+        <ul className="grid gap-2.5 sm:grid-cols-2 lg:grid-cols-1 lg:grid-rows-2">
           {actions.slice(0, 2).map((action) => (
             <ActionCard key={action.title} action={action} />
           ))}
         </ul>
 
-        {latest ? <AssetSpotlight asset={latest} className="max-lg:order-first" /> : null}
+        {latest ? <TaskSpotlight job={latest} className="max-lg:order-first" /> : <NothingOpen className="max-lg:order-first" />}
 
-        <ul className="grid content-start gap-2.5 sm:grid-cols-2 lg:grid-cols-1">
+        <ul className="grid gap-2.5 sm:grid-cols-2 lg:grid-cols-1 lg:grid-rows-2">
           {actions.slice(2).map((action) => (
             <ActionCard key={action.title} action={action} />
           ))}
@@ -95,87 +108,111 @@ export function HomeHero() {
 }
 
 /**
- * The asset in the middle: its photograph standing tall, what it is, where it
- * is, and the one piece of work it is waiting for.
+ * The work in the middle: the one piece the engineer should be on.
  *
- * Which button shows follows the book. A maintenance already assigned against
- * the asset is booked work with a date on it, so it takes precedence;
- * otherwise the inspection does, and that one always works — an ELPREMAR can
- * inspect an asset without being handed a task for it.
+ * "Latest" on a book of work is whatever is open: anything already started
+ * comes first, and failing that the soonest booking that still needs their
+ * hands. A task further down the week is not the one to put in front of them.
+ *
+ * The button follows the job rather than being chosen here, so an inspection
+ * reads Start Inspection and a maintenance Start Maintenance, and either reads
+ * Continue once it is running.
+ *
+ * No photograph. A seeded asset has none, so it drew a placeholder glyph the
+ * height of the whole card and left the row lopsided for no information; the
+ * category tile says the same thing in a corner.
  */
-function AssetSpotlight({ asset, className }: { asset: AssetRecord; className?: string }) {
+function TaskSpotlight({ job, className }: { job: Job; className?: string }) {
   const navigate = useNavigate()
   const me = useCurrentElpremar()
-  const maintenance = maintenanceFor(useMyJobs(), asset)
-  const health = asset.health === null ? null : healthBandFor(asset.health)
+  const kind = jobKindLook[job.kind]
+  const running = actionFor(job) === "continue"
+  const inspection = job.kind === "inspection"
 
+  return (
+    <article className={cn("flex h-full flex-col gap-2 rounded-2xl bg-card p-3 shadow-xs ring-1 ring-primary/25", className)}>
+      <div className="flex items-start gap-2.5">
+        <span className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-info-soft text-primary">
+          {inspection ? (
+            <kind.icon className="size-6" />
+          ) : (
+            <CategoryIcon category={categoryFor(job.asset)} className="size-6" />
+          )}
+        </span>
+        <div className="min-w-0 flex-1">
+          <p className="text-xs font-semibold tracking-wide text-muted-foreground uppercase">
+            {running ? "Under way" : "Next up"}
+          </p>
+          <h4 className="truncate text-base leading-tight font-bold text-brand-navy dark:text-foreground">
+            {inspection ? job.area || job.plant : job.asset}
+          </h4>
+          <p className="truncate text-sm font-medium tabular-nums text-primary">{job.id}</p>
+        </div>
+        <JobStatusBadge job={job} />
+      </div>
+
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
+        <span className={cn("flex items-center gap-1 rounded-md px-2 py-0.5 font-semibold", kind.tint)}>
+          <kind.icon className="size-3.5 shrink-0" /> {kind.label}
+        </span>
+        <span className="flex min-w-0 items-center gap-1">
+          <MapPin className="size-3.5 shrink-0" />
+          <span className="truncate">{job.plant}</span>
+        </span>
+      </div>
+
+      <p className="truncate text-sm">{job.activity}</p>
+
+      <p className="flex flex-wrap items-center gap-x-3 text-xs text-muted-foreground">
+        <span className="flex items-center gap-1.5">
+          <CalendarDays className="size-3.5 shrink-0" />
+          {isToday(job.date) ? "Today" : format(parseDay(job.date), "d MMM yyyy")}
+        </span>
+        <span className="tabular-nums">{slotLabel(job.slot)}</span>
+      </p>
+
+      <div className="mt-auto pt-1">
+        <Button
+          size="lg"
+          className="h-14 w-full text-base font-semibold shadow-md shadow-primary/25"
+          onClick={() => {
+            if (!running) startJob(job, me.name)
+            navigate(jobPath(job))
+          }}
+        >
+          <Play className="fill-current" />
+          {running ? `Continue ${kind.label}` : `Start ${kind.label}`}
+        </Button>
+      </div>
+    </article>
+  )
+}
+
+/** Nothing on the book: the engineer can still start an inspection at any asset */
+function NothingOpen({ className }: { className?: string }) {
   return (
     <article
       className={cn(
-        "flex flex-col overflow-hidden rounded-2xl bg-card shadow-xs ring-1 ring-foreground/10",
+        "flex h-full flex-col items-start gap-2 rounded-2xl bg-card p-3 shadow-xs ring-1 ring-foreground/10",
         className
       )}
     >
-      <div className="relative h-44 bg-muted/40 lg:h-56">
-        <AssetPhoto label={asset.category} />
-        <Badge
-          variant={health ? healthStatus[health.tone].badge : "neutral"}
-          className="absolute top-2 right-2 h-auto gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold"
+      <span className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-healthy-soft text-healthy">
+        <ClipboardCheck className="size-6" />
+      </span>
+      <h4 className="text-base leading-tight font-bold text-brand-navy dark:text-foreground">Nothing open</h4>
+      <p className="text-xs leading-snug text-muted-foreground">
+        No task is waiting on you. An inspection can still be started at any asset — scan its label, or onboard
+        it first.
+      </p>
+      <div className="mt-auto w-full pt-1">
+        <Button
+          size="lg"
+          className="h-14 w-full text-base font-semibold shadow-md shadow-primary/25"
+          onClick={() => openPanel({ kind: "begin-inspection" })}
         >
-          <span aria-hidden className="size-1.5 rounded-full bg-current" />
-          {health ? health.label : "Onboarded"}
-        </Badge>
-      </div>
-
-      <div className="flex min-w-0 flex-1 flex-col p-3">
-        <p className="text-xs font-semibold tracking-wide text-muted-foreground uppercase">Latest asset</p>
-        <h4 className="mt-0.5 truncate text-lg font-bold text-brand-navy dark:text-foreground">{asset.name}</h4>
-        <p className="truncate text-sm font-medium tabular-nums text-primary">{asset.id}</p>
-
-        <p className="mt-1.5 flex items-center gap-1.5 text-xs text-muted-foreground">
-          <CategoryIcon category={asset.category} className="size-4 shrink-0" />
-          <span className="truncate">{asset.category}</span>
-        </p>
-        <p className="mt-1 flex items-center gap-1.5 text-xs text-muted-foreground">
-          <MapPin className="size-3.5 shrink-0" />
-          <span className="truncate">{asset.area}</span>
-        </p>
-
-        <div className="mt-2 flex items-center justify-between gap-2 border-t pt-2">
-          <span className={cn("rounded-md px-2 py-0.5 text-xs font-semibold", criticalityTone[asset.criticality])}>
-            {asset.criticality}
-          </span>
-          <button
-            type="button"
-            onClick={() => navigate(`/assets/${asset.id}`)}
-            className="flex min-h-9 items-center gap-1 text-sm font-semibold text-primary hover:underline"
-          >
-            Open record <ChevronRight className="size-4" />
-          </button>
-        </div>
-
-        <div className="mt-auto pt-3">
-          {maintenance ? (
-            <>
-              <Button
-                size="lg"
-                className="h-14 w-full text-base font-semibold shadow-md shadow-primary/25"
-                onClick={() => {
-                  if (actionFor(maintenance) === "start") startJob(maintenance, me.name)
-                  navigate(jobPath(maintenance))
-                }}
-              >
-                <Play className="fill-current" />
-                {actionFor(maintenance) === "continue" ? "Continue Maintenance" : "Start Maintenance"}
-              </Button>
-              <p className="mt-1.5 text-center text-xs text-muted-foreground">
-                <span className="tabular-nums font-medium">{maintenance.id}</span> · {maintenance.activity}
-              </p>
-            </>
-          ) : (
-            <StartInspection asset={asset} />
-          )}
-        </div>
+          <Play className="fill-current" /> Start Inspection
+        </Button>
       </div>
     </article>
   )
