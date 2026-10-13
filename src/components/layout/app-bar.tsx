@@ -1,5 +1,5 @@
 import { NavLink, useNavigate } from "react-router"
-import { Bell, LogOut, MapPin } from "lucide-react"
+import { Bell, LogOut, MapPin, ShieldCheck } from "lucide-react"
 import { cn } from "cn"
 
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
@@ -18,6 +18,9 @@ import { openPanel } from "@/lib/ui-store"
  * Light rather than the navy of the desk consoles — the field app is used at
  * arm's length in daylight, and a white bar keeps the contrast with the cards
  * below it.
+ *
+ * The safety reminder rides here too, so it is on screen on every page rather
+ * than only at the top of the home screen.
  *
  * No menu and no drawer. Every section is on the bottom tab bar, within reach
  * of the thumb already holding the tablet; a second copy of the same list
@@ -47,6 +50,20 @@ export function AppBar() {
         <MapPin className="size-4 shrink-0 text-primary" />
         <span className="truncate max-sm:max-w-24">{me.plant}</span>
       </span>
+
+      {/*
+        * The safety reminder. It used to sit on the home page, where it was read
+        * once and then scrolled past; on the bar it is in front of the engineer
+        * on every screen, which is the point of it.
+        */}
+      <button
+        type="button"
+        aria-label="Safety first"
+        onClick={() => openPanel({ kind: "safety" })}
+        className="flex size-11 shrink-0 items-center justify-center rounded-full bg-healthy-soft text-healthy ring-1 ring-healthy/35 hover:bg-healthy-soft/80"
+      >
+        <ShieldCheck className="size-5" />
+      </button>
 
       <button
         type="button"

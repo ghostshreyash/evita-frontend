@@ -174,16 +174,11 @@ export function ContactPage() {
               <Headset className="size-5 text-primary" /> Get help
             </h3>
             <p className="mt-1 text-sm text-muted-foreground">
-              Still stuck after the answers above? A ticket is the channel to OCC. Raise one with a photograph and what you
-              were doing, and it is tracked until it is closed.
+              Still stuck after the answers above? Call or write, and if it needs tracking raise a ticket - that is the
+              channel to OCC, and it stays open until it is closed.
             </p>
-            <div className="mt-3">
-              <Button className="h-14 text-base" onClick={() => openPanel({ kind: "issue" })}>
-                <TriangleAlert /> Report an Issue
-              </Button>
-            </div>
             {/* Placeholder details until OLIVINE publish theirs — see data/support.ts */}
-            <dl className="mt-3 divide-y border-t">
+            <dl className="mt-3 divide-y border-y">
               <Line
                 icon={Phone}
                 label="Support line"
@@ -205,6 +200,11 @@ export function ContactPage() {
               <Line icon={Clock} label="Hours" value={olivineSupport.hours} />
             </dl>
             <p className="mt-2 text-xs text-muted-foreground">{olivineSupport.note}</p>
+            {/* The ticket closes the card: the call line and the hours are the quicker
+                answers, and this is what to do when neither of them has settled it */}
+            <Button className="mt-3 h-14 w-full text-base" onClick={() => openPanel({ kind: "issue" })}>
+              <TriangleAlert /> Report an Issue
+            </Button>
           </section>
         </div>
       </div>
