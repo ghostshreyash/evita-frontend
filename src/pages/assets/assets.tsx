@@ -314,12 +314,13 @@ function AssetCard({ asset }: { asset: AssetRecord }) {
       <Link to={`/assets/${asset.id}`} className="block outline-none">
         <div className="relative h-32 bg-muted/40">
           <AssetPhoto label={asset.category} />
+          {/* The band and the score are one reading, so they are one badge */}
           <Badge
             variant={health ? healthStatus[health.tone].badge : "neutral"}
             className="absolute top-2 right-2 h-auto gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold"
           >
             <span aria-hidden className="size-1.5 rounded-full bg-current" />
-            {health ? health.label : "Onboarded"}
+            {health ? `${health.label} · ${asset.health}/100` : "Onboarded"}
           </Badge>
         </div>
 
@@ -332,17 +333,9 @@ function AssetCard({ asset }: { asset: AssetRecord }) {
           </p>
           <div className="mt-2 flex items-center justify-between gap-2 border-t pt-2">
             <span className={cn("rounded-md px-2 py-0.5 text-xs font-semibold", criticalityTone[asset.criticality])}>
-              {asset.criticality}
+              {asset.criticality} criticality
             </span>
-            {health ? (
-              <span className="flex items-center gap-1.5 text-sm">
-                <span className={cn("size-2 shrink-0 rounded-full", healthStatus[health.tone].dot)} />
-                <span className="font-bold tabular-nums">{asset.health}</span>
-                <span className="text-xs text-muted-foreground">/ 100</span>
-              </span>
-            ) : (
-              <span className="text-xs text-muted-foreground">Not inspected yet</span>
-            )}
+            {health ? null : <span className="text-xs text-muted-foreground">Not inspected yet</span>}
           </div>
         </div>
       </Link>
