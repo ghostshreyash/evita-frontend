@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react"
 import { Link, useNavigate, useSearchParams } from "react-router"
-import { ChevronRight, HardDrive, LayoutGrid, List, Plus, Search, SlidersHorizontal, TriangleAlert, X } from "lucide-react"
+import { ChevronRight, LayoutGrid, List, Plus, Search, SlidersHorizontal, TriangleAlert, X } from "lucide-react"
 import { cn } from "cn"
 
 import { PageHeader } from "@/components/common/page-header"
@@ -140,8 +140,6 @@ export function AssetsPage() {
     setParams({}, { replace: true })
   }
 
-  const site = register[0]
-
   return (
     <div>
       <PageHeader
@@ -155,14 +153,6 @@ export function AssetsPage() {
           </Button>
         }
       />
-
-      {/* Which site this register belongs to — EVITA shows one plant and no other */}
-      <p className="mb-3 flex flex-wrap items-center gap-x-2 gap-y-0.5 rounded-xl bg-info-soft px-3 py-2 text-sm">
-        <HardDrive className="size-4 text-primary" />
-        <span className="font-semibold">{site.plant}</span>
-        <span className="text-muted-foreground">·</span>
-        <span>{site.enterprise}</span>
-      </p>
 
       {/* ---------- Search, the rest of the filters behind a toggle, and the view ---------- */}
       <div className="mb-3 flex flex-wrap items-center gap-2">

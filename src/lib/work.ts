@@ -24,8 +24,9 @@ export type JobKind = "inspection" | "maintenance"
  * the task screens and the book of work.
  */
 export const jobKindLook: Record<JobKind, { label: string; long: string; icon: LucideIcon; tint: string }> = {
-  inspection: { label: "Inspection", long: "Inspection Task", icon: ClipboardCheck, tint: "bg-info-soft text-primary" },
-  maintenance: { label: "Maintenance", long: "Maintenance Task", icon: Wrench, tint: "bg-highlight-soft text-highlight" },
+  inspection: { label: "Inspection", long: "Inspection", icon: ClipboardCheck, tint: "bg-info-soft text-primary" },
+  // Maintenance is cleaning, and that is the word the engineer uses for it
+  maintenance: { label: "Cleaning", long: "Cleaning", icon: Wrench, tint: "bg-highlight-soft text-highlight" },
 }
 
 /**

@@ -44,7 +44,7 @@ import { categoryLook, shortCategory } from "@/lib/category-icons"
 import { useCurrentElpremar } from "@/lib/me"
 import { startJob } from "@/lib/start-job"
 import { openPanel } from "@/lib/ui-store"
-import { actionFor, categoryFor, isOverdue, isToday, jobKindLook, parseDay, useMyJobs, type Job } from "@/lib/work"
+import { actionFor, categoryFor, isOverdue, isToday, parseDay, useMyJobs, type Job } from "@/lib/work"
 
 const prepare: { icon: LucideIcon; tone: string; title: string; detail: string }[] = [
   { icon: ClipboardList, tone: "text-info", title: "Permit to work", detail: "issued and valid for this asset and activity" },
@@ -99,7 +99,7 @@ export function TaskPage() {
         <p className="max-w-md text-sm text-muted-foreground">
           <span className="font-semibold">{id}</span> is not on your book of work. It may have been reassigned by EMMS-E.
         </p>
-        <Button asChild><Link to="/my-tasks">Back to My Tasks</Link></Button>
+        <Button asChild><Link to="/my-tasks">Back to Tasks</Link></Button>
       </div>
     )
   }
@@ -110,9 +110,8 @@ export function TaskPage() {
   const action = actionFor(job)
   const category = categoryFor(job.asset)
   const look = categoryLook(category)
-  const kind = jobKindLook[job.kind]
-  /* An inspection is not on My Tasks, so it does not say it came from there */
-  const home = job.kind === "inspection" ? { to: "/inspections", label: "Inspections" } : { to: "/my-tasks", label: "My Tasks" }
+  /* An inspection is not on Tasks, so it does not say it came from there */
+  const home = job.kind === "inspection" ? { to: "/inspections", label: "Inspections" } : { to: "/my-tasks", label: "Tasks" }
   /* On an inspection's own screen the word is "inspection", never "task" */
   const noun = job.kind === "inspection" ? "Inspection" : "Task"
   const overdue = isOverdue(job)
@@ -163,22 +162,16 @@ export function TaskPage() {
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-2">
             <span className="rounded-md bg-muted px-2 py-1 tabular-nums text-xs font-semibold">{shortCategory(category)}</span>
-            <span className={cn("flex items-center gap-1 rounded-md px-2 py-1 text-xs font-semibold", kind.tint)}>
-              <kind.icon className="size-3.5" /> {kind.label}
+            {/* The id, not the asset tag: it is what the job is called everywhere else */}
+            <span className="flex items-center gap-1.5 text-lg font-bold tabular-nums text-brand-navy dark:text-foreground">
+              {job.id} <QrCode className="size-4 text-primary" />
             </span>
-            {detail?.assetTag ? (
-              <span className="flex items-center gap-1.5 text-lg font-bold tabular-nums text-brand-navy dark:text-foreground">
-                {detail.assetTag} <QrCode className="size-4 text-primary" />
-              </span>
-            ) : null}
           </div>
           <div className="mt-1 flex flex-wrap items-center gap-2 text-sm">
             <span className={cn("rounded-md px-2 py-0.5 text-xs font-bold uppercase", priorityTone[job.priority])}>{job.priority}</span>
-            {detail ? (
-              <span className="text-muted-foreground">
-                Criticality: <span className="font-semibold text-foreground">{detail.assetCriticality}</span>
-              </span>
-            ) : null}
+            <span className="text-muted-foreground">
+              Assigned by <span className="font-semibold text-foreground">{detail?.createdBy ?? "EMMS-E"}</span>
+            </span>
           </div>
         </div>
         <div className="ml-auto flex flex-wrap items-center gap-3">
@@ -192,16 +185,11 @@ export function TaskPage() {
 
       {/* ---------- What EMMS-E assigned, and where the asset is ---------- */}
       <TaskPanel icon={SlidersHorizontal} title={`${noun} Details`}>
+        {/* The id, the type and who assigned it are on the strip above; what is
+            left is the activity, and where a cleaning came from */}
         <Group title={noun}>
-          <Field label={`${noun} ID`}><span className="tabular-nums font-semibold text-primary">{job.id}</span></Field>
-          <Field label={`${noun} Type`}>
-            <span className={cn("inline-flex items-center gap-1.5 rounded-md px-2 py-0.5 text-sm font-semibold", kind.tint)}>
-              <kind.icon className="size-4" /> {kind.label}
-            </span>
-          </Field>
           <Field label="Activity">{job.activity}</Field>
-          <Field label="Assigned By">{detail?.createdBy ?? "EMMS-E"}</Field>
-          {/* Only maintenance traces back to something: the inspection that raised it */}
+          {/* Only a cleaning traces back to something: the inspection that raised it */}
           {job.kind === "maintenance" ? (
             <Field label="Raised From">{job.inspectionId ? `Inspection ${job.inspectionId}` : "—"}</Field>
           ) : null}
@@ -351,7 +339,7 @@ function OutcomeBanner({ job, assetTag }: { job: Job; assetTag?: string }) {
         ? { title: "Approved by OCC", body: "The asset's health report is updated from this work." }
         : job.status === "open"
           ? { title: "Submitted for Approval", body: "OCC will review the evidence and approve the work or send it back with remarks." }
-          : { title: "Maintenance Completed", body: "Closed out and recorded against the asset." }
+          : { title: "Cleaning Completed", body: "Closed out and recorded against the asset." }
   return (
     <section
       className={cn(

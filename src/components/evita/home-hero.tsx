@@ -61,15 +61,15 @@ export function QuickActions() {
     },
     {
       icon: ClipboardCheck,
-      title: "Start Inspection",
+      title: "Inspections",
       detail: "Scan an asset, or onboard a new one",
       tint: "bg-healthy-soft text-healthy",
       run: () => openPanel({ kind: "begin-inspection" }),
     },
     {
       icon: ClipboardList,
-      title: "My Tasks",
-      detail: "The maintenance assigned to you",
+      title: "Tasks",
+      detail: "The cleaning assigned to you",
       tint: "bg-attention-soft text-attention",
       run: () => navigate("/my-tasks"),
     },
@@ -151,7 +151,7 @@ export function NextTask() {
         <span className="flex size-8 items-center justify-center rounded-lg bg-attention-soft text-attention">
           <Zap className="size-4.5" />
         </span>
-        <span className="text-base font-bold text-brand-navy dark:text-foreground">Next Task</span>
+        <span className="text-base font-bold text-brand-navy dark:text-foreground">{inspection ? "Next Inspection" : "Next Task"}</span>
         <JobStatusBadge job={job} />
         <span className="ml-auto flex items-center gap-1">
           <PagerButton label="Previous task" disabled={index === 0} onClick={() => setAt(index - 1)} icon={ChevronLeft} />
@@ -180,7 +180,8 @@ export function NextTask() {
 
           <div className="mt-2.5 flex flex-wrap gap-1.5">
             <Chip className={kind.tint}>
-              <kind.icon className="size-3.5" /> {kind.label}
+              {/* A cleaning job is a task on the book; an inspection is not */}
+              <kind.icon className="size-3.5" /> {inspection ? kind.label : `${kind.label} Task`}
             </Chip>
             <Chip className="bg-info-soft text-info">{job.activity}</Chip>
             <Chip className={criticalityTone[job.priority === "Low" ? "Low" : job.priority === "Medium" ? "Medium" : "High"]}>
@@ -268,7 +269,7 @@ export function UpcomingTasks() {
     <section className="rounded-2xl bg-card p-3 shadow-xs ring-1 ring-foreground/10">
       <div className="mb-2 flex flex-wrap items-center justify-between gap-x-3">
         <h3 className="flex items-center gap-1.5 text-base font-semibold text-brand-navy dark:text-foreground">
-          <CalendarDays className="size-5 text-primary" /> Upcoming Tasks ({upcoming.length})
+          <CalendarDays className="size-5 text-primary" /> Upcoming ({upcoming.length})
         </h3>
         <button
           type="button"

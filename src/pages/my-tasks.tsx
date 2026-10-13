@@ -169,13 +169,13 @@ function MyTasks({ only }: { only?: JobKind }) {
   return (
     <div>
       <PageHeader
-        title={only === "inspection" ? "Inspections" : only ? `${jobKindLook[only].long}s` : "My Tasks"}
+        title={only === "inspection" ? "Inspections" : only ? `${jobKindLook[only].long}s` : "Tasks"}
         description={
           only === "inspection"
             ? "Each one covers a single area of a plant, whatever departments and assets sit in it. You can also start an inspection at any asset without being booked for it."
             : "The maintenance and cleaning assigned to you. Inspections have a section of their own."
         }
-        breadcrumbs={[{ label: only === "inspection" ? "Inspections" : only ? `${jobKindLook[only].long}s` : "My Tasks" }]}
+        breadcrumbs={[{ label: only === "inspection" ? "Inspections" : only ? `${jobKindLook[only].long}s` : "Tasks" }]}
         actions={
           only === "inspection" ? (
             <Button onClick={() => openPanel({ kind: "begin-inspection" })}>
@@ -275,7 +275,6 @@ function MyTasks({ only }: { only?: JobKind }) {
  */
 function TaskCard({ job }: { job: Job }) {
   const category = categoryFor(job.asset)
-  const kind = jobKindLook[job.kind]
   const overdue = isOverdue(job)
 
   return (
@@ -294,10 +293,8 @@ function TaskCard({ job }: { job: Job }) {
 
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2">
+            {/* No kind chip: every row on this page is the same kind of work */}
             <span className="tabular-nums text-xs font-bold text-muted-foreground">{job.id}</span>
-            <span className={cn("flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[0.7rem] font-semibold", kind.tint)}>
-              <kind.icon className="size-3" /> {kind.label}
-            </span>
             <span className={cn("rounded-md px-1.5 py-0.5 text-[0.7rem] font-bold tracking-wide uppercase", priorityTone[job.priority])}>
               {job.priority}
             </span>

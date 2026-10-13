@@ -1,5 +1,5 @@
 import { useRef, useState } from "react"
-import { Check, Eye, Image as ImageIcon, Thermometer, Trash2, UploadCloud } from "lucide-react"
+import { Camera, Check, Eye, Image as ImageIcon, ImagePlus, Thermometer, Trash2, UploadCloud } from "lucide-react"
 import { cn } from "cn"
 import { toast } from "sonner"
 
@@ -233,7 +233,15 @@ function Chip({ selected, onClick, children }: { selected: boolean; onClick: () 
 
 /* ---------- Pieces ---------- */
 
-/** The dashed zone that takes a click or a drop */
+/**
+ * The dashed zone a picture is added through.
+ *
+ * Two ways in, because on a tablet they are genuinely different jobs: the
+ * camera for the panel standing in front of the engineer, the gallery for a
+ * photograph already taken. `capture` is what sends the first straight to the
+ * rear camera rather than to the file picker. Dropping a file on the zone still
+ * works for anyone doing this at a desk.
+ */
 function AddSlot({
   icon: Icon,
   label,
@@ -245,14 +253,18 @@ function AddSlot({
   onPick: (files: FileList | null) => void
   className?: string
 }) {
-  const input = useRef<HTMLInputElement>(null)
+  const camera = useRef<HTMLInputElement>(null)
+  const gallery = useRef<HTMLInputElement>(null)
   const [over, setOver] = useState(false)
 
+  const pick = (e: React.ChangeEvent<HTMLInputElement>) => {
+    onPick(e.target.files)
+    // Reset, so picking the same file twice still fires a change
+    e.target.value = ""
+  }
+
   return (
-    <button
-      type="button"
-      onClick={() => input.current?.click()}
-      aria-label={label}
+    <div
       onDragOver={(e) => {
         e.preventDefault()
         setOver(true)
@@ -264,8 +276,8 @@ function AddSlot({
         onPick(e.dataTransfer.files)
       }}
       className={cn(
-        "flex min-h-28 w-full flex-col items-center justify-center gap-1 rounded-lg border-2 border-dashed px-2 text-center transition-colors",
-        over ? "border-primary bg-info-soft" : "border-input bg-muted/30 hover:border-primary hover:bg-accent",
+        "flex min-h-28 w-full flex-col items-center justify-center gap-1.5 rounded-lg border-2 border-dashed px-2 py-2 text-center transition-colors",
+        over ? "border-primary bg-info-soft" : "border-input bg-muted/30",
         className
       )}
     >
@@ -273,20 +285,19 @@ function AddSlot({
         {over ? <UploadCloud className="size-5" /> : <Icon className="size-5" />}
       </span>
       <span className="text-sm font-medium">{label}</span>
-      <span className="text-xs text-muted-foreground">or drag here</span>
-      <input
-        ref={input}
-        type="file"
-        multiple
-        accept={IMAGE_TYPES}
-        className="sr-only"
-        onChange={(e) => {
-          onPick(e.target.files)
-          // Reset, so picking the same file twice still fires a change
-          e.target.value = ""
-        }}
-      />
-    </button>
+
+      <span className="flex flex-wrap items-center justify-center gap-1.5">
+        <Button type="button" size="sm" variant="outline" className="h-9 bg-card" onClick={() => camera.current?.click()}>
+          <Camera className="size-4" /> Camera
+        </Button>
+        <Button type="button" size="sm" variant="outline" className="h-9 bg-card" onClick={() => gallery.current?.click()}>
+          <ImagePlus className="size-4" /> Upload
+        </Button>
+      </span>
+
+      <input ref={camera} type="file" accept={IMAGE_TYPES} capture="environment" className="sr-only" onChange={pick} />
+      <input ref={gallery} type="file" multiple accept={IMAGE_TYPES} className="sr-only" onChange={pick} />
+    </div>
   )
 }
 

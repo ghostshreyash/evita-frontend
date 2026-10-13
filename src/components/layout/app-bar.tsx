@@ -1,5 +1,5 @@
 import { NavLink, useNavigate } from "react-router"
-import { Bell, LogOut, MapPin, ShieldCheck } from "lucide-react"
+import { Bell, CloudCheck, CloudOff, CloudUpload, LogOut, ShieldCheck } from "lucide-react"
 import { cn } from "cn"
 
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
@@ -7,13 +7,13 @@ import { Button } from "@/components/ui/button"
 import { OlivineEmblem } from "@/components/layout/olivine-logo"
 import { useOnline } from "@/hooks/use-media"
 import { useAuth } from "@/lib/auth/context"
-import { useCurrentElpremar } from "@/lib/me"
+import { useInspectionDetails } from "@/data/inspection-store"
 import { useNotifications } from "@/lib/notifications"
 import { openPanel } from "@/lib/ui-store"
 
 /**
- * EVITA's top bar: the Olivine emblem with the EVITA FIELD wordmark, the
- * posting the engineer is working at, notifications, and their own avatar.
+ * EVITA's top bar: the Olivine emblem with the EVITA FIELD wordmark, whether
+ * what was recorded has reached OCC, notifications, and their own avatar.
  *
  * Light rather than the navy of the desk consoles — the field app is used at
  * arm's length in daylight, and a white bar keeps the contrast with the cards
@@ -27,11 +27,18 @@ import { openPanel } from "@/lib/ui-store"
  * behind a hamburger was one navigation too many.
  */
 export function AppBar() {
-  const me = useCurrentElpremar()
   const online = useOnline()
+  const details = useInspectionDetails()
   const { unread } = useNotifications()
   const { user, signOut } = useAuth()
   const navigate = useNavigate()
+
+  const waiting = Object.values(details).filter((d) => d.sync?.state === "pending").length
+  const sync = !online
+    ? { label: "Offline", icon: CloudOff, tint: "bg-muted text-muted-foreground ring-foreground/10" }
+    : waiting
+      ? { label: `Not synced (${waiting})`, icon: CloudUpload, tint: "bg-attention-soft text-attention ring-attention/30" }
+      : { label: "Synced", icon: CloudCheck, tint: "bg-healthy-soft text-healthy ring-healthy/30" }
 
   return (
     <header className="sticky top-0 z-30 flex h-16 shrink-0 items-center gap-2 border-b bg-card px-2.5 sm:px-3">
@@ -45,10 +52,19 @@ export function AppBar() {
         </span>
       </NavLink>
 
-      {/* The posting, not a chooser: EVITA works one plant at a time */}
-      <span className="ml-auto flex h-10 min-w-0 items-center gap-1.5 rounded-full bg-muted px-3 text-sm font-medium">
-        <MapPin className="size-4 shrink-0 text-primary" />
-        <span className="truncate max-sm:max-w-24">{me.plant}</span>
+      {/*
+        * Whether what was recorded has reached OCC. On a plant floor the signal
+        * comes and goes, and the one thing the engineer needs to know at a
+        * glance is whether their work is still only on this tablet.
+        */}
+      <span
+        className={cn(
+          "ml-auto flex h-10 min-w-0 items-center gap-1.5 rounded-full px-3 text-sm font-semibold ring-1",
+          sync.tint
+        )}
+      >
+        <sync.icon className="size-4 shrink-0" />
+        <span className="truncate">{sync.label}</span>
       </span>
 
       {/*
@@ -93,14 +109,12 @@ export function AppBar() {
         <LogOut className="size-5" />
       </Button>
 
-      <NavLink to="/more" aria-label="Profile and more" className="relative shrink-0">
+      <NavLink to="/more" aria-label="Profile and more" className="shrink-0">
         <Avatar className="size-10">
           <AvatarFallback className="bg-primary text-sm font-bold text-primary-foreground">
             {user?.initials ?? "EL"}
           </AvatarFallback>
         </Avatar>
-        {/* The connection state rides the avatar, so it is on screen at all times */}
-        <span className={cn("absolute right-0 bottom-0 size-3 rounded-full ring-2 ring-card", online ? "bg-healthy" : "bg-offline")} />
       </NavLink>
     </header>
   )

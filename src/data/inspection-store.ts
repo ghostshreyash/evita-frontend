@@ -106,7 +106,7 @@ export function addInspectionForAsset(
       area: asset.area,
       assetTag: asset.id,
       assetCategory: asset.category,
-      createdBy: `${by} (on site)`,
+      createdBy: `${by} (ELPREMAR)`,
       execution: { performedBy: by, startedAt: stampNow(), remarks: "" },
       measurements: [],
       observations: [],
