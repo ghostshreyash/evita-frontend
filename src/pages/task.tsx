@@ -29,6 +29,7 @@ import { Timeline } from "@/components/common/detail-view"
 import { CategoryIcon } from "@/components/common/category-icon"
 import { HealthRing, TaskPanel } from "@/components/evita/field-kit"
 import { InspectionForm, ScoreBreakdown } from "@/components/evita/inspection-form"
+import { CleaningReportPanel } from "@/components/evita/cleaning-report-panel"
 import { InspectionReports } from "@/components/evita/inspection-reports"
 import { JobStatusBadge } from "@/components/evita/job-action"
 import { MaintenanceForm } from "@/components/evita/maintenance-form"
@@ -43,7 +44,7 @@ import { categoryLook, shortCategory } from "@/lib/category-icons"
 import { useCurrentElpremar } from "@/lib/me"
 import { startJob } from "@/lib/start-job"
 import { openPanel } from "@/lib/ui-store"
-import { actionFor, categoryFor, isOverdue, isToday, jobKindLook, parseDay, useMyJobs, type Job } from "@/lib/work"
+import { actionFor, categoryFor, isOverdue, isToday, parseDay, useMyJobs, type Job } from "@/lib/work"
 
 const prepare: { icon: LucideIcon; tone: string; title: string; detail: string }[] = [
   { icon: ClipboardList, tone: "text-info", title: "Permit to work", detail: "issued and valid for this asset and activity" },
@@ -53,7 +54,7 @@ const prepare: { icon: LucideIcon; tone: string; title: string; detail: string }
   { icon: Gauge, tone: "text-healthy", title: "Instruments ready", detail: "calibrated, charged and to hand" },
 ]
 
-/** A label above its value, in the Task Details grid */
+/** A label above its value, in the details grid */
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div className="min-w-0">
@@ -63,7 +64,7 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
   )
 }
 
-/** One titled run of fields inside Task Details: the task, the place, the asset */
+/** One titled run of fields inside the details panel: the work, the place, the asset */
 function Group({ title, last, children }: { title: string; last?: boolean; children: React.ReactNode }) {
   return (
     <section className={cn(!last && "mb-4 border-b pb-4")}>
@@ -98,7 +99,7 @@ export function TaskPage() {
         <p className="max-w-md text-sm text-muted-foreground">
           <span className="font-semibold">{id}</span> is not on your book of work. It may have been reassigned by EMMS-E.
         </p>
-        <Button asChild><Link to="/my-tasks">Back to My Tasks</Link></Button>
+        <Button asChild><Link to="/my-tasks">Back to Tasks</Link></Button>
       </div>
     )
   }
@@ -109,7 +110,10 @@ export function TaskPage() {
   const action = actionFor(job)
   const category = categoryFor(job.asset)
   const look = categoryLook(category)
-  const kind = jobKindLook[job.kind]
+  /* An inspection is not on Tasks, so it does not say it came from there */
+  const home = job.kind === "inspection" ? { to: "/inspections", label: "Inspections" } : { to: "/my-tasks", label: "Tasks" }
+  /* On an inspection's own screen the word is "inspection", never "task" */
+  const noun = job.kind === "inspection" ? "Inspection" : "Task"
   const overdue = isOverdue(job)
   const timeline =
     job.kind === "inspection"
@@ -124,7 +128,10 @@ export function TaskPage() {
         <div className="min-w-0">
           <nav className="flex flex-wrap items-center gap-1.5 text-sm text-muted-foreground">
             <Link to="/" className="flex items-center gap-1 hover:text-foreground"><Home className="size-3.5" /> Home</Link>›
-            <Link to="/my-tasks" className="hover:text-foreground">My Tasks</Link>›
+            <Link to={home.to} className="hover:text-foreground">
+              {home.label}
+            </Link>
+            ›
             <span className="font-semibold text-primary">{job.id}</span>
           </nav>
           <h2 className="mt-1 text-2xl font-bold text-brand-navy dark:text-foreground">{job.asset}</h2>
@@ -155,22 +162,16 @@ export function TaskPage() {
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-2">
             <span className="rounded-md bg-muted px-2 py-1 tabular-nums text-xs font-semibold">{shortCategory(category)}</span>
-            <span className={cn("flex items-center gap-1 rounded-md px-2 py-1 text-xs font-semibold", kind.tint)}>
-              <kind.icon className="size-3.5" /> {kind.label}
+            {/* The id, not the asset tag: it is what the job is called everywhere else */}
+            <span className="flex items-center gap-1.5 text-lg font-bold tabular-nums text-brand-navy dark:text-foreground">
+              {job.id} <QrCode className="size-4 text-primary" />
             </span>
-            {detail?.assetTag ? (
-              <span className="flex items-center gap-1.5 text-lg font-bold tabular-nums text-brand-navy dark:text-foreground">
-                {detail.assetTag} <QrCode className="size-4 text-primary" />
-              </span>
-            ) : null}
           </div>
           <div className="mt-1 flex flex-wrap items-center gap-2 text-sm">
             <span className={cn("rounded-md px-2 py-0.5 text-xs font-bold uppercase", priorityTone[job.priority])}>{job.priority}</span>
-            {detail ? (
-              <span className="text-muted-foreground">
-                Criticality: <span className="font-semibold text-foreground">{detail.assetCriticality}</span>
-              </span>
-            ) : null}
+            <span className="text-muted-foreground">
+              Assigned by <span className="font-semibold text-foreground">{detail?.createdBy ?? "EMMS-E"}</span>
+            </span>
           </div>
         </div>
         <div className="ml-auto flex flex-wrap items-center gap-3">
@@ -183,17 +184,12 @@ export function TaskPage() {
       </section>
 
       {/* ---------- What EMMS-E assigned, and where the asset is ---------- */}
-      <TaskPanel icon={SlidersHorizontal} title="Task Details">
-        <Group title="Task">
-          <Field label="Task ID"><span className="tabular-nums font-semibold text-primary">{job.id}</span></Field>
-          <Field label="Task Type">
-            <span className={cn("inline-flex items-center gap-1.5 rounded-md px-2 py-0.5 text-sm font-semibold", kind.tint)}>
-              <kind.icon className="size-4" /> {kind.label}
-            </span>
-          </Field>
+      <TaskPanel icon={SlidersHorizontal} title={`${noun} Details`}>
+        {/* The id, the type and who assigned it are on the strip above; what is
+            left is the activity, and where a cleaning came from */}
+        <Group title={noun}>
           <Field label="Activity">{job.activity}</Field>
-          <Field label="Assigned By">{detail?.createdBy ?? "EMMS-E"}</Field>
-          {/* Only maintenance traces back to something: the inspection that raised it */}
+          {/* Only a cleaning traces back to something: the inspection that raised it */}
           {job.kind === "maintenance" ? (
             <Field label="Raised From">{job.inspectionId ? `Inspection ${job.inspectionId}` : "—"}</Field>
           ) : null}
@@ -263,6 +259,8 @@ export function TaskPage() {
                   <Timeline steps={timeline} />
                 </TaskPanel>
               ) : null}
+              {/* What the clean changed, on every job that has been carried out */}
+              {maintenance?.execution?.endedAt ? <CleaningReportPanel job={job} detail={maintenance} /> : null}
             </aside>
           </div>
         </div>
@@ -275,6 +273,7 @@ export function TaskPage() {
 function StartSection({ job, onStart }: { job: Job; onStart: () => void }) {
   // The ticks are the engineer's own reminder on site; they are not stored
   const [checked, setChecked] = useState<string[]>([])
+  const noun = job.kind === "inspection" ? "Inspection" : "Task"
   return (
     <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_20rem]">
       <section className="rounded-2xl bg-card shadow-xs ring-1 ring-foreground/10">
@@ -324,7 +323,7 @@ function StartSection({ job, onStart }: { job: Job; onStart: () => void }) {
           <span className="tabular-nums font-semibold">{format(parseDay(job.date), "d MMM")}, {slotLabel(job.slot)}</span>
         </div>
         <Button size="lg" className="mt-auto h-14 w-full text-lg shadow-lg shadow-primary/30 max-lg:mt-5" onClick={onStart}>
-          <Play className="fill-current" /> Start Task
+          <Play className="fill-current" /> Start {noun}
         </Button>
       </section>
     </div>
@@ -340,7 +339,7 @@ function OutcomeBanner({ job, assetTag }: { job: Job; assetTag?: string }) {
         ? { title: "Approved by OCC", body: "The asset's health report is updated from this work." }
         : job.status === "open"
           ? { title: "Submitted for Approval", body: "OCC will review the evidence and approve the work or send it back with remarks." }
-          : { title: "Maintenance Completed", body: "Closed out and recorded against the asset." }
+          : { title: "Cleaning Completed", body: "Closed out and recorded against the asset." }
   return (
     <section
       className={cn(

@@ -24,8 +24,9 @@ export type JobKind = "inspection" | "maintenance"
  * the task screens and the book of work.
  */
 export const jobKindLook: Record<JobKind, { label: string; long: string; icon: LucideIcon; tint: string }> = {
-  inspection: { label: "Inspection", long: "Inspection Task", icon: ClipboardCheck, tint: "bg-info-soft text-primary" },
-  maintenance: { label: "Maintenance", long: "Maintenance Task", icon: Wrench, tint: "bg-highlight-soft text-highlight" },
+  inspection: { label: "Inspection", long: "Inspection", icon: ClipboardCheck, tint: "bg-info-soft text-primary" },
+  // Maintenance is cleaning, and that is the word the engineer uses for it
+  maintenance: { label: "Cleaning", long: "Cleaning", icon: Wrench, tint: "bg-highlight-soft text-highlight" },
 }
 
 /**
@@ -33,14 +34,15 @@ export const jobKindLook: Record<JobKind, { label: string; long: string; icon: L
  * Open (assigned, not started), Overdue (not started and past its day),
  * In Progress, Completed (their part is done) and Approved (signed off by OCC).
  */
-export type FieldStatus = "open" | "overdue" | "in_progress" | "completed" | "approved"
+export type FieldStatus = "open" | "overdue" | "in_progress" | "report_due" | "completed" | "approved"
 
-export const fieldStatuses: FieldStatus[] = ["open", "overdue", "in_progress", "completed", "approved"]
+export const fieldStatuses: FieldStatus[] = ["open", "overdue", "in_progress", "report_due", "completed", "approved"]
 
 export const fieldStatusLook: Record<FieldStatus, { label: string; badge: "info" | "critical" | "warning" | "success" | "highlight" }> = {
   open: { label: "Open", badge: "info" },
   overdue: { label: "Overdue", badge: "critical" },
   in_progress: { label: "In Progress", badge: "warning" },
+  report_due: { label: "Report Due", badge: "warning" },
   completed: { label: "Completed", badge: "success" },
   approved: { label: "Approved", badge: "highlight" },
 }
@@ -86,13 +88,26 @@ export function inspectionFor(jobs: Job[], asset: { category: string; plant: str
   )
 }
 
-/** What the ELPREMAR can do with a job right now */
-export type JobAction = "start" | "continue" | "view"
+/**
+ * Where a job's record lives.
+ *
+ * An inspection is not on My Tasks, so it does not open there either: it opens
+ * under Inspections, and the screen reads the same either way.
+ */
+export const jobPath = (job: Pick<Job, "id" | "kind">) =>
+  job.kind === "inspection" ? `/inspections/${job.id}` : `/my-tasks/${job.id}`
 
-/** Open and Overdue → Start; In Progress → Continue; Completed and Approved → View */
+/** What the ELPREMAR can do with a job right now */
+export type JobAction = "start" | "continue" | "report" | "view"
+
+/**
+ * Open and Overdue → Start; In Progress → Continue; Report Due → Generate
+ * Report; Completed and Approved → View.
+ */
 export function actionFor(job: Pick<Job, "field">): JobAction {
   if (job.field === "open" || job.field === "overdue") return "start"
   if (job.field === "in_progress") return "continue"
+  if (job.field === "report_due") return "report"
   return "view"
 }
 
@@ -117,12 +132,13 @@ export const isOverdue = (job: Pick<Job, "field">) => job.field === "overdue"
  * closed work read Completed; OCC's Approved reads Approved; work OCC sent back
  * reads Open again, to be started and resubmitted.
  */
-function fieldStatusOf(kind: JobKind, status: WorkStatus, date: string, startedHere: boolean): FieldStatus {
+function fieldStatusOf(kind: JobKind, status: WorkStatus, date: string, startedHere: boolean, reported = true): FieldStatus {
   const notStarted = (): FieldStatus => (isPast(date) ? "overdue" : "open")
   if (kind === "inspection") {
     if (status === "pending") return notStarted()
     if (status === "in_progress") return "in_progress"
-    return "completed"
+    // Submitted is not finished: the reports still have to come out of it
+    return reported ? "completed" : "report_due"
   }
   if (status === "in_progress") return startedHere ? "in_progress" : notStarted()
   if (status === "rejected") return notStarted()
@@ -158,7 +174,7 @@ export function useMyJobs(): Job[] {
           slot: t.slot,
           priority: t.priority,
           status: t.status,
-          field: fieldStatusOf("inspection", t.status, t.due, false),
+          field: fieldStatusOf("inspection", t.status, t.due, false, !!inspectionDetails[t.id]?.reportedAt),
           area: inspectionDetails[t.id]?.area ?? "",
         })),
       ...maintenance

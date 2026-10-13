@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
 import { Input } from "@/components/ui/input"
 import { UploadSection } from "@/components/evita/upload-section"
-import { Checklist, CountPill, FieldLabel, HealthRing, Segmented, StepCard } from "@/components/evita/field-kit"
+import { Checklist, CountPill, FieldLabel, Segmented, StepCard } from "@/components/evita/field-kit"
 import type { EvidenceItem } from "@/data/evidence"
 import { stampNow } from "@/data/persist"
 import { completeInspection, saveInspectionDraft } from "@/data/inspection-store"
@@ -103,7 +103,6 @@ export function InspectionForm({ job, detail }: { job: Job; detail: InspectionDe
   const readings = inspectionReadingsFor(category)
   const done = sectionsDone(capture, category, ids)
   const tabDone: Record<Section, boolean> = { images: done.images, thermal: done.thermal, technical: done.readings, fps: done.fps, pd: false }
-  const preview = scoreCapture(capture)
   const ready = done.images && done.thermal && done.readings && done.fps
   const set: Setter = (p) => setCapture((c) => ({ ...c, ...p }))
   const removeEvidence = (id: string) => setEvidence((ev) => ev.filter((e) => e.id !== id))
@@ -170,17 +169,12 @@ export function InspectionForm({ job, detail }: { job: Job; detail: InspectionDe
         {/* ---------- Score estimate and submit ---------- */}
         <aside className="space-y-4 lg:sticky lg:top-20 lg:self-start">
           <section className="space-y-4 rounded-2xl bg-card p-4 shadow-xs ring-1 ring-foreground/10">
-            <h3 className="text-lg font-semibold text-brand-navy dark:text-foreground">Inspection Health Summary</h3>
-            <div className="rounded-xl bg-muted/50 p-3">
-              {/* Contamination and hygiene are read off the images by AI after sync, so the
-                  field estimate stands on the thermal scan and the fire prevention system */}
-              <HealthRing score={preview.healthScore} caption="Estimate · updates as you record" />
-            </div>
-            <p className="rounded-lg bg-info-soft/50 px-3 py-2 text-xs text-muted-foreground">
-              Contamination and physical hygiene are scored by AI from the images after sync. The estimate here covers
-              what you record on site.
-            </p>
-            <ScoreBreakdown breakdown={preview.breakdown} />
+            {/*
+              * No score while the inspection is being recorded. Contamination and
+              * physical hygiene are read off the images by AI after sync, so anything
+              * shown here would be a partial figure the engineer could act on - what
+              * is left is the checklist of what still has to be captured.
+              */}
             <Checklist
               items={[
                 { label: "At least one asset image", done: done.images },

@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button"
 import { recommendInsta } from "@/data/insta"
 import { useAssetRows } from "@/data/asset-store"
 import { profileOf } from "@/data/asset-store"
+import { markReportGenerated } from "@/data/inspection-store"
 import { addMaintenanceFromInspection } from "@/data/maintenance-store"
 import type { InspectionDetail } from "@/data/inspection-detail"
 import { contaminationReport, hygieneReport, printReport, type InspectionReport } from "@/lib/inspection-report"
@@ -36,7 +37,12 @@ const toneClass = {
 export function InspectionReports({ job, detail }: { job: Job; detail: InspectionDetail }) {
   const navigate = useNavigate()
   const register = useAssetRows()
-  const [generated, setGenerated] = useState(false)
+  /*
+   * Whether the reports have been produced is on the record, not in local
+   * state: until they are, the work reads as Report Due on the lists, and a
+   * reload must not quietly turn that back into Completed.
+   */
+  const generated = !!detail.reportedAt
   const [raised, setRaised] = useState<string>()
 
   const category = categoryFor(job.asset)
@@ -101,7 +107,7 @@ export function InspectionReports({ job, detail }: { job: Job; detail: Inspectio
             Two reports come out of this inspection: the contamination the cleaning is sold on, and the physical hygiene
             of the panel. Both are built from what was recorded.
           </p>
-          <Button className="mt-3 h-12 w-full sm:w-auto" onClick={() => setGenerated(true)}>
+          <Button className="mt-3 h-12 w-full sm:w-auto" onClick={() => markReportGenerated(job.id)}>
             <FileText /> Generate Report
           </Button>
         </>

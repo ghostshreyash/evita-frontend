@@ -8,18 +8,14 @@ import { AssetPhoto } from "@/components/common/asset-photo"
 import { HealthDial } from "@/components/common/health-dial"
 import { DetailList, DetailPanel } from "@/components/common/detail-list"
 import { assetDetailRows, assetTechnicalRows } from "@/components/assets/asset-sections"
-import { AssetIdChip, AssetQrPanel, QrLabelPreview } from "@/components/assets/asset-qr"
+import { AssetQrPanel, QrLabelPreview } from "@/components/assets/asset-qr"
 import { StartInspection } from "@/components/assets/start-inspection"
-import { CategoryIcon } from "@/components/common/category-icon"
-import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import type { AssetRecord } from "@/data/asset-data"
 import { capturesOf, findAsset, profileOf, useAssetRows } from "@/data/asset-store"
-import { criticalityTone } from "@/data/occ-tables"
 import { healthBandFor } from "@/data/master-data"
 import { td, th } from "@/lib/data-table"
-import { healthStatus } from "@/lib/status"
 
 /**
  * One asset, in full.
@@ -60,32 +56,16 @@ function AssetDetail({ asset, onBack }: { asset: AssetRecord; onBack: () => void
         description={`${asset.category} · ${asset.area}`}
         breadcrumbs={[{ label: "Assets", to: "/assets" }, { label: asset.id }]}
         actions={
-          <Button variant="outline" onClick={onBack}>
-            <ArrowLeft /> Back to Assets
-          </Button>
+          <>
+            {/* The asset is the way into an inspection: an ELPREMAR standing at
+                one does not need to have been booked for it */}
+            <StartInspection asset={asset} size="default" className="w-56" />
+            <Button variant="outline" onClick={onBack}>
+              <ArrowLeft /> Back to Assets
+            </Button>
+          </>
         }
       />
-
-      {/* ---------- Identity strip ---------- */}
-      <div className="mb-3 flex flex-wrap items-center gap-x-3 gap-y-2 rounded-2xl bg-card px-3 py-2.5 shadow-xs ring-1 ring-foreground/10">
-        <span className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-info-soft text-info">
-          <CategoryIcon category={asset.category} className="size-5" />
-        </span>
-        <AssetIdChip id={asset.id} />
-        <span className="text-sm text-muted-foreground">{asset.tag}</span>
-        <span className={cn("rounded px-2 py-1 text-xs font-semibold", criticalityTone[asset.criticality])}>
-          {asset.criticality} criticality
-        </span>
-        <Badge
-          variant={band ? healthStatus[band.tone].badge : "neutral"}
-          className="h-auto rounded px-2 py-1 text-xs"
-        >
-          {band ? `${band.label} · ${asset.health}` : "Onboarded"}
-        </Badge>
-        <span className="ml-auto text-sm text-muted-foreground">
-          Onboarded <span className="font-medium text-foreground tabular-nums">{asset.onboarded}</span>
-        </span>
-      </div>
 
       <div className="grid gap-3 lg:grid-cols-2 xl:grid-cols-[minmax(0,1.3fr)_minmax(0,1fr)_minmax(0,1fr)]">
         {/* ---------- Identity and where it sits ---------- */}
@@ -113,6 +93,9 @@ function AssetDetail({ asset, onBack }: { asset: AssetRecord; onBack: () => void
 
           <DetailPanel title="QR Code Label Preview">
             <QrLabelPreview asset={asset} />
+            <p className="mt-2 text-sm text-muted-foreground">
+              Onboarded <span className="font-medium tabular-nums text-foreground">{asset.onboarded}</span>
+            </p>
           </DetailPanel>
         </div>
 

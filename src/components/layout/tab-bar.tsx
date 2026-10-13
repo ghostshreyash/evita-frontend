@@ -36,13 +36,13 @@ type Tab = { path: string; title: string; icon: LucideIcon; badge?: "work" | "in
 const left: Tab[] = [
   { path: "/", title: "Home", icon: LayoutDashboard },
   { path: "/my-tasks", title: "Tasks", icon: ClipboardList, badge: "work" },
-  { path: "/inspections", title: "Inspect", icon: ClipboardCheck, badge: "inspection" },
+  { path: "/inspections", title: "Inspection", icon: ClipboardCheck, badge: "inspection" },
 ]
 
 const right: Tab[] = [
   { path: "/assets", title: "Assets", icon: HardDrive },
   { path: "/reports", title: "Reports", icon: FileText },
-  { path: "/contact", title: "Contact", icon: Headset },
+  { path: "/contact", title: "Help", icon: Headset },
 ]
 
 const under = (current: string, path: string) =>
@@ -52,7 +52,11 @@ export function TabBar() {
   const { pathname } = useLocation()
   // Work still needing the engineer's hands, counted for Tasks and for Inspect
   const waiting = useMyJobs().filter((j) => actionFor(j) !== "view")
-  const counts = { work: waiting.length, inspection: waiting.filter((j) => j.kind === "inspection").length }
+  // Each badge counts the screen it opens: Tasks is the maintenance book now
+  const counts = {
+    work: waiting.filter((j) => j.kind === "maintenance").length,
+    inspection: waiting.filter((j) => j.kind === "inspection").length,
+  }
 
   return (
     <nav

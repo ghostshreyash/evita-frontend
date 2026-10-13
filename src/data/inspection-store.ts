@@ -106,7 +106,7 @@ export function addInspectionForAsset(
       area: asset.area,
       assetTag: asset.id,
       assetCategory: asset.category,
-      createdBy: `${by} (on site)`,
+      createdBy: `${by} (ELPREMAR)`,
       execution: { performedBy: by, startedAt: stampNow(), remarks: "" },
       measurements: [],
       observations: [],
@@ -118,6 +118,12 @@ export function addInspectionForAsset(
   }
   emit()
   return id
+}
+
+/** The reports have been produced; the inspection is finished */
+export function markReportGenerated(id: string) {
+  details = { ...details, [id]: { ...details[id], reportedAt: stampNow() } }
+  emit()
 }
 
 export function saveInspectionDraft(id: string, patch: Partial<InspectionDetail>) {

@@ -34,6 +34,9 @@ export function StepTechnical({ form }: { form: UseFormReturn<AssetFormValues> }
   const values = form.watch()
   const specs = parametersFor(values.category)
   const answers = values.parameters ?? {}
+  // Criticality is held back so the installation environment can stand in front of it
+  const criticality = specs.find((p) => p.key === "criticality")
+  const ratings = specs.filter((p) => p !== criticality)
 
   const set = (key: string, value: string) =>
     form.setValue("parameters", { ...answers, [key]: value }, { shouldDirty: true })
@@ -49,14 +52,13 @@ export function StepTechnical({ form }: { form: UseFormReturn<AssetFormValues> }
           The parameters below are the ones a {values.category || "asset"} is registered with.
         </p>
         <div className="grid gap-x-3 gap-y-2 sm:grid-cols-2 xl:grid-cols-3">
-          {specs.map((spec) => (
+          {ratings.map((spec) => (
             <ParamField key={spec.key} spec={spec} answers={answers} onChange={set} />
           ))}
-        </div>
 
-        {/* Not a rating, but asked for here because it is about the asset and
-            decides how often it is cleaned */}
-        <div className="mt-4 border-t pt-4">
+          {/* Not a rating, but asked for here because it is about the asset and
+              decides how often it is cleaned. It stands ahead of criticality, which
+              closes the step as the one question every asset type is asked. */}
           <SelectField
             control={form.control}
             name="environment"
@@ -69,8 +71,9 @@ export function StepTechnical({ form }: { form: UseFormReturn<AssetFormValues> }
                 ? `${environmentNote[values.environment as (typeof installEnvironments)[number]]} \u2014 cleaned every ${cleaningIntervalMonths(values.category, values.environment)} months`
                 : "Decides how often the asset is scheduled for cleaning"
             }
-            className="max-w-md"
           />
+
+          {criticality ? <ParamField spec={criticality} answers={answers} onChange={set} /> : null}
         </div>
       </StepCard>
 

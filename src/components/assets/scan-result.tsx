@@ -116,18 +116,18 @@ function AssetBrief({ asset }: { asset: AssetRecord }) {
         </p>
       </div>
 
+      {/* The band and the score are one reading, so they are one badge */}
       <div className="flex shrink-0 flex-col items-end gap-1.5">
         <Badge
           variant={health ? healthStatus[health.tone].badge : "neutral"}
           className="h-auto gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold"
         >
           <span aria-hidden className="size-1.5 rounded-full bg-current" />
-          {health ? health.label : "Onboarded"}
+          {health ? `${health.label} · ${asset.health}/100` : "Onboarded"}
         </Badge>
         <span className={cn("rounded-md px-2 py-0.5 text-xs font-semibold", criticalityTone[asset.criticality])}>
-          {asset.criticality}
+          {asset.criticality} criticality
         </span>
-        {health ? <span className="text-sm font-bold tabular-nums">{asset.health}/100</span> : null}
       </div>
     </div>
   )

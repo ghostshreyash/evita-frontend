@@ -1,184 +1,121 @@
-import { useState } from "react"
 import { NavLink, useNavigate } from "react-router"
-import { Bell, CloudCheck, CloudOff, LogOut, Menu, MapPin } from "lucide-react"
+import { Bell, CloudCheck, CloudOff, CloudUpload, LogOut, ShieldCheck } from "lucide-react"
 import { cn } from "cn"
 
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
-import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet"
-import { OlivineEmblem, OlivineLogo } from "@/components/layout/olivine-logo"
-import { navigation } from "@/config/navigation"
+import { OlivineEmblem } from "@/components/layout/olivine-logo"
 import { useOnline } from "@/hooks/use-media"
 import { useAuth } from "@/lib/auth/context"
-import { useCurrentElpremar } from "@/lib/me"
+import { useInspectionDetails } from "@/data/inspection-store"
 import { useNotifications } from "@/lib/notifications"
 import { openPanel } from "@/lib/ui-store"
-import { actionFor, useMyJobs } from "@/lib/work"
 
 /**
- * EVITA's top bar, as the tablet design draws it: the menu, the Olivine
- * emblem with the EVITA FIELD wordmark, the posting the engineer is working
- * at, and their own avatar.
+ * EVITA's top bar: the Olivine emblem with the EVITA FIELD wordmark, whether
+ * what was recorded has reached OCC, notifications, and their own avatar.
  *
  * Light rather than the navy of the desk consoles — the field app is used at
  * arm's length in daylight, and a white bar keeps the contrast with the cards
- * below it. The sections live on the bottom tab bar; the menu here carries the
- * same list for a thumb that is already at the top of the screen, plus who is
- * signed in and the way out.
+ * below it.
+ *
+ * The safety reminder rides here too, so it is on screen on every page rather
+ * than only at the top of the home screen.
+ *
+ * No menu and no drawer. Every section is on the bottom tab bar, within reach
+ * of the thumb already holding the tablet; a second copy of the same list
+ * behind a hamburger was one navigation too many.
  */
 export function AppBar() {
-  const [menu, setMenu] = useState(false)
-  const me = useCurrentElpremar()
   const online = useOnline()
+  const details = useInspectionDetails()
   const { unread } = useNotifications()
   const { user, signOut } = useAuth()
   const navigate = useNavigate()
 
+  const waiting = Object.values(details).filter((d) => d.sync?.state === "pending").length
+  const sync = !online
+    ? { label: "Offline", icon: CloudOff, tint: "bg-muted text-muted-foreground ring-foreground/10" }
+    : waiting
+      ? { label: `Not synced (${waiting})`, icon: CloudUpload, tint: "bg-attention-soft text-attention ring-attention/30" }
+      : { label: "Synced", icon: CloudCheck, tint: "bg-healthy-soft text-healthy ring-healthy/30" }
+
   return (
-    <>
-      <header className="sticky top-0 z-30 flex h-16 shrink-0 items-center gap-2 border-b bg-card px-2.5 sm:px-3">
-        <button
-          type="button"
-          aria-label="Open menu"
-          onClick={() => setMenu(true)}
-          className="flex size-11 shrink-0 items-center justify-center rounded-xl text-foreground/70 hover:bg-muted"
-        >
-          <Menu className="size-6" />
-        </button>
-
-        <NavLink to="/" className="flex min-w-0 items-center gap-2">
-          <OlivineEmblem className="size-9 max-sm:hidden" />
-          <span className="text-xl leading-none font-black tracking-[-0.03em] text-brand-navy dark:text-foreground">
-            EVITA<sup className="ml-0.5 align-super text-[0.55rem] font-bold text-muted-foreground">™</sup>
-          </span>
-          <span className="rounded bg-primary px-1.5 py-0.5 text-[0.65rem] font-bold tracking-wide text-primary-foreground">
-            FIELD
-          </span>
-        </NavLink>
-
-        {/* The posting, not a chooser: EVITA works one plant at a time */}
-        <span className="ml-auto flex h-10 min-w-0 items-center gap-1.5 rounded-full bg-muted px-3 text-sm font-medium">
-          <MapPin className="size-4 shrink-0 text-primary" />
-          <span className="truncate max-sm:max-w-24">{me.plant}</span>
+    <header className="sticky top-0 z-30 flex h-16 shrink-0 items-center gap-2 border-b bg-card px-2.5 sm:px-3">
+      <NavLink to="/" className="flex min-w-0 items-center gap-2">
+        <OlivineEmblem className="size-9" />
+        <span className="text-xl leading-none font-black tracking-[-0.03em] text-brand-navy dark:text-foreground">
+          EVITA<sup className="ml-0.5 align-super text-[0.55rem] font-bold text-muted-foreground">™</sup>
         </span>
+        <span className="rounded bg-primary px-1.5 py-0.5 text-[0.65rem] font-bold tracking-wide text-primary-foreground">
+          FIELD
+        </span>
+      </NavLink>
 
-        <button
-          type="button"
-          aria-label={unread ? `Notifications, ${unread} unread` : "Notifications"}
-          onClick={() => openPanel({ kind: "notifications" })}
-          className="relative flex size-11 shrink-0 items-center justify-center rounded-full text-foreground/70 hover:bg-muted"
-        >
-          <Bell className="size-5" />
-          {unread ? (
-            <span className="absolute top-1.5 right-1.5 flex min-w-4 items-center justify-center rounded-full bg-critical px-1 text-[0.65rem] leading-4 font-bold text-critical-foreground">
-              {unread > 9 ? "9+" : unread}
-            </span>
-          ) : null}
-        </button>
+      {/*
+        * Whether what was recorded has reached OCC. On a plant floor the signal
+        * comes and goes, and the one thing the engineer needs to know at a
+        * glance is whether their work is still only on this tablet.
+        */}
+      <span
+        className={cn(
+          "ml-auto flex h-10 min-w-0 items-center gap-1.5 rounded-full px-3 text-sm font-semibold ring-1",
+          sync.tint
+        )}
+      >
+        <sync.icon className="size-4 shrink-0" />
+        <span className="truncate">{sync.label}</span>
+      </span>
 
-        <NavLink to="/more" aria-label="Profile and more" className="relative shrink-0">
-          <Avatar className="size-10">
-            <AvatarFallback className="bg-primary text-sm font-bold text-primary-foreground">
-              {user?.initials ?? "EL"}
-            </AvatarFallback>
-          </Avatar>
-          {/* The connection state rides the avatar, so it is on screen at all times */}
-          <span className={cn("absolute right-0 bottom-0 size-3 rounded-full ring-2 ring-card", online ? "bg-healthy" : "bg-offline")} />
-        </NavLink>
-      </header>
+      {/*
+        * The safety reminder. It used to sit on the home page, where it was read
+        * once and then scrolled past; on the bar it is in front of the engineer
+        * on every screen, which is the point of it.
+        */}
+      <button
+        type="button"
+        aria-label="Safety first"
+        onClick={() => openPanel({ kind: "safety" })}
+        className="flex size-11 shrink-0 items-center justify-center rounded-full bg-healthy-soft text-healthy ring-1 ring-healthy/35 hover:bg-healthy-soft/80"
+      >
+        <ShieldCheck className="size-5" />
+      </button>
 
-      <Sheet open={menu} onOpenChange={setMenu}>
-        <SheetContent side="left" className="w-80 gap-0 bg-card p-0">
-          <SheetHeader className="border-b bg-[#f7f4ee] p-3">
-            <SheetTitle className="sr-only">Menu</SheetTitle>
-            <OlivineLogo className="h-11" />
-          </SheetHeader>
+      <button
+        type="button"
+        aria-label={unread ? `Notifications, ${unread} unread` : "Notifications"}
+        onClick={() => openPanel({ kind: "notifications" })}
+        className="relative flex size-11 shrink-0 items-center justify-center rounded-full text-foreground/70 hover:bg-muted"
+      >
+        <Bell className="size-5" />
+        {unread ? (
+          <span className="absolute top-1.5 right-1.5 flex min-w-4 items-center justify-center rounded-full bg-critical px-1 text-[0.65rem] leading-4 font-bold text-critical-foreground">
+            {unread > 9 ? "9+" : unread}
+          </span>
+        ) : null}
+      </button>
 
-          <div className="flex items-center gap-3 border-b p-4">
-            <div className="relative shrink-0">
-              <Avatar className="size-12">
-                <AvatarFallback className="bg-primary text-base font-bold text-primary-foreground">
-                  {user?.initials ?? "EL"}
-                </AvatarFallback>
-              </Avatar>
-              <span className={cn("absolute right-0 bottom-0 size-3.5 rounded-full ring-2 ring-card", online ? "bg-healthy" : "bg-offline")} />
-            </div>
-            <div className="min-w-0 leading-tight">
-              <div className="truncate text-base font-semibold">{me.name}</div>
-              <div className="mt-0.5 truncate text-sm text-muted-foreground">ELPREMAR · {me.id}</div>
-              <div className={cn("mt-1 flex items-center gap-1.5 text-xs font-medium", online ? "text-healthy" : "text-muted-foreground")}>
-                {online ? <CloudCheck className="size-3.5" /> : <CloudOff className="size-3.5" />}
-                {online ? "All synced" : "Offline · saved on tablet"}
-              </div>
-            </div>
-          </div>
+      <Button
+        variant="ghost"
+        size="icon"
+        aria-label="Log out"
+        className="size-11 shrink-0 rounded-full text-foreground/70 hover:bg-muted max-sm:hidden"
+        onClick={() => {
+          // TODO: warn before signing out while records are still waiting to sync
+          signOut()
+          navigate("/login?reason=signed-out", { replace: true })
+        }}
+      >
+        <LogOut className="size-5" />
+      </Button>
 
-          <nav className="flex-1 overflow-y-auto p-2">
-            <ul className="space-y-1">
-              {navigation.map((item) => (
-                <li key={item.path}>
-                  <MenuLink path={item.path} title={item.title} icon={item.icon} onNavigate={() => setMenu(false)} />
-                </li>
-              ))}
-            </ul>
-          </nav>
-
-          <div className="border-t p-3">
-            <Button
-              variant="outline"
-              className="h-12 w-full justify-start text-critical"
-              onClick={() => {
-                // TODO: warn before signing out while records are still waiting to sync
-                setMenu(false)
-                signOut()
-                navigate("/login?reason=signed-out", { replace: true })
-              }}
-            >
-              <LogOut /> Logout
-            </Button>
-            <p className="mt-2 flex items-center justify-between px-1 text-xs text-muted-foreground">
-              <span>EVITA PWA Client</span>
-              <span className="tabular-nums">v1.0.0</span>
-            </p>
-          </div>
-        </SheetContent>
-      </Sheet>
-    </>
-  )
-}
-
-/** One section in the menu, carrying the open-work count against My Tasks */
-function MenuLink({
-  path,
-  title,
-  icon: Icon,
-  onNavigate,
-}: {
-  path: string
-  title: string
-  icon: React.ComponentType<{ className?: string }>
-  onNavigate: () => void
-}) {
-  const open = useMyJobs().filter((j) => actionFor(j) !== "view").length
-  const badge = path === "/my-tasks" ? open : 0
-
-  return (
-    <NavLink
-      to={path}
-      end={path === "/"}
-      onClick={onNavigate}
-      className={({ isActive }) =>
-        cn(
-          "flex min-h-12 items-center gap-3 rounded-xl px-3 text-[0.9375rem] font-medium",
-          isActive ? "bg-primary font-semibold text-primary-foreground" : "hover:bg-muted"
-        )
-      }
-    >
-      <Icon className="size-5" />
-      <span className="flex-1">{title}</span>
-      {badge ? (
-        <span className="min-w-6 rounded-full bg-critical px-1.5 text-center text-xs font-bold text-critical-foreground">{badge}</span>
-      ) : null}
-    </NavLink>
+      <NavLink to="/more" aria-label="Profile and more" className="shrink-0">
+        <Avatar className="size-10">
+          <AvatarFallback className="bg-primary text-sm font-bold text-primary-foreground">
+            {user?.initials ?? "EL"}
+          </AvatarFallback>
+        </Avatar>
+      </NavLink>
+    </header>
   )
 }

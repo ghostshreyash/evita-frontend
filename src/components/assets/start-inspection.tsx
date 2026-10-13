@@ -7,7 +7,7 @@ import type { AssetRecord } from "@/data/asset-data"
 import { addInspectionForAsset } from "@/data/inspection-store"
 import { useCurrentElpremar } from "@/lib/me"
 import { startJob } from "@/lib/start-job"
-import { actionFor, inspectionFor, useMyJobs } from "@/lib/work"
+import { actionFor, inspectionFor, jobPath, useMyJobs } from "@/lib/work"
 
 /**
  * Inspect the asset in front of you.
@@ -39,11 +39,11 @@ export function StartInspection({
     onLeave?.()
     if (assigned) {
       if (!running) startJob(assigned, me.name)
-      navigate(`/my-tasks/${assigned.id}`)
+      navigate(jobPath(assigned))
       return
     }
     // Nothing on the book for it: raise the inspection here and open it
-    navigate(`/my-tasks/${addInspectionForAsset(asset, me.name)}`)
+    navigate(`/inspections/${addInspectionForAsset(asset, me.name)}`)
   }
 
   return (
