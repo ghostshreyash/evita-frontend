@@ -86,6 +86,14 @@ export function inspectionFor(jobs: Job[], asset: { category: string; plant: str
   )
 }
 
+/** The maintenance on the engineer's book for this asset, matched the same way */
+export function maintenanceFor(jobs: Job[], asset: { category: string; plant: string }) {
+  return jobs.find(
+    (j) =>
+      j.kind === "maintenance" && actionFor(j) !== "view" && j.plant === asset.plant && categoryFor(j.asset) === asset.category
+  )
+}
+
 /**
  * Where a job's record lives.
  *

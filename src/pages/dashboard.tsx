@@ -20,7 +20,7 @@ import { cn } from "cn"
 
 import { CategoryIcon } from "@/components/common/category-icon"
 import { WorkRow } from "@/components/evita/work-row"
-import { QuickActions } from "@/components/evita/quick-actions"
+import { HomeHero } from "@/components/evita/home-hero"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { useAssetRows } from "@/data/asset-store"
 import { elpremarProfileFor } from "@/data/elpremar-data"
@@ -147,7 +147,7 @@ export function DashboardPage() {
         </div>
       </section>
 
-      <QuickActions />
+      <HomeHero />
 
       <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_19rem]">
         <div className="min-w-0 space-y-5">
