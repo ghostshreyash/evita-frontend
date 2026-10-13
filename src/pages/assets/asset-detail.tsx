@@ -1,6 +1,6 @@
 import { useMemo } from "react"
 import { Link, useNavigate, useParams } from "react-router"
-import { ArrowLeft, Building2, CircleDashed, ClipboardCheck, FileText, Images, QrCode, Settings, TriangleAlert } from "lucide-react"
+import { ArrowLeft, CalendarDays, Building2, CircleDashed, ClipboardCheck, FileText, Images, QrCode, Settings, TriangleAlert } from "lucide-react"
 import { cn } from "cn"
 
 import { PageHeader } from "@/components/common/page-header"
@@ -90,9 +90,6 @@ function AssetDetail({ asset, onBack }: { asset: AssetRecord; onBack: () => void
 
           <DetailPanel title="QR Code Label Preview">
             <QrLabelPreview asset={asset} />
-            <p className="mt-2 text-sm text-muted-foreground">
-              Onboarded <span className="font-medium tabular-nums text-foreground">{asset.onboarded}</span>
-            </p>
           </DetailPanel>
         </div>
 
@@ -100,6 +97,12 @@ function AssetDetail({ asset, onBack }: { asset: AssetRecord; onBack: () => void
         <div className="space-y-3">
           <DetailPanel icon={QrCode} title="Asset ID & QR Code">
             <AssetQrPanel asset={asset} />
+          </DetailPanel>
+
+          {/* When the asset joined the register - a card of its own, since the
+              printed label carries no date */}
+          <DetailPanel icon={CalendarDays} title="Onboarding">
+            <DetailList rows={[{ label: "Onboarded On", value: asset.onboarded, always: true }]} />
           </DetailPanel>
         </div>
 
