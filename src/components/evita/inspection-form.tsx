@@ -65,7 +65,14 @@ type Setter = (p: Partial<InspectionCapture>) => void
  * locks the record, scores it and queues it for sync.
  */
 export function InspectionForm({ job, detail }: { job: Job; detail: InspectionDetail }) {
-  const category = categoryFor(job.asset)
+  /*
+   * The asset's registered category, not a guess at it from the job's asset
+   * name: which readings the sheet asks for depends on the type, so an
+   * inspection started at a scanned asset must ask for that asset's own
+   * parameters. `categoryFor` is the fallback for an older seeded row that
+   * carries no category of its own.
+   */
+  const category = detail.assetCategory || categoryFor(job.asset)
   const [section, setSection] = useState<Section>("images")
   const [capture, setCapture] = useState<InspectionCapture>(() => detail.capture ?? emptyCapture())
   const [evidence, setEvidence] = useState<EvidenceItem[]>(detail.evidence)
