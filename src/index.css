@@ -326,13 +326,15 @@
    * Both target devices (Lenovo ThinkTab X11, Samsung Galaxy Tab S9 FE) give
    * Chrome a viewport of roughly 1280×800 CSS px in landscape and 800×1280 in
    * portrait, viewed at arm's length. The OCC console shrinks its root to 13–14px
-   * for dense desktop dashboards; EVITA does the opposite and keeps the browser's
-   * 16px, so every rem-based size (text, padding, 44px+ touch targets) stays
-   * readable and hittable. Do not shrink this on small screens.
+   * for dense desktop dashboards; EVITA stays close to the browser's 16px so
+   * every rem-based size (text, padding, 44px+ touch targets) stays readable and
+   * hittable. 15.2px is one 5% step down - the browser at 95% - which buys back
+   * a little of the screen without taking a touch target under 44px. Do not
+   * shrink it further on small screens.
    */
   html {
     @apply font-sans;
-    font-size: 16px;
+    font-size: 15.2px;
     /* Stop Chrome inflating text when the tablet rotates */
     -webkit-text-size-adjust: 100%;
     text-size-adjust: 100%;

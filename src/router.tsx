@@ -1,7 +1,6 @@
 import { createBrowserRouter } from "react-router"
 
 import { AppLayout } from "@/layouts/app-layout"
-import { navigation } from "@/config/navigation"
 import { PublicOnly, RequireAuth } from "@/components/auth/require-auth"
 import { LoginPage } from "@/pages/auth/login"
 import { VerifyOtpPage } from "@/pages/auth/verify-otp"
@@ -18,9 +17,6 @@ import { MyTasksPage } from "@/pages/my-tasks"
 import { MorePage } from "@/pages/more"
 import { TaskPage } from "@/pages/task"
 import { ComingSoonPage } from "@/pages/coming-soon"
-
-/** Sidebar sections with a real screen; the rest render a placeholder */
-const built = new Set(["/", "/assets", "/my-tasks", "/inspections", "/reports", "/contact"])
 
 /*
  * There is no Register screen: ELPREMAR accounts are created by OLIVINE in the
@@ -59,10 +55,6 @@ export const router = createBrowserRouter([
            * the largest data module in the app and is wanted on one screen.
            */
           { path: "contact", lazy: async () => ({ Component: (await import("@/pages/contact")).ContactPage }) },
-          // Remaining sidebar entries show a placeholder until their screens are built
-          ...navigation
-            .filter((item) => !built.has(item.path))
-            .map((item) => ({ path: item.path.slice(1), element: <ComingSoonPage title={item.title} /> })),
           { path: "*", element: <ComingSoonPage title="Page not found" /> },
         ],
       },
