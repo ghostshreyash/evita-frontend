@@ -70,14 +70,9 @@ function AssetDetail({ asset, onBack }: { asset: AssetRecord; onBack: () => void
         description={`${asset.category} · ${asset.area}`}
         breadcrumbs={[{ label: "Assets", to: "/assets" }, { label: asset.id }]}
         actions={
-          <>
-            {/* The asset is the way into an inspection: an ELPREMAR standing at
-                one does not need to have been booked for it */}
-            <StartInspection asset={asset} size="default" className="w-56" />
-            <Button variant="outline" onClick={onBack}>
-              <ArrowLeft /> Back to Assets
-            </Button>
-          </>
+          <Button variant="outline" onClick={onBack}>
+            <ArrowLeft /> Back to Assets
+          </Button>
         }
       />
 
@@ -117,9 +112,6 @@ function AssetDetail({ asset, onBack }: { asset: AssetRecord; onBack: () => void
           {/* Walk up to the asset, open its record, inspect it */}
           <DetailPanel icon={ClipboardCheck} title="Inspect this asset">
             <StartInspection asset={asset} />
-            <p className="mt-3 text-sm text-muted-foreground">
-              Scanning the label on the panel door opens this record and offers the same inspection.
-            </p>
           </DetailPanel>
 
           <DetailPanel icon={Images} title={`Asset Images (${profile.images.length})`}>
