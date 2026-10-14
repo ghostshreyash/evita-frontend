@@ -15,7 +15,7 @@ import { brand } from "@/config/brand"
  */
 export function SystemName({ className }: { className?: string }) {
   return (
-    <p className={cn("text-sm leading-snug font-medium text-balance", className)}>
+    <p className={cn("leading-snug font-medium text-balance", className)}>
       {brand.system.split(" ").map((word, i) => {
         const lead = (brand.systemInitials as readonly string[]).includes(word)
         return (
@@ -180,8 +180,9 @@ export function AuthCard({
             <div className="bg-gradient-to-r from-[#164d9b] via-[#0b3b80] to-[#68a83c] bg-clip-text text-[3.3rem] leading-none font-black tracking-[-0.06em] text-transparent">
               EVITA<sup className="ml-1 align-super text-sm font-bold text-[#164d9b]">™</sup>
             </div>
-            <SystemName className="mx-auto mt-2 max-w-xs text-[#163b72]" />
-            <div className="mt-4 flex items-center gap-3">
+            {/* Tight under the wordmark, where an expansion belongs */}
+            <SystemName className="mt-1 text-[0.7rem] text-[#163b72]" />
+            <div className="mt-3 flex items-center gap-3">
               <span className="h-px flex-1 bg-[#b8cadf]" />
               <span className="text-sm whitespace-nowrap text-[#31578e] italic">{brand.tagline}</span>
               <span className="h-px flex-1 bg-[#b8cadf]" />

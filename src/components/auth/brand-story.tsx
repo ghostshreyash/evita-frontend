@@ -16,7 +16,7 @@ export function BrandStory() {
           EVITA
           <sup className="ml-1 align-super text-base font-semibold text-white/60">™</sup>
         </h2>
-        <SystemName className="mt-1.5 max-w-md text-base text-white" />
+        <SystemName className="mt-1.5 max-w-md text-sm text-white/90" />
         <p className="mt-3 max-w-md text-lg text-white/85">{brand.strapline}</p>
       </Rise>
 
