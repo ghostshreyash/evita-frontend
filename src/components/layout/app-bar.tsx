@@ -5,6 +5,7 @@ import { cn } from "cn"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
 import { OlivineEmblem } from "@/components/layout/olivine-logo"
+import { SystemName } from "@/components/common/system-name"
 import { useOnline } from "@/hooks/use-media"
 import { useAuth } from "@/lib/auth/context"
 import { useInspectionDetails } from "@/data/inspection-store"
@@ -50,12 +51,19 @@ export function AppBar({ onMenu }: { onMenu: () => void }) {
       </button>
 
       <NavLink to="/" className="flex min-w-0 items-center gap-2">
-        <OlivineEmblem className="size-9" />
-        <span className="text-xl leading-none font-black tracking-[-0.03em] text-brand-navy dark:text-foreground">
-          EVITA<sup className="ml-0.5 align-super text-[0.55rem] font-bold text-muted-foreground">™</sup>
-        </span>
-        <span className="rounded bg-primary px-1.5 py-0.5 text-[0.65rem] font-bold tracking-wide text-primary-foreground">
-          FIELD
+        <OlivineEmblem className="size-9 shrink-0" />
+        <span className="min-w-0">
+          <span className="flex items-center gap-2">
+            <span className="text-xl leading-none font-black tracking-[-0.03em] text-brand-navy dark:text-foreground">
+              EVITA<sup className="ml-0.5 align-super text-[0.55rem] font-bold text-muted-foreground">™</sup>
+            </span>
+            <span className="rounded bg-primary px-1.5 py-0.5 text-[0.65rem] font-bold tracking-wide text-primary-foreground">
+              FIELD
+            </span>
+          </span>
+          {/* What the wordmark stands for, under it. Dropped once the bar needs
+              the width for the controls on its right. */}
+          <SystemName className="mt-0.5 text-[0.6rem] text-muted-foreground max-xl:hidden" />
         </span>
       </NavLink>
 
