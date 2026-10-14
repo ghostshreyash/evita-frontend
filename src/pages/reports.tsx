@@ -20,6 +20,9 @@ import { control, PAGE_SIZES } from "@/lib/data-table"
 
 const ANY = "all"
 
+/** How many assets with no cleaning report are lifted to the front of the list */
+const LEAD_UNCLEANED = 3
+
 /**
  * Asset Health Reports.
  *
@@ -31,9 +34,9 @@ const ANY = "all"
  * opening as a PDF.
  *
  * The filters open on the engineer's own enterprise and plant, and an ELPREMAR
- * cannot reach outside their assignment, so there is no site chooser. Assets
- * still waiting on a clean lead, and asset id orders the rest - the order the
- * client asked for, with what is outstanding where it can be seen.
+ * cannot reach outside their assignment, so there is no site chooser. A few
+ * assets still waiting on a clean lead the list; the rest is in asset-id order,
+ * the order the client asked for.
  *
  * Trend Analysis is deliberately absent, on the client's instruction at review.
  */
@@ -64,14 +67,15 @@ export function ReportsPage() {
         (status === ANY || r.contaminationStatus === status || r.hygieneStatus === status)
     )
     /*
-     * Assets still waiting on a clean come first.
+     * A few of the assets still waiting on a clean are lifted to the front.
      *
-     * They are the ones with something outstanding, and in asset-id order alone
-     * they fell past the first page entirely - a register where every card on
-     * screen has all three reports reads as though nothing is owed. Asset id
-     * still orders within each group.
+     * In asset-id order alone none of them reached the first page, and a screen
+     * where every card has all three reports reads as though nothing is owed.
+     * Only a few, though: the register is read in asset-id order, and sorting
+     * all nineteen to the top would bury that order under the exceptions.
      */
-    return [...matched].sort((a, b) => Number(!!a.lastCleaned) - Number(!!b.lastCleaned))
+    const waiting = matched.filter((r) => !r.lastCleaned).slice(0, LEAD_UNCLEANED)
+    return [...waiting, ...matched.filter((r) => !waiting.includes(r))]
   }, [query, department, category, status])
 
   const clear = () => {
