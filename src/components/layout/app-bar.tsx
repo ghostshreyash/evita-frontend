@@ -1,5 +1,5 @@
 import { NavLink, useNavigate } from "react-router"
-import { Bell, CloudCheck, CloudOff, CloudUpload, LogOut, ShieldCheck } from "lucide-react"
+import { Bell, CloudCheck, CloudOff, CloudUpload, LogOut, Menu, QrCode, ShieldCheck } from "lucide-react"
 import { cn } from "cn"
 
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
@@ -22,11 +22,9 @@ import { openPanel } from "@/lib/ui-store"
  * The safety reminder rides here too, so it is on screen on every page rather
  * than only at the top of the home screen.
  *
- * No menu and no drawer. Every section is on the bottom tab bar, within reach
- * of the thumb already holding the tablet; a second copy of the same list
- * behind a hamburger was one navigation too many.
+ * The sections are behind the menu button on the left - see `AppSidebar`.
  */
-export function AppBar() {
+export function AppBar({ onMenu }: { onMenu: () => void }) {
   const online = useOnline()
   const details = useInspectionDetails()
   const { unread } = useNotifications()
@@ -42,6 +40,15 @@ export function AppBar() {
 
   return (
     <header className="sticky top-0 z-30 flex h-16 shrink-0 items-center gap-2 border-b bg-card px-2.5 sm:px-3">
+      <button
+        type="button"
+        aria-label="Open the sections menu"
+        onClick={onMenu}
+        className="flex size-11 shrink-0 items-center justify-center rounded-full text-foreground/70 hover:bg-muted"
+      >
+        <Menu className="size-6" />
+      </button>
+
       <NavLink to="/" className="flex min-w-0 items-center gap-2">
         <OlivineEmblem className="size-9" />
         <span className="text-xl leading-none font-black tracking-[-0.03em] text-brand-navy dark:text-foreground">
@@ -66,6 +73,17 @@ export function AppBar() {
         <sync.icon className="size-4 shrink-0" />
         <span className="truncate">{sync.label}</span>
       </span>
+
+      {/* Scanning starts from anywhere: the engineer walks up to a panel and
+          points the tablet at its label */}
+      <button
+        type="button"
+        aria-label="Scan an asset QR code"
+        onClick={() => openPanel({ kind: "scan" })}
+        className="flex size-11 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-md shadow-primary/30 transition-transform active:scale-95"
+      >
+        <QrCode className="size-5" />
+      </button>
 
       {/*
         * The safety reminder. It used to sit on the home page, where it was read
