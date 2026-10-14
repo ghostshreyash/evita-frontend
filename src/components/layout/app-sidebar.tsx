@@ -56,7 +56,7 @@ export function AppSidebar({ open, onOpenChange }: { open: boolean; onOpenChange
       <SheetContent
         side="left"
         showCloseButton={false}
-        className="flex w-72 flex-col gap-0 border-sidebar-border bg-sidebar p-0 text-sidebar-foreground"
+        className="flex w-60 flex-col gap-0 border-sidebar-border bg-sidebar p-0 text-sidebar-foreground"
       >
         <SheetTitle className="sr-only">Sections</SheetTitle>
         <SheetDescription className="sr-only">Move between the screens of the field app.</SheetDescription>
