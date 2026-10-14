@@ -85,7 +85,8 @@ export function AssetQrPanel({ asset }: { asset: AssetRecord }) {
       toast.error("The QR code is still rendering. Try again in a moment.")
       return
     }
-    const sheet = window.open("", "_blank", "noopener,width=460,height=620")
+    /* No `noopener`: with it window.open returns null and the sheet comes up blank */
+    const sheet = window.open("", "_blank", "width=460,height=620")
     if (!sheet) {
       toast.error("Allow pop-ups for this site to print the label.")
       return
