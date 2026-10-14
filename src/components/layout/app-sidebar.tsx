@@ -1,10 +1,9 @@
 import { NavLink, useLocation } from "react-router"
-import { ClipboardCheck, ClipboardList, FileText, HardDrive, Headset, LayoutDashboard, Leaf, Menu, QrCode, type LucideIcon } from "lucide-react"
+import { ClipboardCheck, ClipboardList, FileText, HardDrive, Headset, LayoutDashboard, Leaf, Menu, type LucideIcon } from "lucide-react"
 import { cn } from "cn"
 
 import { Sheet, SheetContent, SheetDescription, SheetTitle } from "@/components/ui/sheet"
 import { OlivineLogo } from "@/components/layout/olivine-logo"
-import { openPanel } from "@/lib/ui-store"
 import { actionFor, useMyJobs } from "@/lib/work"
 
 /** One section of the app, and the badge it carries */
@@ -42,7 +41,10 @@ function useCounts() {
  *
  * Narrow enough to cost the page almost nothing, which is why it can stay. The
  * names are on each icon as its label, so a hover and a screen reader both get
- * them; the menu button on the bar opens the full list over the page.
+ * them; the button at its head opens the full list over the page.
+ *
+ * Sections only. Scanning is an action rather than a place, and it is on the
+ * home screen's quick actions where the other things an ELPREMAR starts live.
  *
  * Hidden on a phone, where sixty-four pixels is a column the page needs.
  */
@@ -71,18 +73,6 @@ export function AppRail({ onMenu }: { onMenu: () => void }) {
               <RailLink item={item} active={under(pathname, item.path)} badge={item.badge ? counts[item.badge] : 0} />
             </li>
           ))}
-
-          <li className="mt-1 w-full border-t border-sidebar-border pt-3">
-            <button
-              type="button"
-              title="Scan Asset QR"
-              aria-label="Scan an asset QR code"
-              onClick={() => openPanel({ kind: "scan" })}
-              className="mx-auto flex size-11 items-center justify-center rounded-xl hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
-            >
-              <QrCode className="size-5" />
-            </button>
-          </li>
         </ul>
       </nav>
     </aside>
@@ -168,18 +158,6 @@ export function AppSidebar({ open, onOpenChange }: { open: boolean; onOpenChange
               )
             })}
           </ul>
-
-          <button
-            type="button"
-            onClick={() => {
-              close()
-              openPanel({ kind: "scan" })
-            }}
-            className="mt-3 flex min-h-11 w-full items-center gap-2.5 rounded-lg border border-sidebar-border px-2.5 text-sm font-medium hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
-          >
-            <QrCode className="size-[18px] shrink-0" />
-            Scan Asset QR
-          </button>
         </nav>
 
         {/* Mountain artwork from the mockups, fading into the navy sidebar */}

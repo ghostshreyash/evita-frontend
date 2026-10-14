@@ -1,5 +1,5 @@
 import { NavLink, useNavigate } from "react-router"
-import { Bell, CloudCheck, CloudOff, CloudUpload, LogOut, Menu, QrCode, ShieldCheck } from "lucide-react"
+import { Bell, CloudCheck, CloudOff, CloudUpload, LogOut, Menu, ShieldCheck } from "lucide-react"
 import { cn } from "cn"
 
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
@@ -73,17 +73,6 @@ export function AppBar({ onMenu }: { onMenu: () => void }) {
         <sync.icon className="size-4 shrink-0" />
         <span className="truncate">{sync.label}</span>
       </span>
-
-      {/* Scanning starts from anywhere: the engineer walks up to a panel and
-          points the tablet at its label */}
-      <button
-        type="button"
-        aria-label="Scan an asset QR code"
-        onClick={() => openPanel({ kind: "scan" })}
-        className="flex size-11 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-md shadow-primary/30 transition-transform active:scale-95"
-      >
-        <QrCode className="size-5" />
-      </button>
 
       {/*
         * The safety reminder. It used to sit on the home page, where it was read
