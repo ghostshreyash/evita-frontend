@@ -19,7 +19,7 @@ import type { AssetRecord } from "@/data/asset-data"
 
 const EMBLEM = "/brand/olivine-emblem.png"
 
-export function AssetQrCode({ asset, size = 200, className }: { asset: AssetRecord; size?: number; className?: string }) {
+function AssetQrCode({ asset, size = 200, className }: { asset: AssetRecord; size?: number; className?: string }) {
   return (
     <QRCodeCanvas
       value={asset.id}

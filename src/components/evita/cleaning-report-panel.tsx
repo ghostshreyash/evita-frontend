@@ -26,9 +26,9 @@ const toneTint = {
  * What the clean changed, as the customer is shown it.
  *
  * The client's sheet draws this as two columns - the panel as found against the
- * panel after INSTA CLEAN, the same parameters read down both. The column it
- * sits in is narrow, so here the two sides stack and each parameter carries its
- * before and its after on one line; printed, it goes out as the two-column
+ * panel after INSTA CLEAN, the same parameters read down both. Here each
+ * parameter carries its before and its after on one line, which reads the same
+ * way and survives a narrow screen; printed, it goes out as the two-column
  * sheet through the same window the inspection reports use.
  *
  * Only on finished work: there is nothing to compare until the job is done.
@@ -65,9 +65,9 @@ export function CleaningReportPanel({ job, detail }: { job: Job; detail: Mainten
       </div>
 
       {/* Each parameter on one line, found on the left and left-behind on the right */}
-      <dl className="mt-4 divide-y border-t">
+      <dl className="mt-4 grid border-t sm:grid-cols-2 sm:gap-x-6">
         {comparison.rows.map((row) => (
-          <div key={row.label} className="py-2">
+          <div key={row.label} className="border-b py-2">
             <dt className="text-sm font-semibold">{row.label}</dt>
             <dd className="mt-0.5 flex flex-wrap items-center gap-1.5 text-sm">
               <span className="text-critical line-through decoration-critical/40">{row.before}</span>
@@ -88,7 +88,7 @@ export function CleaningReportPanel({ job, detail }: { job: Job; detail: Mainten
 
       <Button
         variant="outline"
-        className="mt-4 h-12 w-full bg-card"
+        className="mt-4 h-12 w-full bg-card sm:w-auto"
         onClick={() => printReport(cleaningReport(comparison), header)}
       >
         <Printer /> Save as PDF

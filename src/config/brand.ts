@@ -8,8 +8,14 @@ import { BarChart3, ClipboardCheck, Leaf, ShieldCheck, Wrench, type LucideIcon }
  * keep the wording in step with that file when either changes.
  */
 export const brand = {
-  /** Wordmark expansion shown on the sign-in card and in the top bar */
-  system: "Enterprise Electrical Maintenance & Reliability Management System",
+  /** What the wordmark stands for, shown under it on the sign-in screen */
+  system: "Electrical Visual and Input Based Technical Assessment",
+  /**
+   * The words EVITA takes its letters from. "and" and "Based" are carried by
+   * the phrase but not by the name, so they are not marked - see `SystemName`,
+   * which reads this to emphasise the initials rather than hard-coding them.
+   */
+  systemInitials: ["Electrical", "Visual", "Input", "Technical", "Assessment"],
   tagline: "Field Insights. Reliable Assets.",
   /** Line under the big wordmark on the photo panel */
   strapline: "Electrical Asset Management for a Safer Tomorrow",

@@ -1,28 +1,40 @@
+import { useState } from "react"
 import { Outlet } from "react-router"
 
 import { AppBar } from "@/components/layout/app-bar"
-import { TabBar } from "@/components/layout/tab-bar"
+import { AppRail, AppSidebar } from "@/components/layout/app-sidebar"
 import { Panels } from "@/components/evita/panels"
+import { HelpBot } from "@/components/evita/help-bot"
 
 /**
- * App shell for the tablet: a light bar at the top and the sections along the
- * bottom, where a thumb already rests.
+ * App shell for the tablet: a narrow rail of section icons down the left, a
+ * light bar across the top of what is left, and the page under it.
  *
- * No docked sidebar. EVITA is held, not sat at, so the page gets the full
- * width at every size and the same list of sections lives both on the bottom
- * bar and behind the menu button.
+ * The rail is permanent but costs the page sixty-four pixels; the menu button
+ * opens the same sections with their names, over the page rather than widening
+ * the rail in place - EVITA is held in two hands, and reflowing what is being
+ * read to make room for a navigation list is the wrong trade.
  *
- * The bottom bar is fixed, so the page reserves room for it rather than
- * letting the last card disappear behind it.
+ * The help assistant is docked here rather than on a screen, so the same
+ * conversation is in reach from every one of them.
  */
 export function AppLayout() {
+  const [menu, setMenu] = useState(false)
+
   return (
-    <div className="flex min-h-svh flex-col bg-background">
-      <AppBar />
-      <main className="mx-auto w-full max-w-[112rem] flex-1 px-3 pt-4 pb-28 sm:px-4">
-        <Outlet />
-      </main>
-      <TabBar />
+    <div className="flex min-h-svh bg-background">
+      {/* Always there, icon-wide; the menu button opens the same list named */}
+      <AppRail onMenu={() => setMenu(true)} />
+      <AppSidebar open={menu} onOpenChange={setMenu} />
+
+      <div className="flex min-w-0 flex-1 flex-col">
+        <AppBar onMenu={() => setMenu(true)} />
+        <main className="mx-auto w-full max-w-[112rem] flex-1 px-3 pt-4 pb-10 sm:px-4">
+          <Outlet />
+        </main>
+      </div>
+
+      <HelpBot />
       <Panels />
     </div>
   )

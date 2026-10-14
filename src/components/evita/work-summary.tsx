@@ -1,4 +1,4 @@
-import { Activity, Camera, ClipboardList, Droplets, Eye, Flame, Gauge, Timer, Wrench } from "lucide-react"
+import { Camera, ClipboardList, Eye, Flame, Gauge, Timer, Wrench } from "lucide-react"
 import { cn } from "cn"
 
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
@@ -7,6 +7,7 @@ import { EvidenceStrip, TaskPanel } from "@/components/evita/field-kit"
 import { TimeLog } from "@/components/evita/time-log"
 import type { InspectionDetail } from "@/data/inspection-detail"
 import type { MaintenanceDetail } from "@/data/maintenance-detail"
+import { profileOf, useAssetRows } from "@/data/asset-store"
 import { resultLabel, resultPill } from "@/data/test-template"
 import { td, th } from "@/lib/data-table"
 import { bandLook } from "@/lib/health"
@@ -27,11 +28,48 @@ const severityTone = {
 const empty = (text: string) => <p className="py-1 text-sm text-muted-foreground">{text}</p>
 
 /**
+ * Which onboarded parameter a reading is to be read against.
+ *
+ * Matched by name rather than by key: the onboarding sheet and the inspection
+ * sheet are two separate transcriptions, and they do not share identifiers. The
+ * match is deliberately exact - "Neutral-Earth Voltage" must not pick up Rated
+ * Voltage, which is a different thing measured at a different place.
+ *
+ * Only the readings the onboarding sheet has a counterpart for appear here.
+ * Frequency is one it does not ask for, so that row carries no onboarded value;
+ * nothing is invented to fill the column.
+ */
+const ratedNames: Record<string, string[]> = {
+  voltage: ["rated voltage"],
+  "load current per phase": ["rated current", "busbar rating", "incomer rating"],
+  "load current": ["rated current", "busbar rating", "incomer rating"],
+  "neutral current": ["rated current", "busbar rating", "incomer rating"],
+}
+
+/** The value this asset was onboarded with for a measured parameter, if it carries one */
+function onboardedValue(parameter: string, rated: { label: string; value: string; unit?: string }[]) {
+  const names = ratedNames[parameter.toLowerCase()]
+  if (!names) return undefined
+  const match = rated.find((r) => names.includes(r.label.toLowerCase()) && r.value.trim())
+  return match ? [match.value, match.unit].filter(Boolean).join(" ") : undefined
+}
+
+/**
  * A submitted inspection, laid out like the Inspection Completed screen
- * (mockup p.22): the inspection details, the Test Results table with each
- * value's standard limit and result, what was found, and the images.
+ * (mockup p.22): the inspection details, the Test Results table, what was
+ * found, and the images.
+ *
+ * Each reading is shown three ways across: what the asset was onboarded with,
+ * what was measured on the day, and the standard it is judged against. The
+ * onboarded figure is the one the customer signed the asset up with, so a
+ * reading drifting away from it is the thing worth seeing at a glance.
  */
 export function InspectionRecord({ detail, activity }: { detail: InspectionDetail; activity?: string }) {
+  const register = useAssetRows()
+  /* What the asset was registered with, so a reading can be read against it */
+  const asset = register.find((a) => a.id === detail.assetTag)
+  const rated = asset ? profileOf(asset).parameters : []
+
   const images = detail.evidence.filter((e) => e.kind !== "document")
   const { execution, result } = detail
   const [date, start] = (execution?.startedAt ?? "").split(" ")
@@ -64,6 +102,7 @@ export function InspectionRecord({ detail, activity }: { detail: InspectionDetai
                 <TableRow className="bg-muted/60 hover:bg-muted/60">
                   <TableHead className={cn(th, "w-10")}>#</TableHead>
                   <TableHead className={th}>Test Parameter</TableHead>
+                  <TableHead className={th}>Onboarded Value</TableHead>
                   <TableHead className={th}>Measured Value</TableHead>
                   <TableHead className={cn(th, "max-md:hidden")}>Standard Limit</TableHead>
                   <TableHead className={cn(th, "max-lg:hidden")}>Captured By</TableHead>
@@ -75,6 +114,9 @@ export function InspectionRecord({ detail, activity }: { detail: InspectionDetai
                   <TableRow key={i}>
                     <TableCell className={cn(td, "text-muted-foreground tabular-nums")}>{i + 1}</TableCell>
                     <TableCell className={cn(td, "font-medium whitespace-normal")}>{m.parameter}</TableCell>
+                    <TableCell className={cn(td, "whitespace-nowrap tabular-nums text-muted-foreground")}>
+                      {onboardedValue(m.parameter, rated) ?? "—"}
+                    </TableCell>
                     <TableCell className={cn(td, "tabular-nums font-semibold whitespace-nowrap")}>
                       {m.value} {m.unit !== "—" && m.unit !== "Other" ? m.unit : ""}
                     </TableCell>
@@ -144,10 +186,6 @@ export function MaintenanceRecord({ detail }: { detail: MaintenanceDetail }) {
           )}
         </TaskPanel>
 
-        <TaskPanel icon={Droplets} title="INSTA Consumables">
-          {detail.products.length ? <DetailList rows={detail.products.map((p) => ({ label: p.name, value: `${p.quantity} ${p.unit}` }))} /> : empty("None booked.")}
-        </TaskPanel>
-
         <TaskPanel icon={Flame} title="Fire Prevention System">
           {detail.firePrevention ? (
             <DetailList
@@ -161,18 +199,6 @@ export function MaintenanceRecord({ detail }: { detail: MaintenanceDetail }) {
           )}
         </TaskPanel>
 
-        <TaskPanel icon={Activity} title="PD Mitigation">
-          {detail.pdMitigation ? (
-            <DetailList
-              rows={[
-                { label: "Method", value: detail.pdMitigation.method, always: true },
-                { label: "Remarks", value: detail.pdMitigation.remarks },
-              ]}
-            />
-          ) : (
-            empty("Not performed on this job.")
-          )}
-        </TaskPanel>
       </div>
 
       {detail.timeLog?.length ? (

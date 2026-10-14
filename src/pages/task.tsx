@@ -17,6 +17,7 @@ import {
   Play,
   QrCode,
   Rocket,
+  RotateCcw,
   ShieldCheck,
   SlidersHorizontal,
   TriangleAlert,
@@ -24,6 +25,7 @@ import {
   type LucideIcon,
 } from "lucide-react"
 import { cn } from "cn"
+import { toast } from "sonner"
 
 import { Timeline } from "@/components/common/detail-view"
 import { CategoryIcon } from "@/components/common/category-icon"
@@ -36,7 +38,7 @@ import { MaintenanceForm } from "@/components/evita/maintenance-form"
 import { InspectionRecord, MaintenanceRecord } from "@/components/evita/work-summary"
 import { Button } from "@/components/ui/button"
 import { inspectionTimeline } from "@/data/inspection-detail"
-import { findInspection, useInspectionDetails } from "@/data/inspection-store"
+import { findInspection, reinspect, useInspectionDetails } from "@/data/inspection-store"
 import { maintenanceTimeline } from "@/data/maintenance-detail"
 import { findMaintenance, useMaintenanceDetails } from "@/data/maintenance-store"
 import { criticalityTone, priorityTone, slotLabel } from "@/data/occ-tables"
@@ -81,7 +83,7 @@ function Group({ title, last, children }: { title: string; last?: boolean; child
  *
  * Inspection: Open → Start → record images and evidence → Submit (Completed).
  * Maintenance: Open → Start → log the work against the clock → Submit for
- * Approval (Completed) → OCC approves (Approved) or sends it back (Open again).
+ * Approval (Completed) → OCC approves, or sends it back (Open again).
  */
 export function TaskPage() {
   const { id } = useParams()
@@ -141,6 +143,25 @@ export function TaskPage() {
           <Button variant="outline" className="h-12 px-4" onClick={() => navigate(-1)}>
             <ArrowLeft /> Back
           </Button>
+          {/*
+            * Something recorded wrongly is put right by taking the inspection
+            * again, not by rewriting what was submitted - see `reinspect`. Only
+            * offered once the record is in and not already replaced.
+            */}
+          {inspection && action === "view" && !inspection.supersededBy ? (
+            <Button
+              variant="outline"
+              className="h-12 px-4 text-primary"
+              onClick={() => {
+                const fresh = reinspect(job.id, me.name)
+                if (!fresh) return
+                toast.success(`${fresh} opened`, { description: `Carried over from ${job.id}` })
+                navigate(`/inspections/${fresh}`)
+              }}
+            >
+              <RotateCcw /> Re-inspect
+            </Button>
+          ) : null}
           <Button variant="outline" className="h-12 px-4 text-primary" onClick={() => openPanel({ kind: "sop", activity: job.activity })}>
             <BookOpen /> SOP Guide
           </Button>
@@ -182,6 +203,29 @@ export function TaskPage() {
           <JobStatusBadge job={job} className="px-3 py-1.5 text-sm" />
         </div>
       </section>
+
+      {/* Where this record sits against the one it corrects, or the one that corrected it */}
+      {inspection?.supersedes || inspection?.supersededBy ? (
+        <section className="flex flex-wrap items-center gap-2 rounded-2xl bg-info-soft px-5 py-3 text-sm shadow-xs ring-1 ring-primary/20">
+          <RotateCcw className="size-4 shrink-0 text-primary" />
+          {inspection.supersededBy ? (
+            <span>
+              Replaced by a later inspection. This record is kept as history.{" "}
+              <Link to={`/inspections/${inspection.supersededBy}`} className="font-semibold text-primary hover:underline">
+                {inspection.supersededBy}
+              </Link>
+            </span>
+          ) : (
+            <span>
+              Re-inspection, opened with what{" "}
+              <Link to={`/inspections/${inspection.supersedes}`} className="font-semibold text-primary hover:underline">
+                {inspection.supersedes}
+              </Link>{" "}
+              recorded. Change what was wrong and submit.
+            </span>
+          )}
+        </section>
+      ) : null}
 
       {/* ---------- What EMMS-E assigned, and where the asset is ---------- */}
       <TaskPanel icon={SlidersHorizontal} title={`${noun} Details`}>
@@ -237,12 +281,14 @@ export function TaskPage() {
         <MaintenanceForm key={job.id} job={job} detail={maintenance} />
       ) : (
         <div className="space-y-5">
-          <OutcomeBanner job={job} assetTag={detail?.assetTag} />
+          <OutcomeBanner job={job} />
           <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_19rem]">
             <div className="min-w-0 space-y-5">
               {inspection ? <InspectionRecord detail={inspection} activity={job.activity} /> : maintenance ? <MaintenanceRecord detail={maintenance} /> : null}
               {/* The two reports the inspection produces, and the clean they ask for */}
               {inspection ? <InspectionReports job={job} detail={inspection} /> : null}
+              {/* What the clean changed, on every job that has been carried out */}
+              {maintenance?.execution?.endedAt ? <CleaningReportPanel job={job} detail={maintenance} /> : null}
             </div>
             <aside className="space-y-5">
               {inspection?.result ? (
@@ -259,8 +305,6 @@ export function TaskPage() {
                   <Timeline steps={timeline} />
                 </TaskPanel>
               ) : null}
-              {/* What the clean changed, on every job that has been carried out */}
-              {maintenance?.execution?.endedAt ? <CleaningReportPanel job={job} detail={maintenance} /> : null}
             </aside>
           </div>
         </div>
@@ -331,31 +375,21 @@ function StartSection({ job, onStart }: { job: Job; onStart: () => void }) {
 }
 
 /** Where finished work stands, as the design's green completion banner */
-function OutcomeBanner({ job, assetTag }: { job: Job; assetTag?: string }) {
+function OutcomeBanner({ job }: { job: Job }) {
   const note =
     job.kind === "inspection"
       ? { title: "Inspection Completed", body: "The readings and evidence are saved against the asset." }
-      : job.field === "approved"
-        ? { title: "Approved by OCC", body: "The asset's health report is updated from this work." }
-        : job.status === "open"
-          ? { title: "Submitted for Approval", body: "OCC will review the evidence and approve the work or send it back with remarks." }
-          : { title: "Cleaning Completed", body: "Closed out and recorded against the asset." }
+      : job.status === "open"
+        ? { title: "Submitted for Approval", body: "OCC will review the evidence and approve the work or send it back with remarks." }
+        : { title: "Cleaning Completed", body: "Closed out and recorded against the asset." }
   return (
-    <section
-      className={cn(
-        "flex items-center gap-4 rounded-2xl p-5 text-white shadow-sm",
-        job.field === "approved" ? "bg-gradient-to-r from-highlight to-primary" : "bg-gradient-to-r from-healthy to-[#0f7a5c]"
-      )}
-    >
+    <section className="flex items-center gap-4 rounded-2xl bg-gradient-to-r from-healthy to-[#0f7a5c] p-5 text-white shadow-sm">
       <span className="flex size-14 shrink-0 items-center justify-center rounded-full bg-white/15 ring-2 ring-white/40">
         <CircleCheck className="size-8" />
       </span>
       <div className="min-w-0">
         <div className="text-2xl font-bold">{note.title}</div>
-        <p className="text-sm text-white/90">
-          {note.body}
-          {assetTag ? <span className="tabular-nums font-semibold"> · {assetTag}</span> : null}
-        </p>
+        <p className="text-sm text-white/90">{note.body}</p>
       </div>
     </section>
   )

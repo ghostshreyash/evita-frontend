@@ -144,6 +144,18 @@ export type InspectionDetail = {
    * is set the work reads as Report Due rather than Completed.
    */
   reportedAt?: string
+  /**
+   * A re-inspection, and the record it was taken to correct.
+   *
+   * Nothing is deleted or overwritten. An inspection that went in wrongly - a
+   * mistyped reading, the wrong fire prevention answer - is corrected by taking
+   * the inspection again, and the new record carries the old one's readings so
+   * only what was wrong has to be changed. The pair stays linked in both
+   * directions so the history reads straight.
+   */
+  supersedes?: string
+  /** Set on the old record once a re-inspection has replaced it */
+  supersededBy?: string
 }
 
 const supervisors = ["Priya Nair", "Rakesh Menon", "Divya Iyer", "Arun Prakash"]

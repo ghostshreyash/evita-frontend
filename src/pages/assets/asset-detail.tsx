@@ -1,11 +1,10 @@
 import { useMemo } from "react"
 import { Link, useNavigate, useParams } from "react-router"
-import { Activity, ArrowLeft, Building2, CircleDashed, ClipboardCheck, FileText, Images, QrCode, Settings, TriangleAlert } from "lucide-react"
+import { ArrowLeft, CalendarDays, Pencil, Building2, CircleDashed, ClipboardCheck, FileText, Images, QrCode, Settings, TriangleAlert } from "lucide-react"
 import { cn } from "cn"
 
 import { PageHeader } from "@/components/common/page-header"
 import { AssetPhoto } from "@/components/common/asset-photo"
-import { HealthDial } from "@/components/common/health-dial"
 import { DetailList, DetailPanel } from "@/components/common/detail-list"
 import { assetDetailRows, assetTechnicalRows } from "@/components/assets/asset-sections"
 import { AssetQrPanel, QrLabelPreview } from "@/components/assets/asset-qr"
@@ -15,6 +14,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import type { AssetRecord } from "@/data/asset-data"
 import { capturesOf, findAsset, profileOf, useAssetRows } from "@/data/asset-store"
 import { healthBandFor } from "@/data/master-data"
+import { healthStatus } from "@/lib/status"
 import { td, th } from "@/lib/data-table"
 
 /**
@@ -53,13 +53,30 @@ function AssetDetail({ asset, onBack }: { asset: AssetRecord; onBack: () => void
     <div>
       <PageHeader
         title={asset.name}
+        /* The score belongs with the name: it is the first thing asked about an
+           asset, and it was taking a card of its own to say one number */
+        badge={
+          band ? (
+            <span className={cn("flex items-center gap-1.5 rounded-full px-3 py-1 text-sm font-semibold", healthStatus[band.tone].tile)}>
+              <span aria-hidden className={cn("size-2 rounded-full", healthStatus[band.tone].dot)} />
+              {band.label} · <span className="tabular-nums">{asset.health}/100</span>
+            </span>
+          ) : (
+            <span className="flex items-center gap-1.5 rounded-full bg-muted px-3 py-1 text-sm font-medium text-muted-foreground">
+              <CircleDashed className="size-4" /> Not inspected yet
+            </span>
+          )
+        }
         description={`${asset.category} · ${asset.area}`}
         breadcrumbs={[{ label: "Assets", to: "/assets" }, { label: asset.id }]}
         actions={
           <>
-            {/* The asset is the way into an inspection: an ELPREMAR standing at
-                one does not need to have been booked for it */}
-            <StartInspection asset={asset} size="default" className="w-56" />
+            {/* Anything entered wrongly at onboarding is put right here */}
+            <Button variant="outline" asChild>
+              <Link to={`/assets/${asset.id}/edit`}>
+                <Pencil /> Edit
+              </Link>
+            </Button>
             <Button variant="outline" onClick={onBack}>
               <ArrowLeft /> Back to Assets
             </Button>
@@ -67,35 +84,46 @@ function AssetDetail({ asset, onBack }: { asset: AssetRecord; onBack: () => void
         }
       />
 
-      <div className="grid gap-3 lg:grid-cols-2 xl:grid-cols-[minmax(0,1.3fr)_minmax(0,1fr)_minmax(0,1fr)]">
-        {/* ---------- Identity and where it sits ---------- */}
-        <DetailPanel icon={Building2} title="Asset Information">
-          <DetailList rows={assetDetailRows(profile)} />
-        </DetailPanel>
-
-        {/* ---------- The code on the panel door ---------- */}
-        <DetailPanel icon={QrCode} title="Asset ID & QR Code">
-          <AssetQrPanel asset={asset} />
-        </DetailPanel>
-
-        {/* ---------- How it is doing ---------- */}
+      {/*
+        * Three columns, each one a thing the engineer came for: what the asset
+        * is and the label that goes on its door; the code on that door; what it
+        * is rated for and the inspection it leads to. The photographs and the
+        * documents run the full width underneath.
+        */}
+      <div className="grid items-start gap-3 lg:grid-cols-2 xl:grid-cols-3">
+        {/* ---------- What it is, and the label for its door ---------- */}
         <div className="space-y-3">
-          <DetailPanel icon={Activity} title={band ? "Health & Condition" : "Condition"}>
-            {band ? (
-              <HealthDial score={asset.health!} label={band.label} tone={band.tone} />
-            ) : (
-              <p className="flex items-start gap-2 rounded-md bg-muted/60 p-2.5 text-sm text-muted-foreground">
-                <CircleDashed className="mt-0.5 size-4 shrink-0" />
-                Not inspected yet. A health score appears once the first inspection report is in.
-              </p>
-            )}
+          <DetailPanel icon={Building2} title="Asset Information">
+            <DetailList rows={assetDetailRows(profile)} />
           </DetailPanel>
 
           <DetailPanel title="QR Code Label Preview">
             <QrLabelPreview asset={asset} />
-            <p className="mt-2 text-sm text-muted-foreground">
-              Onboarded <span className="font-medium tabular-nums text-foreground">{asset.onboarded}</span>
-            </p>
+          </DetailPanel>
+        </div>
+
+        {/* ---------- The code on the panel door ---------- */}
+        <div className="space-y-3">
+          <DetailPanel icon={QrCode} title="Asset ID & QR Code">
+            <AssetQrPanel asset={asset} />
+          </DetailPanel>
+
+          {/* When the asset joined the register - a card of its own, since the
+              printed label carries no date */}
+          <DetailPanel icon={CalendarDays} title="Onboarding">
+            <DetailList rows={[{ label: "Onboarded On", value: asset.onboarded, always: true }]} />
+          </DetailPanel>
+        </div>
+
+        {/* ---------- What it is rated for, and what it looks like ---------- */}
+        <div className="space-y-3">
+          <DetailPanel icon={Settings} title="Technical Details">
+            <DetailList rows={assetTechnicalRows(profile)} />
+          </DetailPanel>
+
+          {/* Walk up to the asset, open its record, inspect it */}
+          <DetailPanel icon={ClipboardCheck} title="Inspect this asset">
+            <StartInspection asset={asset} />
           </DetailPanel>
         </div>
 
@@ -103,13 +131,15 @@ function AssetDetail({ asset, onBack }: { asset: AssetRecord; onBack: () => void
         <DetailPanel
           icon={Images}
           title={`Asset Images (${profile.images.length})`}
-          className="lg:col-span-2 xl:col-span-1"
+          className="lg:col-span-2 xl:col-span-3"
         >
           {profile.images.length ? (
-            <div className="grid grid-cols-3 gap-2">
+            /* A row of five across the page: the angles were shot as a set and
+               read as one, and the three-up grid in a column cut them too small */
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
               {profile.images.map((image) => (
                 <figure key={image.id}>
-                  <div className="h-24 overflow-hidden rounded-md ring-1 ring-foreground/10">
+                  <div className="h-36 overflow-hidden rounded-lg ring-1 ring-foreground/10">
                     <AssetPhoto file={captures?.images[image.id]} label={image.name} caption={image.name} />
                   </div>
                   <figcaption className="mt-1 line-clamp-2 text-center text-xs leading-tight">{image.name}</figcaption>
@@ -119,18 +149,6 @@ function AssetDetail({ asset, onBack }: { asset: AssetRecord; onBack: () => void
           ) : (
             <p className="py-3 text-center text-sm text-muted-foreground">No photographs held for this asset.</p>
           )}
-        </DetailPanel>
-
-        <DetailPanel icon={Settings} title="Technical Details">
-          <DetailList rows={assetTechnicalRows(profile)} />
-        </DetailPanel>
-
-        {/* Walk up to the asset, open its record, inspect it */}
-        <DetailPanel icon={ClipboardCheck} title="Inspect this asset">
-          <StartInspection asset={asset} />
-          <p className="mt-3 text-sm text-muted-foreground">
-            Scanning the label on the panel door opens this record and offers the same inspection.
-          </p>
         </DetailPanel>
 
         {/* ---------- The paperwork behind the ratings ---------- */}

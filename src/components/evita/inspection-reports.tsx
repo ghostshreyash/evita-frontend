@@ -45,7 +45,14 @@ export function InspectionReports({ job, detail }: { job: Job; detail: Inspectio
   const generated = !!detail.reportedAt
   const [raised, setRaised] = useState<string>()
 
-  const category = categoryFor(job.asset)
+  /*
+   * The asset's registered category, not a guess at it from the job's asset
+   * name: which readings the sheet asks for depends on the type, so an
+   * inspection started at a scanned asset must ask for that asset's own
+   * parameters. `categoryFor` is the fallback for an older seeded row that
+   * carries no category of its own.
+   */
+  const category = detail.assetCategory || categoryFor(job.asset)
 
   /*
    * The ratings to compare the readings against, off the asset register.

@@ -1,6 +1,7 @@
 import { Leaf } from "lucide-react"
 
 import { Rise } from "@/components/auth/auth-screen"
+import { SystemName } from "@/components/common/system-name"
 import { brand } from "@/config/brand"
 
 /**
@@ -16,7 +17,8 @@ export function BrandStory() {
           EVITA
           <sup className="ml-1 align-super text-base font-semibold text-white/60">™</sup>
         </h2>
-        <p className="mt-2 max-w-md text-lg text-white/85">{brand.strapline}</p>
+        <SystemName className="mt-1.5 max-w-md text-sm text-white/90" />
+        <p className="mt-3 max-w-md text-lg text-white/85">{brand.strapline}</p>
       </Rise>
 
       <ul className="mt-8 space-y-4">

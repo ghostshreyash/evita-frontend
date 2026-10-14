@@ -17,7 +17,13 @@ import { placeInPlant } from "@/data/plant-tree"
 type Priority = (typeof priorities)[number]
 
 /** An INSTA CLEAN consumable booked against the job */
-export type InstaProduct = { name: string; quantity: number; unit: string }
+/**
+ * One INSTA consumable booked against a job.
+ *
+ * Booked, not metered: the client removed the quantity field on 14-10-2026, so
+ * what the record carries is which products were used and nothing more.
+ */
+export type InstaProduct = { name: string }
 
 
 export type MaintenanceReview = {
@@ -56,7 +62,6 @@ export type MaintenanceDetail = {
   execution?: Execution
   products: InstaProduct[]
   firePrevention?: { system: string; remarks: string }
-  pdMitigation?: { method: string; remarks: string }
   evidence: EvidenceItem[]
   review?: MaintenanceReview
   /**
@@ -82,13 +87,6 @@ export const fireSystems = [
   "Aerosol fire suppression module (panel-mounted)",
   "Thermal fuse link with auto cut-off",
   "Fire retardant cable coating",
-]
-
-export const pdMethods = [
-  "Corona shield application on busbar joints",
-  "Insulation re-taping at termination points",
-  "Busbar re-torquing to specified values",
-  "Nano-coating on HT insulators",
 ]
 
 const supervisors = ["Priya Nair", "Rakesh Menon", "Divya Iyer", "Arun Prakash"]
@@ -152,11 +150,7 @@ export function maintenanceDetail(row: MaintenanceRow): MaintenanceDetail {
       const p = pick(products)
       if (used.has(p.name)) continue
       used.add(p.name)
-      detail.products.push({
-        name: p.name,
-        quantity: p.unit === "kg" ? Number((0.2 + random()).toFixed(1)) : Math.ceil(random() * 6) * (p.unit === "ml" ? 50 : 1),
-        unit: p.unit,
-      })
+      detail.products.push({ name: p.name })
     }
   }
 
@@ -166,12 +160,6 @@ export function maintenanceDetail(row: MaintenanceRow): MaintenanceDetail {
       system: pick(fireSystems),
       remarks: "Installed and function-tested; tamper seal intact.",
     }
-  if (random() < 0.45)
-    detail.pdMitigation = {
-      method: pick(pdMethods),
-      remarks: "PD level re-measured after treatment and found within limits.",
-    }
-
   if (finished) {
     detail.evidence = [
       { id: `${row.id}-p1`, kind: "photo", label: "Panel front — before", caption: `${row.asset} prior to work`, meta: at(row.scheduled, row.slot, 5) },

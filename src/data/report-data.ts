@@ -70,14 +70,6 @@ export const hygieneChecks = [
   "Panel housekeeping and safety",
 ] as const
 
-/** What the contamination assessment measures, per the same answer */
-export const contaminationInputs = [
-  "Dust accumulation thickness",
-  "Type of dust present",
-  "Hotspot temperature",
-  "Other contamination observations",
-] as const
-
 /* ---------- Seeded helpers ---------- */
 
 const seedOf = (s: string) => {
@@ -106,8 +98,6 @@ const monthsOn = (from: string, months: number) => {
 
 /* ---------- Pools ---------- */
 
-const inspectionTypes = ["Visual Inspection & Testing", "Thermal Inspection", "Visual Inspection", "Re-inspection"]
-
 const maintenanceTypesPool = ["Preventive", "Condition-Based", "Corrective", "Fire Preventive"]
 
 /**
@@ -126,24 +116,6 @@ const hygieneSpread: Finding[] = [
   "Alarming",
   "Healthy",
   "Healthy",
-]
-
-const dustTypes = ["Fine industrial dust", "Carbon / soot", "Cement dust", "Metallic particles", "Fibrous lint"]
-
-const keyFindingsPool = [
-  "Heavy dust accumulation on busbars, loose connections, signs of heating.",
-  "Light surface dust, all terminations tight, no hotspots recorded.",
-  "Moderate dust on the panel floor; one gland loose at the cable entry.",
-  "Dust on the radiator fins reducing cooling; no electrical defect found.",
-  "Moisture ingress at the base of the panel with early corrosion on the door frame.",
-]
-
-const actionsPool = [
-  "Immediate cleaning, tighten connections, infrared thermography, monitor load.",
-  "Continue the periodic cleaning schedule; no intervention needed now.",
-  "Clean with INSTA CLEAN 50 and re-seal the cable entry.",
-  "Clean the radiator fins and re-check the winding temperature at the next visit.",
-  "Seal the panel base, treat the corrosion and re-inspect in one month.",
 ]
 
 /* ---------- Report rows ---------- */
@@ -219,8 +191,15 @@ function reportFor(asset: AssetRecord, index: number): ReportRow {
     finding: faults[i] ?? ("Healthy" as Finding),
   }))
 
-  const lastCleaned = inspected ? dateOffset(-(10 + (s % 200))) : ""
-  const lastMaintenance = inspected ? dateOffset(-(20 + (s % 260))) : ""
+  /*
+   * Not every asset has been cleaned. An inspection raises the cleaning, and on
+   * a live register a good few are still waiting on one - by position rather
+   * than by hash, so the "no cleaning report yet" case is always on screen and
+   * is not left to a divisor to produce.
+   */
+  const cleaned = inspected && index % 4 !== 3
+  const lastCleaned = cleaned ? dateOffset(-(10 + (s % 200))) : ""
+  const lastMaintenance = cleaned ? dateOffset(-(20 + (s % 260))) : ""
 
   return {
     asset,
@@ -241,74 +220,7 @@ function reportFor(asset: AssetRecord, index: number): ReportRow {
   }
 }
 
-/* ---------- The record behind one row ---------- */
-
-export type AssetReport = {
-  row: ReportRow
-  inspection: {
-    type: string
-    inspectedBy: string
-    overallCondition: Finding
-    dustType: string
-    dustThickness: string
-    hotspot: string
-    keyFindings: string
-    recommendedAction: string
-  }
-  maintenance: { date: string; type: string; by: string; outcome: string }[]
-}
-
-/** Everything the panel shows for one asset, seeded off its id */
-export function assetReport(row: ReportRow): AssetReport {
-  const s = seedOf(row.asset.id)
-  const inspected = row.healthScore !== null
-  const crew = ["Suresh Kumar", "Amit Sharma", "Ramesh Patil", "Priya Nair"]
-
-  return {
-    row,
-    inspection: {
-      type: inspectionTypes[s % inspectionTypes.length],
-      inspectedBy: `${crew[s % crew.length]} (ELPREMAR)`,
-      overallCondition: row.contaminationStatus,
-      dustType: inspected ? dustTypes[s % dustTypes.length] : "",
-      dustThickness: inspected ? `${(0.2 + ((s % 18) / 10)).toFixed(1)} mm` : "",
-      hotspot: inspected ? `${38 + (s % 34)} °C` : "",
-      keyFindings: inspected ? keyFindingsPool[s % keyFindingsPool.length] : "",
-      recommendedAction: inspected ? actionsPool[s % actionsPool.length] : "",
-    },
-    maintenance: inspected
-      ? Array.from({ length: 1 + (s % 3) }, (_, i) => ({
-          date: dateOffset(-(30 + i * 180 + (s % 60))),
-          type: maintenanceTypesPool[(s + i) % maintenanceTypesPool.length],
-          by: `${crew[(s + i) % crew.length]} (ELPREMAR)`,
-          outcome: i === 0 ? "Completed" : "Completed",
-        }))
-      : [],
-  }
-}
-
 /* ---------- Aggregates ---------- */
-
-/**
- * Counts for the tiles. The client confirmed these recalculate for the active
- * filter and search context rather than always showing the whole plant, so they
- * take the rows actually on screen.
- */
-export const contaminationKpis = (rows: ReportRow[]) => ({
-  total: rows.length,
-  healthy: rows.filter((r) => r.contaminationStatus === "Healthy").length,
-  attention: rows.filter((r) => r.contaminationStatus === "Alarming").length,
-  atRisk: rows.filter((r) => r.contaminationStatus === "At Risk").length,
-})
-
-export const hygieneKpis = (rows: ReportRow[]) => ({
-  total: rows.length,
-  clear: rows.filter((r) => r.hygieneStatus === "Healthy").length,
-  attention: rows.filter((r) => r.hygieneStatus === "Alarming").length,
-  atRisk: rows.filter((r) => r.hygieneStatus === "At Risk").length,
-  /** Every failing point across the rows, which is what the crew actually works through */
-  openPoints: rows.reduce((n, r) => n + r.hygieneOpen, 0),
-})
 
 /* ---------- The register, as the reports read it ---------- */
 
@@ -330,6 +242,3 @@ export const reportRows: ReportRow[] = assetRegister
   .map((asset, i) => reportFor(asset, i))
   .filter((r) => r.healthScore !== null)
   .sort((a, b) => a.asset.id.localeCompare(b.asset.id, undefined, { numeric: true }))
-
-/** How many assets the reports leave out because nobody has inspected them yet */
-export const uninspectedCount = assetRegister.filter((a) => a.health === null).length

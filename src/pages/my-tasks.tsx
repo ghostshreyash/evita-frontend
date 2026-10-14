@@ -26,7 +26,6 @@ const statusEdge: Record<FieldStatus, string> = {
   in_progress: "bg-attention",
   report_due: "bg-attention",
   completed: "bg-healthy",
-  approved: "bg-highlight",
 }
 
 type SortKey = "due" | "priority" | "status" | "asset" | "id"
@@ -46,7 +45,7 @@ const priorityRank: Record<string, number> = { Low: 0, Medium: 1, High: 2, Criti
  * Report Due leads: the work on site is done and only the report is missing, so
  * it is the quickest thing on the book to clear and the easiest to forget.
  */
-const statusRank: Record<FieldStatus, number> = { report_due: 0, overdue: 1, in_progress: 2, open: 3, completed: 4, approved: 5 }
+const statusRank: Record<FieldStatus, number> = { report_due: 0, overdue: 1, in_progress: 2, open: 3, completed: 4 }
 
 const sortValue: Record<SortKey, (j: Job) => string | number> = {
   due: when,
@@ -73,7 +72,7 @@ const sortValue: Record<SortKey, (j: Job) => string | number> = {
  * section is: the same screen reading the other half of the book.
  *
  * The dashboard links here with `?status=` (Open, Overdue, In Progress,
- * Completed, Approved), `?type=` (inspection, maintenance) or `?date=today`,
+ * Completed), `?type=` (inspection, maintenance) or `?date=today`,
  * which preset the filters.
  */
 export function MyTasksPage({ only }: { only?: JobKind }) {

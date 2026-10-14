@@ -109,8 +109,8 @@ export function useNotifications() {
         title: `${t.id} ${workStatus[t.status].label.toLowerCase()}: ${t.subject}`,
         detail: `${t.category} · ${t.plant}`,
         at: stamp(t.lastUpdated),
-        // No ticket screen in EVITA yet: tapping only marks it read
-        to: "",
+        // Reported Issues is where the engineer's own tickets are read
+        to: "/issues",
         tone: t.status === "closed" ? "success" : "warning",
       })
 

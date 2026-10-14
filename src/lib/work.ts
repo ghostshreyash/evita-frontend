@@ -30,13 +30,14 @@ export const jobKindLook: Record<JobKind, { label: string; long: string; icon: L
 }
 
 /**
- * The five statuses an ELPREMAR sees, whichever book the job comes from:
- * Open (assigned, not started), Overdue (not started and past its day),
- * In Progress, Completed (their part is done) and Approved (signed off by OCC).
+ * The statuses an ELPREMAR sees, whichever book the job comes from: Open
+ * (assigned, not started), Overdue (not started and past its day), In Progress,
+ * Report Due (recorded, reports not produced) and Completed. OCC's sign-off is
+ * not among them - from the field the work is finished either way.
  */
-export type FieldStatus = "open" | "overdue" | "in_progress" | "report_due" | "completed" | "approved"
+export type FieldStatus = "open" | "overdue" | "in_progress" | "report_due" | "completed"
 
-export const fieldStatuses: FieldStatus[] = ["open", "overdue", "in_progress", "report_due", "completed", "approved"]
+export const fieldStatuses: FieldStatus[] = ["open", "overdue", "in_progress", "report_due", "completed"]
 
 export const fieldStatusLook: Record<FieldStatus, { label: string; badge: "info" | "critical" | "warning" | "success" | "highlight" }> = {
   open: { label: "Open", badge: "info" },
@@ -44,7 +45,6 @@ export const fieldStatusLook: Record<FieldStatus, { label: string; badge: "info"
   in_progress: { label: "In Progress", badge: "warning" },
   report_due: { label: "Report Due", badge: "warning" },
   completed: { label: "Completed", badge: "success" },
-  approved: { label: "Approved", badge: "highlight" },
 }
 
 export type Job = {
@@ -142,7 +142,8 @@ function fieldStatusOf(kind: JobKind, status: WorkStatus, date: string, startedH
   }
   if (status === "in_progress") return startedHere ? "in_progress" : notStarted()
   if (status === "rejected") return notStarted()
-  if (status === "assigned") return "approved"
+  // OCC's sign-off is not a state of its own in the field: the work is done
+  if (status === "assigned") return "completed"
   return "completed"
 }
 

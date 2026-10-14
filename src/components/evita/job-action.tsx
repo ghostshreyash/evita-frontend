@@ -10,7 +10,7 @@ import { actionFor, fieldStatusLook, jobPath, type Job, type JobAction } from "@
 
 /**
  * The one button a job needs right now: Start (Open or Overdue), Continue
- * (In Progress) or View (Completed or Approved). All three look the same, so a
+ * (In Progress) or View (Completed). All of them look the same, so a
  * table of tasks reads evenly. Starting changes the job's status in the shared
  * book before opening it.
  */

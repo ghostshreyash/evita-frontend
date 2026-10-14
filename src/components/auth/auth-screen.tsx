@@ -4,6 +4,7 @@ import { cn } from "cn"
 import { Button } from "@/components/ui/button"
 import { OlivineLogo } from "@/components/layout/olivine-logo"
 import { brand } from "@/config/brand"
+import { SystemName } from "@/components/common/system-name"
 
 /** Staggered entrance, so the screen assembles rather than appearing at once. */
 export function Rise({
@@ -149,11 +150,9 @@ export function AuthCard({
             <div className="bg-gradient-to-r from-[#164d9b] via-[#0b3b80] to-[#68a83c] bg-clip-text text-[3.3rem] leading-none font-black tracking-[-0.06em] text-transparent">
               EVITA<sup className="ml-1 align-super text-sm font-bold text-[#164d9b]">™</sup>
             </div>
-            <p className="mt-2 text-sm leading-tight font-medium text-[#163b72]">
-              Enterprise Electrical Maintenance
-              <br />&amp; Reliability Management System
-            </p>
-            <div className="mt-4 flex items-center gap-3">
+            {/* Tight under the wordmark, where an expansion belongs */}
+            <SystemName className="mt-1 text-[0.7rem] text-[#163b72]" />
+            <div className="mt-3 flex items-center gap-3">
               <span className="h-px flex-1 bg-[#b8cadf]" />
               <span className="text-sm whitespace-nowrap text-[#31578e] italic">{brand.tagline}</span>
               <span className="h-px flex-1 bg-[#b8cadf]" />

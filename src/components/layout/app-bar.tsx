@@ -1,10 +1,11 @@
 import { NavLink, useNavigate } from "react-router"
-import { Bell, CloudCheck, CloudOff, CloudUpload, LogOut, ShieldCheck } from "lucide-react"
+import { Bell, CloudCheck, CloudOff, CloudUpload, LogOut, Menu, ShieldCheck } from "lucide-react"
 import { cn } from "cn"
 
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
 import { OlivineEmblem } from "@/components/layout/olivine-logo"
+import { SystemName } from "@/components/common/system-name"
 import { useOnline } from "@/hooks/use-media"
 import { useAuth } from "@/lib/auth/context"
 import { useInspectionDetails } from "@/data/inspection-store"
@@ -22,11 +23,9 @@ import { openPanel } from "@/lib/ui-store"
  * The safety reminder rides here too, so it is on screen on every page rather
  * than only at the top of the home screen.
  *
- * No menu and no drawer. Every section is on the bottom tab bar, within reach
- * of the thumb already holding the tablet; a second copy of the same list
- * behind a hamburger was one navigation too many.
+ * The sections are behind the menu button on the left - see `AppSidebar`.
  */
-export function AppBar() {
+export function AppBar({ onMenu }: { onMenu: () => void }) {
   const online = useOnline()
   const details = useInspectionDetails()
   const { unread } = useNotifications()
@@ -42,13 +41,29 @@ export function AppBar() {
 
   return (
     <header className="sticky top-0 z-30 flex h-16 shrink-0 items-center gap-2 border-b bg-card px-2.5 sm:px-3">
+      <button
+        type="button"
+        aria-label="Open the sections menu"
+        onClick={onMenu}
+        className="flex size-11 shrink-0 items-center justify-center rounded-full text-foreground/70 hover:bg-muted sm:hidden"
+      >
+        <Menu className="size-6" />
+      </button>
+
       <NavLink to="/" className="flex min-w-0 items-center gap-2">
-        <OlivineEmblem className="size-9" />
-        <span className="text-xl leading-none font-black tracking-[-0.03em] text-brand-navy dark:text-foreground">
-          EVITA<sup className="ml-0.5 align-super text-[0.55rem] font-bold text-muted-foreground">™</sup>
-        </span>
-        <span className="rounded bg-primary px-1.5 py-0.5 text-[0.65rem] font-bold tracking-wide text-primary-foreground">
-          FIELD
+        <OlivineEmblem className="size-9 shrink-0" />
+        <span className="min-w-0">
+          <span className="flex items-center gap-2">
+            <span className="text-xl leading-none font-black tracking-[-0.03em] text-brand-navy dark:text-foreground">
+              EVITA<sup className="ml-0.5 align-super text-[0.55rem] font-bold text-muted-foreground">™</sup>
+            </span>
+            <span className="rounded bg-primary px-1.5 py-0.5 text-[0.65rem] font-bold tracking-wide text-primary-foreground">
+              FIELD
+            </span>
+          </span>
+          {/* What the wordmark stands for, under it. Dropped once the bar needs
+              the width for the controls on its right. */}
+          <SystemName className="mt-0.5 text-[0.6rem] text-muted-foreground max-xl:hidden" />
         </span>
       </NavLink>
 
