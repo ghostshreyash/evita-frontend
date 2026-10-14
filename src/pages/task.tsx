@@ -83,7 +83,7 @@ function Group({ title, last, children }: { title: string; last?: boolean; child
  *
  * Inspection: Open → Start → record images and evidence → Submit (Completed).
  * Maintenance: Open → Start → log the work against the clock → Submit for
- * Approval (Completed) → OCC approves (Approved) or sends it back (Open again).
+ * Approval (Completed) → OCC approves, or sends it back (Open again).
  */
 export function TaskPage() {
   const { id } = useParams()
@@ -281,7 +281,7 @@ export function TaskPage() {
         <MaintenanceForm key={job.id} job={job} detail={maintenance} />
       ) : (
         <div className="space-y-5">
-          <OutcomeBanner job={job} assetTag={detail?.assetTag} />
+          <OutcomeBanner job={job} />
           <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_19rem]">
             <div className="min-w-0 space-y-5">
               {inspection ? <InspectionRecord detail={inspection} activity={job.activity} /> : maintenance ? <MaintenanceRecord detail={maintenance} /> : null}
@@ -375,31 +375,21 @@ function StartSection({ job, onStart }: { job: Job; onStart: () => void }) {
 }
 
 /** Where finished work stands, as the design's green completion banner */
-function OutcomeBanner({ job, assetTag }: { job: Job; assetTag?: string }) {
+function OutcomeBanner({ job }: { job: Job }) {
   const note =
     job.kind === "inspection"
       ? { title: "Inspection Completed", body: "The readings and evidence are saved against the asset." }
-      : job.field === "approved"
-        ? { title: "Approved by OCC", body: "The asset's health report is updated from this work." }
-        : job.status === "open"
-          ? { title: "Submitted for Approval", body: "OCC will review the evidence and approve the work or send it back with remarks." }
-          : { title: "Cleaning Completed", body: "Closed out and recorded against the asset." }
+      : job.status === "open"
+        ? { title: "Submitted for Approval", body: "OCC will review the evidence and approve the work or send it back with remarks." }
+        : { title: "Cleaning Completed", body: "Closed out and recorded against the asset." }
   return (
-    <section
-      className={cn(
-        "flex items-center gap-4 rounded-2xl p-5 text-white shadow-sm",
-        job.field === "approved" ? "bg-gradient-to-r from-highlight to-primary" : "bg-gradient-to-r from-healthy to-[#0f7a5c]"
-      )}
-    >
+    <section className="flex items-center gap-4 rounded-2xl bg-gradient-to-r from-healthy to-[#0f7a5c] p-5 text-white shadow-sm">
       <span className="flex size-14 shrink-0 items-center justify-center rounded-full bg-white/15 ring-2 ring-white/40">
         <CircleCheck className="size-8" />
       </span>
       <div className="min-w-0">
         <div className="text-2xl font-bold">{note.title}</div>
-        <p className="text-sm text-white/90">
-          {note.body}
-          {assetTag ? <span className="tabular-nums font-semibold"> · {assetTag}</span> : null}
-        </p>
+        <p className="text-sm text-white/90">{note.body}</p>
       </div>
     </section>
   )
