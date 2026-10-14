@@ -28,12 +28,44 @@ const cleaningSteps = ["Surface cleaning completed", "Internal cleaning (as appl
  * add-ons, then Submit for Approval to OCC. Everything saves as it is entered;
  * the clock is written straight to the record by Start / Stop / Resume.
  */
+/**
+ * The inspection's images, relabelled as the state the panel was found in.
+ *
+ * The ids are the inspection's own, so an image can be traced back to the visit
+ * it was taken on rather than looking like it was shot twice.
+ */
+function carriedOver(evidence: EvidenceItem[] | undefined, inspectionId?: string): EvidenceItem[] {
+  if (!evidence?.length) return []
+  return evidence
+    .filter((e) => e.kind !== "document")
+    .map((e) => ({
+      ...e,
+      label: e.kind === "thermal" ? `Before thermal — ${e.label}` : `Before — ${e.label}`,
+      caption: inspectionId ? `From inspection ${inspectionId}` : e.caption,
+    }))
+}
+
 export function MaintenanceForm({ job, detail }: { job: Job; detail: MaintenanceDetail }) {
+  /* The inspection this cleaning came out of, and what it asked for */
+  const inspections = useInspectionDetails()
+  const source = job.inspectionId ? inspections[job.inspectionId] : undefined
+
   // The cleaning checklist is stored at the end of the notes; split it back out when reopening
   const [notes, setNotes] = useState((detail.execution?.notes ?? "").replace(/\s*Checklist: .*$/, ""))
   const [items, setItems] = useState<InstaProduct[]>(detail.products)
   const [cleaned, setCleaned] = useState<string[]>(() => cleaningSteps.filter((step) => detail.execution?.notes.includes(step)))
-  const [evidence, setEvidence] = useState<EvidenceItem[]>(detail.evidence)
+  /*
+   * The before set is the inspection's own images, carried over.
+   *
+   * The point of the pair is to show what the clean changed, and the state the
+   * panel was found in was already photographed on the visit that raised the
+   * job - re-shooting it would be both wasted work and a different moment. They
+   * arrive as ordinary evidence: the engineer can drop one that is not useful,
+   * or add more of their own.
+   */
+  const [evidence, setEvidence] = useState<EvidenceItem[]>(() =>
+    detail.evidence.length ? detail.evidence : carriedOver(source?.evidence, job.inspectionId)
+  )
   const [fire, setFire] = useState<{ done?: "Yes" | "No"; system: string; remarks: string }>({
     done: detail.firePrevention ? "Yes" : undefined,
     system: detail.firePrevention?.system ?? "",
@@ -69,14 +101,14 @@ export function MaintenanceForm({ job, detail }: { job: Job; detail: Maintenance
     return () => window.clearTimeout(t)
   }, [patch, job.id])
 
-  const before = evidence.filter((e) => e.label.startsWith("Before"))
-  const after = evidence.filter((e) => e.label.startsWith("After"))
-  const thermal = evidence.filter((e) => e.kind === "thermal")
+  const isBefore = (e: EvidenceItem) => e.label.startsWith("Before")
+  const before = evidence.filter((e) => e.kind === "photo" && isBefore(e))
+  const after = evidence.filter((e) => e.kind === "photo" && !isBefore(e))
+  const thermalBefore = evidence.filter((e) => e.kind === "thermal" && isBefore(e))
+  const thermalAfter = evidence.filter((e) => e.kind === "thermal" && !isBefore(e))
   const usedProducts = items.filter((p) => p.name)
 
-  /* The inspection this cleaning came out of, and what it asked for */
-  const inspections = useInspectionDetails()
-  const advice = recommendInsta(job.inspectionId ? inspections[job.inspectionId]?.capture : undefined)
+  const advice = recommendInsta(source?.capture)
 
   const checklist = [
     { label: "Work time logged", done: timeLog.length > 0 },
@@ -88,7 +120,7 @@ export function MaintenanceForm({ job, detail }: { job: Job; detail: Maintenance
   const ready = checklist.every((c) => c.done)
 
   const capture = (label: string) => (captured: EvidenceItem[]) =>
-    setEvidence((ev) => [...ev, ...captured.map((c) => ({ ...c, label: c.kind === "thermal" ? "Thermal scan — after" : label }))])
+    setEvidence((ev) => [...ev, ...captured.map((c) => ({ ...c, label }))])
   const remove = (id: string) => setEvidence((ev) => ev.filter((e) => e.id !== id))
 
   return (
@@ -173,10 +205,15 @@ export function MaintenanceForm({ job, detail }: { job: Job; detail: Maintenance
         </StepCard>
 
         {/* ---------- 4. Evidence ---------- */}
-        <StepCard title="Maintenance Images" icon={Camera} done={after.length > 0} actions={<CountPill done={after.length > 0}>{before.length + after.length + thermal.length} Captured</CountPill>}>
+        <StepCard title="Maintenance Images" icon={Camera} done={after.length > 0} actions={<CountPill done={after.length > 0}>{evidence.length} Captured</CountPill>}>
           <div className="space-y-4">
             <div>
               <FieldLabel>Before maintenance ({before.length})</FieldLabel>
+              {job.inspectionId ? (
+                <p className="mb-1.5 text-xs text-muted-foreground">
+                  Carried over from inspection {job.inspectionId}. Drop any that are not useful, or add your own.
+                </p>
+              ) : null}
               <EvidenceStrip items={before} onRemove={remove}>
                 <CaptureTile kind="photo" label="Before Photo" onCapture={capture("Before — as found")} />
               </EvidenceStrip>
@@ -188,9 +225,15 @@ export function MaintenanceForm({ job, detail }: { job: Job; detail: Maintenance
               </EvidenceStrip>
             </div>
             <div>
-              <FieldLabel>Thermal images ({thermal.length})</FieldLabel>
-              <EvidenceStrip items={thermal} onRemove={remove}>
-                <CaptureTile kind="thermal" label="Thermal Image" onCapture={capture("Thermal scan — after")} />
+              <FieldLabel>Thermal before ({thermalBefore.length})</FieldLabel>
+              <EvidenceStrip items={thermalBefore} onRemove={remove}>
+                <CaptureTile kind="thermal" label="Thermal Before" onCapture={capture("Before thermal — as found")} />
+              </EvidenceStrip>
+            </div>
+            <div>
+              <FieldLabel>Thermal after ({thermalAfter.length})</FieldLabel>
+              <EvidenceStrip items={thermalAfter} onRemove={remove}>
+                <CaptureTile kind="thermal" label="Thermal After" onCapture={capture("Thermal scan — after")} />
               </EvidenceStrip>
             </div>
           </div>
