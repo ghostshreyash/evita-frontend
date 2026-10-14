@@ -5,6 +5,37 @@ import { Button } from "@/components/ui/button"
 import { OlivineLogo } from "@/components/layout/olivine-logo"
 import { brand } from "@/config/brand"
 
+/**
+ * What EVITA stands for, with the letters the name is built from marked.
+ *
+ * Written out flat it is a long sentence that reads as filler under a logo;
+ * marking the initials makes it an expansion, and the eye takes it in as one
+ * thing rather than seven words. The words are not hard-coded here - they come
+ * from `brand.systemInitials`, so the copy stays in one place.
+ */
+export function SystemName({ className }: { className?: string }) {
+  return (
+    <p className={cn("text-sm leading-snug font-medium text-balance", className)}>
+      {brand.system.split(" ").map((word, i) => {
+        const lead = (brand.systemInitials as readonly string[]).includes(word)
+        return (
+          <span key={`${word}-${i}`}>
+            {i ? " " : ""}
+            {lead ? (
+              <>
+                <span className="font-extrabold">{word[0]}</span>
+                <span className="opacity-80">{word.slice(1)}</span>
+              </>
+            ) : (
+              <span className="opacity-80">{word}</span>
+            )}
+          </span>
+        )
+      })}
+    </p>
+  )
+}
+
 /** Staggered entrance, so the screen assembles rather than appearing at once. */
 export function Rise({
   delay = 0,
@@ -149,10 +180,7 @@ export function AuthCard({
             <div className="bg-gradient-to-r from-[#164d9b] via-[#0b3b80] to-[#68a83c] bg-clip-text text-[3.3rem] leading-none font-black tracking-[-0.06em] text-transparent">
               EVITA<sup className="ml-1 align-super text-sm font-bold text-[#164d9b]">™</sup>
             </div>
-            <p className="mt-2 text-sm leading-tight font-medium text-[#163b72]">
-              Enterprise Electrical Maintenance
-              <br />&amp; Reliability Management System
-            </p>
+            <SystemName className="mx-auto mt-2 max-w-xs text-[#163b72]" />
             <div className="mt-4 flex items-center gap-3">
               <span className="h-px flex-1 bg-[#b8cadf]" />
               <span className="text-sm whitespace-nowrap text-[#31578e] italic">{brand.tagline}</span>
