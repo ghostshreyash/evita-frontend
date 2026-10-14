@@ -1,6 +1,6 @@
 import { useMemo } from "react"
 import { Link, useNavigate, useParams } from "react-router"
-import { ArrowLeft, CalendarDays, Building2, CircleDashed, ClipboardCheck, FileText, Images, QrCode, Settings, TriangleAlert } from "lucide-react"
+import { ArrowLeft, CalendarDays, Pencil, Building2, CircleDashed, ClipboardCheck, FileText, Images, QrCode, Settings, TriangleAlert } from "lucide-react"
 import { cn } from "cn"
 
 import { PageHeader } from "@/components/common/page-header"
@@ -70,9 +70,17 @@ function AssetDetail({ asset, onBack }: { asset: AssetRecord; onBack: () => void
         description={`${asset.category} · ${asset.area}`}
         breadcrumbs={[{ label: "Assets", to: "/assets" }, { label: asset.id }]}
         actions={
-          <Button variant="outline" onClick={onBack}>
-            <ArrowLeft /> Back to Assets
-          </Button>
+          <>
+            {/* Anything entered wrongly at onboarding is put right here */}
+            <Button variant="outline" asChild>
+              <Link to={`/assets/${asset.id}/edit`}>
+                <Pencil /> Edit
+              </Link>
+            </Button>
+            <Button variant="outline" onClick={onBack}>
+              <ArrowLeft /> Back to Assets
+            </Button>
+          </>
         }
       />
 

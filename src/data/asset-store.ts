@@ -87,7 +87,7 @@ export function profileFrom(values: AssetFormValues, dates: { onboarded: string 
     documents: (values.documents ?? []).map((d) => ({
       id: d.id,
       name: d.name,
-      file: d.file.name,
+      file: d.file?.name ?? d.name,
       uploaded: dates.onboarded,
     })),
     images: (values.images ?? []).map((i) => ({ id: i.id, name: i.name })),
@@ -129,14 +129,71 @@ export function onboardAsset(values: AssetFormValues, site: { city: string }): A
 
   profiles = { ...profiles, [id]: profileFrom(values, { onboarded }) }
 
-  captures = {
-    ...captures,
-    [id]: {
-      images: Object.fromEntries((values.images ?? []).map((i) => [i.id, i.file])),
-      documents: Object.fromEntries((values.documents ?? []).map((d) => [d.id, d.file])),
-    },
-  }
+  captures = { ...captures, [id]: capturesFrom(values) }
   rows = [record, ...rows]
+  emit()
+  return record
+}
+
+/** The picked files, keyed by upload, for the detail screen to show back */
+const capturesFrom = (values: AssetFormValues) => ({
+  images: Object.fromEntries((values.images ?? []).map((i) => [i.id, i.file])),
+  documents: Object.fromEntries((values.documents ?? []).map((d) => [d.id, d.file])),
+})
+
+/**
+ * What the wizard would have collected for an asset already on the register,
+ * so it can be reopened and corrected.
+ *
+ * The specification is stored by label rather than by key - that is the shape
+ * the detail screens read - so it is resolved back against the type's own
+ * parameter list here. A parameter the type no longer asks for simply drops.
+ */
+export function valuesFrom(asset: AssetRecord): AssetFormValues {
+  const profile = profileOf(asset)
+  const held = captures[asset.id]
+  const parameters: Record<string, string> = {}
+  for (const spec of parametersFor(profile.details.category)) {
+    const answer = profile.parameters.find((p) => p.label === spec.label)
+    if (answer) parameters[spec.key] = answer.value
+  }
+  return {
+    ...profile.details,
+    parameters,
+    images: profile.images.map((i) => ({ id: i.id, name: i.name, file: held?.images[i.id] })),
+    documents: profile.documents.map((d) => ({ id: d.id, name: d.name, file: held?.documents[d.id] })),
+  }
+}
+
+/**
+ * Correct an asset already on the register.
+ *
+ * The Asset ID is not reissued. It encodes the enterprise, the site and the
+ * type, but it is also printed on the label stuck to the panel door and quoted
+ * by every inspection taken against the asset - so it is issued once and then
+ * belongs to the asset, whatever is corrected about it afterwards. The
+ * onboarding date stays for the same reason: it records when the asset joined
+ * the register, not when its record was last touched.
+ */
+export function updateAsset(id: string, values: AssetFormValues): AssetRecord | undefined {
+  const existing = rows.find((r) => r.id === id)
+  if (!existing) return undefined
+
+  const record: AssetRecord = {
+    ...existing,
+    tag: values.tag,
+    name: values.description?.trim() || values.tag,
+    category: values.category,
+    area: values.area,
+    plant: values.plant,
+    enterprise: values.enterprise,
+    department: values.department ?? "",
+    criticality: (values.parameters?.criticality ?? existing.criticality) as AssetCriticality,
+  }
+
+  profiles = { ...profiles, [id]: profileFrom(values, { onboarded: existing.onboarded }) }
+  captures = { ...captures, [id]: capturesFrom(values) }
+  rows = rows.map((r) => (r.id === id ? record : r))
   emit()
   return record
 }

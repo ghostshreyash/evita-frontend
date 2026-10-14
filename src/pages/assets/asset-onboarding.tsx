@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react"
-import { useNavigate } from "react-router"
+import { useNavigate, useParams } from "react-router"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { ArrowLeft, ArrowRight, Check, Loader2 } from "lucide-react"
@@ -9,7 +9,7 @@ import { PageHeader } from "@/components/common/page-header"
 import { StepperBar } from "@/components/common/wizard"
 import { Button } from "@/components/ui/button"
 import { siteFor } from "@/data/asset-data"
-import { onboardAsset } from "@/data/asset-store"
+import { onboardAsset, updateAsset, useAssetRows, valuesFrom } from "@/data/asset-store"
 import type { AssetRecord } from "@/data/asset-data"
 import { useCurrentElpremar } from "@/lib/me"
 import { assetSchema, missingUploads, stepFields, type AssetFormValues } from "@/pages/assets/schemas"
@@ -34,11 +34,22 @@ const steps = [
  * never discards a later one. Submitting registers the asset and hands over to
  * the Asset ID & QR screen, which is the fifth view of the same route rather
  * than a separate page — there is nothing to link to until the asset exists.
+ *
+ * The same four steps correct an asset already on the register, opened from
+ * `/assets/:id/edit` and filled in with what it holds. The Asset ID is not
+ * reissued — see `updateAsset` — so a correction ends back on the asset rather
+ * than on the Asset ID screen.
  */
 export function AssetOnboardingPage() {
   const navigate = useNavigate()
   const me = useCurrentElpremar()
   const site = useMemo(() => siteFor(me.id), [me])
+
+  /* Correcting an asset rather than registering one, if the route names one */
+  const { id: editing } = useParams()
+  const register = useAssetRows()
+  const asset = useMemo(() => (editing ? register.find((a) => a.id === editing) : undefined), [register, editing])
+  const held = useMemo(() => (asset ? valuesFrom(asset) : undefined), [asset])
 
   const [current, setCurrent] = useState(0)
   const [furthest, setFurthest] = useState(0)
@@ -49,7 +60,7 @@ export function AssetOnboardingPage() {
   const form = useForm<AssetFormValues>({
     resolver: zodResolver(assetSchema),
     mode: "onTouched",
-    defaultValues: {
+    defaultValues: held ?? {
       // The engineer's own posting, which is the only site EVITA registers assets at
       enterprise: site.enterprise,
       plant: site.plant.name,
@@ -108,6 +119,13 @@ export function AssetOnboardingPage() {
 
   const submit = form.handleSubmit((values) => {
     setPending(true)
+    if (asset) {
+      const record = updateAsset(asset.id, values)
+      setPending(false)
+      toast.success(`${asset.id} corrected. It will reach the server at the next sync.`)
+      navigate(`/assets/${record?.id ?? asset.id}`)
+      return
+    }
     const record = onboardAsset(values, { city: site.plant.city })
     setPending(false)
     setCreated(record)
@@ -134,9 +152,17 @@ export function AssetOnboardingPage() {
   return (
     <div>
       <PageHeader
-        title="Asset Onboarding"
-        description="Register new electrical assets at the assigned location for preventive maintenance and reliability management."
-        breadcrumbs={[{ label: "Assets", to: "/assets" }, { label: "Asset Onboarding" }]}
+        title={asset ? `Correct ${asset.id}` : "Asset Onboarding"}
+        description={
+          asset
+            ? "Put right anything that was entered wrongly. The Asset ID stays as it was issued — it is printed on the label and quoted by every inspection taken against this asset."
+            : "Register new electrical assets at the assigned location for preventive maintenance and reliability management."
+        }
+        breadcrumbs={
+          asset
+            ? [{ label: "Assets", to: "/assets" }, { label: asset.id, to: `/assets/${asset.id}` }, { label: "Correct" }]
+            : [{ label: "Assets", to: "/assets" }, { label: "Asset Onboarding" }]
+        }
       />
 
       <StepperBar steps={steps} current={current} furthest={furthest} onSelect={goTo} />

@@ -42,6 +42,8 @@ export const router = createBrowserRouter([
           /* Onboarding sits above ":id" so the literal path is never read as an asset id */
           { path: "assets/onboarding", element: <AssetOnboardingPage /> },
           { path: "assets/:id", element: <AssetDetailPage /> },
+          /* The same wizard, filled in with what the asset holds */
+          { path: "assets/:id/edit", element: <AssetOnboardingPage /> },
           { path: "reports", element: <ReportsPage /> },
           { path: "my-tasks", element: <MyTasksPage /> },
           { path: "my-tasks/:id", element: <TaskPage /> },

@@ -114,8 +114,8 @@ export function StepUploads({ form }: { form: UseFormReturn<AssetFormValues> }) 
                 </span>
                 <span className="min-w-0 flex-1">
                   <span className="block truncate text-sm font-medium">{item.name}</span>
-                  <span className="block truncate text-xs text-muted-foreground" title={item.file.name}>
-                    {item.file.name} · {size(item.file)}
+                  <span className="block truncate text-xs text-muted-foreground" title={item.file?.name}>
+                    {item.file ? `${item.file.name} · ${size(item.file)}` : "Already held for this asset"}
                   </span>
                 </span>
                 <span className="flex shrink-0 items-center gap-1">
@@ -320,8 +320,8 @@ function Thumb({ item, onRemove, className }: { item: AssetUpload; onRemove: () 
       </div>
       <figcaption className="px-2 py-1.5">
         <span className="line-clamp-2 text-sm leading-tight font-medium">{item.name}</span>
-        <span className="mt-0.5 block truncate text-xs text-muted-foreground" title={item.file.name}>
-          {item.file.name}
+        <span className="mt-0.5 block truncate text-xs text-muted-foreground" title={item.file?.name}>
+          {item.file?.name ?? "Already held for this asset"}
         </span>
       </figcaption>
     </figure>
@@ -526,8 +526,11 @@ function IconAction({
 
 const size = (file: File) => `${(file.size / 1024 / 1024).toFixed(1)} MB`
 
-/** Reuses the tile's own URL rather than minting a fresh one on every click */
-const preview = (item: AssetUpload) => window.open(urlFor(item.file), "_blank", "noopener")
+/**
+ * Reuses the tile's own URL rather than minting a fresh one on every click.
+ * An upload the record already holds has no local file to open.
+ */
+const preview = (item: AssetUpload) => item.file && window.open(urlFor(item.file), "_blank", "noopener")
 
 /** Rejects an oversized file with a message, rather than failing quietly at sync */
 function within(file: File, limitMb: number) {

@@ -28,7 +28,12 @@ const file = z.custom<File>((v) => v instanceof File)
 const upload = z.object({
   id: z.string(),
   name: z.string().trim().min(1, "Give this upload a name").max(60, "Keep the name under 60 characters"),
-  file,
+  /**
+   * Absent on an upload the record already holds: reopening an asset to correct
+   * it lists what was captured before, and those files are on the server rather
+   * than in this browser. A newly picked one always carries its file.
+   */
+  file: file.optional(),
 })
 
 export type AssetUpload = z.infer<typeof upload>
