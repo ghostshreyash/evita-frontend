@@ -120,6 +120,51 @@ export function addInspectionForAsset(
   return id
 }
 
+/**
+ * Take the inspection again, to correct one that went in wrongly.
+ *
+ * A new record rather than an edit of the old one: the submitted inspection is
+ * what OCC and the customer have already been shown, and a record that can be
+ * rewritten after the fact is not a record. The new one opens with everything
+ * the last one captured - readings, contamination, hygiene, fire prevention and
+ * the images - so the engineer changes what was wrong and leaves the rest, and
+ * the two are linked so the old one reads as replaced rather than as current.
+ *
+ * Returns the new inspection's id.
+ */
+export function reinspect(id: string, by: string) {
+  const previous = details[id]
+  const row = rows.find((r) => r.id === id)
+  if (!previous || !row) return undefined
+
+  const fresh = `INS-${9000 + rows.filter((r) => r.id.startsWith("INS-9")).length}`
+  const today = stampNow().split(" ")[0]
+
+  rows = [
+    { ...row, id: fresh, elpremar: by, due: today, slot: new Date().getHours(), status: "in_progress" },
+    ...rows,
+  ]
+  details = {
+    ...details,
+    [id]: { ...previous, supersededBy: fresh },
+    [fresh]: {
+      ...previous,
+      supersedes: id,
+      supersededBy: undefined,
+      createdBy: `${by} (ELPREMAR)`,
+      execution: { performedBy: by, startedAt: stampNow(), remarks: previous.execution?.remarks ?? "" },
+      // What was captured carries over; what was concluded from it does not
+      measurements: [],
+      observations: [],
+      result: undefined,
+      reportedAt: undefined,
+      sync: { state: "draft", at: stampNow() },
+    },
+  }
+  emit()
+  return fresh
+}
+
 /** The reports have been produced; the inspection is finished */
 export function markReportGenerated(id: string) {
   details = { ...details, [id]: { ...details[id], reportedAt: stampNow() } }

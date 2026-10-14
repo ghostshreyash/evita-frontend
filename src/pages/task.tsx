@@ -17,6 +17,7 @@ import {
   Play,
   QrCode,
   Rocket,
+  RotateCcw,
   ShieldCheck,
   SlidersHorizontal,
   TriangleAlert,
@@ -24,6 +25,7 @@ import {
   type LucideIcon,
 } from "lucide-react"
 import { cn } from "cn"
+import { toast } from "sonner"
 
 import { Timeline } from "@/components/common/detail-view"
 import { CategoryIcon } from "@/components/common/category-icon"
@@ -36,7 +38,7 @@ import { MaintenanceForm } from "@/components/evita/maintenance-form"
 import { InspectionRecord, MaintenanceRecord } from "@/components/evita/work-summary"
 import { Button } from "@/components/ui/button"
 import { inspectionTimeline } from "@/data/inspection-detail"
-import { findInspection, useInspectionDetails } from "@/data/inspection-store"
+import { findInspection, reinspect, useInspectionDetails } from "@/data/inspection-store"
 import { maintenanceTimeline } from "@/data/maintenance-detail"
 import { findMaintenance, useMaintenanceDetails } from "@/data/maintenance-store"
 import { criticalityTone, priorityTone, slotLabel } from "@/data/occ-tables"
@@ -141,6 +143,25 @@ export function TaskPage() {
           <Button variant="outline" className="h-12 px-4" onClick={() => navigate(-1)}>
             <ArrowLeft /> Back
           </Button>
+          {/*
+            * Something recorded wrongly is put right by taking the inspection
+            * again, not by rewriting what was submitted - see `reinspect`. Only
+            * offered once the record is in and not already replaced.
+            */}
+          {inspection && action === "view" && !inspection.supersededBy ? (
+            <Button
+              variant="outline"
+              className="h-12 px-4 text-primary"
+              onClick={() => {
+                const fresh = reinspect(job.id, me.name)
+                if (!fresh) return
+                toast.success(`${fresh} opened`, { description: `Carried over from ${job.id}` })
+                navigate(`/inspections/${fresh}`)
+              }}
+            >
+              <RotateCcw /> Re-inspect
+            </Button>
+          ) : null}
           <Button variant="outline" className="h-12 px-4 text-primary" onClick={() => openPanel({ kind: "sop", activity: job.activity })}>
             <BookOpen /> SOP Guide
           </Button>
@@ -182,6 +203,29 @@ export function TaskPage() {
           <JobStatusBadge job={job} className="px-3 py-1.5 text-sm" />
         </div>
       </section>
+
+      {/* Where this record sits against the one it corrects, or the one that corrected it */}
+      {inspection?.supersedes || inspection?.supersededBy ? (
+        <section className="flex flex-wrap items-center gap-2 rounded-2xl bg-info-soft px-5 py-3 text-sm shadow-xs ring-1 ring-primary/20">
+          <RotateCcw className="size-4 shrink-0 text-primary" />
+          {inspection.supersededBy ? (
+            <span>
+              Replaced by a later inspection. This record is kept as history.{" "}
+              <Link to={`/inspections/${inspection.supersededBy}`} className="font-semibold text-primary hover:underline">
+                {inspection.supersededBy}
+              </Link>
+            </span>
+          ) : (
+            <span>
+              Re-inspection, opened with what{" "}
+              <Link to={`/inspections/${inspection.supersedes}`} className="font-semibold text-primary hover:underline">
+                {inspection.supersedes}
+              </Link>{" "}
+              recorded. Change what was wrong and submit.
+            </span>
+          )}
+        </section>
+      ) : null}
 
       {/* ---------- What EMMS-E assigned, and where the asset is ---------- */}
       <TaskPanel icon={SlidersHorizontal} title={`${noun} Details`}>
