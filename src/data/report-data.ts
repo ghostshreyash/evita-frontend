@@ -70,14 +70,6 @@ export const hygieneChecks = [
   "Panel housekeeping and safety",
 ] as const
 
-/** What the contamination assessment measures, per the same answer */
-export const contaminationInputs = [
-  "Dust accumulation thickness",
-  "Type of dust present",
-  "Hotspot temperature",
-  "Other contamination observations",
-] as const
-
 /* ---------- Seeded helpers ---------- */
 
 const seedOf = (s: string) => {
@@ -106,8 +98,6 @@ const monthsOn = (from: string, months: number) => {
 
 /* ---------- Pools ---------- */
 
-const inspectionTypes = ["Visual Inspection & Testing", "Thermal Inspection", "Visual Inspection", "Re-inspection"]
-
 const maintenanceTypesPool = ["Preventive", "Condition-Based", "Corrective", "Fire Preventive"]
 
 /**
@@ -126,24 +116,6 @@ const hygieneSpread: Finding[] = [
   "Alarming",
   "Healthy",
   "Healthy",
-]
-
-const dustTypes = ["Fine industrial dust", "Carbon / soot", "Cement dust", "Metallic particles", "Fibrous lint"]
-
-const keyFindingsPool = [
-  "Heavy dust accumulation on busbars, loose connections, signs of heating.",
-  "Light surface dust, all terminations tight, no hotspots recorded.",
-  "Moderate dust on the panel floor; one gland loose at the cable entry.",
-  "Dust on the radiator fins reducing cooling; no electrical defect found.",
-  "Moisture ingress at the base of the panel with early corrosion on the door frame.",
-]
-
-const actionsPool = [
-  "Immediate cleaning, tighten connections, infrared thermography, monitor load.",
-  "Continue the periodic cleaning schedule; no intervention needed now.",
-  "Clean with INSTA CLEAN 50 and re-seal the cable entry.",
-  "Clean the radiator fins and re-check the winding temperature at the next visit.",
-  "Seal the panel base, treat the corrosion and re-inspect in one month.",
 ]
 
 /* ---------- Report rows ---------- */
@@ -238,52 +210,6 @@ function reportFor(asset: AssetRecord, index: number): ReportRow {
     lastMaintenance,
     nextMaintenanceDue: lastMaintenance ? monthsOn(lastMaintenance, 6) : "",
     maintenanceType: maintenanceTypesPool[s % maintenanceTypesPool.length],
-  }
-}
-
-/* ---------- The record behind one row ---------- */
-
-export type AssetReport = {
-  row: ReportRow
-  inspection: {
-    type: string
-    inspectedBy: string
-    overallCondition: Finding
-    dustType: string
-    dustThickness: string
-    hotspot: string
-    keyFindings: string
-    recommendedAction: string
-  }
-  maintenance: { date: string; type: string; by: string; outcome: string }[]
-}
-
-/** Everything the panel shows for one asset, seeded off its id */
-export function assetReport(row: ReportRow): AssetReport {
-  const s = seedOf(row.asset.id)
-  const inspected = row.healthScore !== null
-  const crew = ["Suresh Kumar", "Amit Sharma", "Ramesh Patil", "Priya Nair"]
-
-  return {
-    row,
-    inspection: {
-      type: inspectionTypes[s % inspectionTypes.length],
-      inspectedBy: `${crew[s % crew.length]} (ELPREMAR)`,
-      overallCondition: row.contaminationStatus,
-      dustType: inspected ? dustTypes[s % dustTypes.length] : "",
-      dustThickness: inspected ? `${(0.2 + ((s % 18) / 10)).toFixed(1)} mm` : "",
-      hotspot: inspected ? `${38 + (s % 34)} °C` : "",
-      keyFindings: inspected ? keyFindingsPool[s % keyFindingsPool.length] : "",
-      recommendedAction: inspected ? actionsPool[s % actionsPool.length] : "",
-    },
-    maintenance: inspected
-      ? Array.from({ length: 1 + (s % 3) }, (_, i) => ({
-          date: dateOffset(-(30 + i * 180 + (s % 60))),
-          type: maintenanceTypesPool[(s + i) % maintenanceTypesPool.length],
-          by: `${crew[(s + i) % crew.length]} (ELPREMAR)`,
-          outcome: i === 0 ? "Completed" : "Completed",
-        }))
-      : [],
   }
 }
 
