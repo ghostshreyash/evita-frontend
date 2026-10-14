@@ -20,9 +20,9 @@ import { openPanel } from "@/lib/ui-store"
  * suggested questions offer, because an ELPREMAR holding a tablet in a plant
  * room will not type a question they could instead tap.
  *
- * Where it sits: above the bottom bar, right-hand side, clear of the raised
- * scan button in the middle. It is deliberately not a modal - the screen behind
- * stays readable, because the answer is usually about the form being filled in.
+ * Where it sits: the bottom-right corner, opposite the rail. It is deliberately
+ * not a modal - the screen behind stays readable, because the answer is usually
+ * about the form being filled in.
  *
  * The conversation lives in this component, which the shell mounts once, so it
  * survives moving between screens and is lost on sign-out. Nothing is stored.
@@ -149,7 +149,7 @@ export function HelpBot() {
         size="icon-lg"
         aria-label="Open the help assistant"
         onClick={openBot}
-        className="fixed right-3 bottom-[calc(4.75rem+env(safe-area-inset-bottom))] z-40 size-14 rounded-full shadow-lg shadow-primary/30 sm:right-4"
+        className="fixed right-3 bottom-[calc(1rem+env(safe-area-inset-bottom))] z-40 size-14 rounded-full shadow-lg shadow-primary/30 sm:right-4"
       >
         <MessageCircle className="size-6" />
       </Button>
@@ -165,7 +165,7 @@ export function HelpBot() {
       onKeyDown={(event) => {
         if (event.key === "Escape") setOpen(false)
       }}
-      className="fixed inset-x-3 bottom-[calc(4.75rem+env(safe-area-inset-bottom))] z-40 flex max-h-[min(34rem,70svh)] flex-col overflow-hidden rounded-2xl bg-card shadow-2xl ring-1 ring-foreground/10 outline-none sm:inset-x-auto sm:right-4 sm:w-[26rem]"
+      className="fixed inset-x-3 bottom-[calc(1rem+env(safe-area-inset-bottom))] z-40 flex max-h-[min(34rem,70svh)] flex-col overflow-hidden rounded-2xl bg-card shadow-2xl ring-1 ring-foreground/10 outline-none sm:inset-x-auto sm:right-4 sm:w-[26rem]"
     >
       <header className="flex shrink-0 items-center gap-2.5 border-b px-3 py-2.5">
         <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">

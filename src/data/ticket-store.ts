@@ -2,6 +2,7 @@ import { useSyncExternalStore } from "react"
 
 import { allSupportTickets, type TicketCategory, type TicketRow, type TicketSource } from "@/data/occ-tables"
 import { ticketDetail, type TicketDetail } from "@/data/ticket-detail"
+import { fieldReportedDetails, fieldReportedIssues } from "@/data/reported-issues"
 import type { Priority } from "@/data/occ-tables"
 import type { WorkStatus } from "@/lib/status"
 import { loadSnapshot, saveSnapshot } from "@/data/persist"
@@ -19,8 +20,16 @@ import { loadSnapshot, saveSnapshot } from "@/data/persist"
  */
 // EVITA keeps tickets raised from the tablet across a refresh (see data/persist.ts)
 const saved = loadSnapshot<{ rows: TicketRow[]; details: Record<string, TicketDetail> }>("tickets")
-let rows: TicketRow[] = saved?.rows ?? allSupportTickets
-let details: Record<string, TicketDetail> = saved?.details ?? Object.fromEntries(rows.map((r) => [r.id, ticketDetail(r)]))
+/*
+ * The field's own reported issues lead the desk's, so Reported Issues has a
+ * history on a device that has never raised one. They carry their own detail -
+ * the report as written, the photographs, the trail - rather than the generated
+ * stand-in every console row gets.
+ */
+const seeded = [...fieldReportedIssues, ...allSupportTickets]
+let rows: TicketRow[] = saved?.rows ?? seeded
+let details: Record<string, TicketDetail> =
+  saved?.details ?? Object.fromEntries(rows.map((r) => [r.id, fieldReportedDetails[r.id] ?? ticketDetail(r)]))
 
 const listeners = new Set<() => void>()
 const emit = () => {

@@ -1,5 +1,5 @@
 import { NavLink, useLocation } from "react-router"
-import { ClipboardCheck, ClipboardList, FileText, HardDrive, Headset, LayoutDashboard, Leaf, Menu, type LucideIcon } from "lucide-react"
+import { ClipboardCheck, ClipboardList, FileText, HardDrive, Headset, LayoutDashboard, Leaf, Menu, TriangleAlert, type LucideIcon } from "lucide-react"
 import { cn } from "cn"
 
 import { Sheet, SheetContent, SheetDescription, SheetTitle } from "@/components/ui/sheet"
@@ -19,6 +19,8 @@ const navigation: NavItem[] = [
   { path: "/inspections", title: "Inspections", icon: ClipboardCheck, badge: "inspection" },
   { path: "/assets", title: "Assets", icon: HardDrive },
   { path: "/reports", title: "Reports", icon: FileText },
+  /* What the engineer has reported, next to Help: both are the way back to OCC */
+  { path: "/issues", title: "Reported Issues", icon: TriangleAlert },
   { path: "/contact", title: "Help", icon: Headset },
 ]
 
@@ -119,7 +121,8 @@ export function AppSidebar({ open, onOpenChange }: { open: boolean; onOpenChange
       <SheetContent
         side="left"
         showCloseButton={false}
-        className="flex w-60 flex-col gap-0 border-sidebar-border bg-sidebar p-0 text-sidebar-foreground"
+        /* Narrow: it is a list of seven short names, and it covers the page while it is open */
+        className="flex w-50 flex-col gap-0 border-sidebar-border bg-sidebar p-0 text-sidebar-foreground"
       >
         <SheetTitle className="sr-only">Sections</SheetTitle>
         <SheetDescription className="sr-only">Move between the screens of the field app.</SheetDescription>
