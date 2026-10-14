@@ -115,7 +115,6 @@ export function MaintenanceForm({ job, detail }: { job: Job; detail: Maintenance
     { label: "INSTA consumables booked", done: usedProducts.length > 0 },
     { label: "Cleaning checklist complete", done: cleaned.length === cleaningSteps.length },
     { label: "After-maintenance photos uploaded", done: after.length > 0 },
-    { label: "Fire prevention answered", done: !!fire.done },
   ]
   const ready = checklist.every((c) => c.done)
 
@@ -244,7 +243,8 @@ export function MaintenanceForm({ job, detail }: { job: Job; detail: Maintenance
           <StepCard title="Fire Prevention System" icon={Flame} done={!!fire.done}>
             <div className="space-y-3">
               <div>
-                <FieldLabel required>Installed or serviced on this job?</FieldLabel>
+                {/* Optional throughout: a cleaning job does not always touch the system */}
+                <FieldLabel>Installed or serviced on this job?</FieldLabel>
                 <Segmented label="Fire prevention installed" value={fire.done} options={["Yes", "No"] as const} onChange={(v) => setFire((f) => ({ ...f, done: v }))} />
               </div>
               {fire.done === "Yes" ? (
