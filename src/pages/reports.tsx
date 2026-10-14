@@ -20,8 +20,28 @@ import { control, PAGE_SIZES } from "@/lib/data-table"
 
 const ANY = "all"
 
-/** How many assets with no cleaning report are lifted to the front of the list */
-const LEAD_UNCLEANED = 3
+/**
+ * Deal the assets with no cleaning report evenly through the ones that have it.
+ *
+ * Both groups keep their asset-id order; only where they sit changes, so the
+ * list stays predictable while no page is left looking as though every asset is
+ * fully reported.
+ */
+function mix(rows: ReportRow[]) {
+  const waiting = rows.filter((r) => !r.lastCleaned)
+  const reported = rows.filter((r) => r.lastCleaned)
+  if (!waiting.length || !reported.length) return rows
+
+  const step = (reported.length + waiting.length) / waiting.length
+  const out: ReportRow[] = []
+  let next = 0
+  for (const row of reported) {
+    // One waiting asset each time the running position passes the interval
+    if (next < waiting.length && out.length >= Math.round(next * step)) out.push(waiting[next++])
+    out.push(row)
+  }
+  return [...out, ...waiting.slice(next)]
+}
 
 /**
  * Asset Health Reports.
@@ -34,9 +54,9 @@ const LEAD_UNCLEANED = 3
  * opening as a PDF.
  *
  * The filters open on the engineer's own enterprise and plant, and an ELPREMAR
- * cannot reach outside their assignment, so there is no site chooser. A few
- * assets still waiting on a clean lead the list; the rest is in asset-id order,
- * the order the client asked for.
+ * cannot reach outside their assignment, so there is no site chooser. Rows are
+ * in asset-id order, which is the order the client asked for, with the assets
+ * still waiting on a clean dealt evenly through them - see `mix`.
  *
  * Trend Analysis is deliberately absent, on the client's instruction at review.
  */
@@ -67,15 +87,15 @@ export function ReportsPage() {
         (status === ANY || r.contaminationStatus === status || r.hygieneStatus === status)
     )
     /*
-     * A few of the assets still waiting on a clean are lifted to the front.
+     * The assets still waiting on a clean are spread through the list.
      *
-     * In asset-id order alone none of them reached the first page, and a screen
-     * where every card has all three reports reads as though nothing is owed.
-     * Only a few, though: the register is read in asset-id order, and sorting
-     * all nineteen to the top would bury that order under the exceptions.
+     * In asset-id order they clustered by category and none reached the first
+     * page; piled at the top instead, they read as a separate list. Dealt out
+     * at an even interval they are simply part of the register, and every page
+     * carries some - which is what the screen is for. Deterministic, as all the
+     * mock data here is: no shuffle, just one taken every so often.
      */
-    const waiting = matched.filter((r) => !r.lastCleaned).slice(0, LEAD_UNCLEANED)
-    return [...waiting, ...matched.filter((r) => !waiting.includes(r))]
+    return mix(matched)
   }, [query, department, category, status])
 
   const clear = () => {
