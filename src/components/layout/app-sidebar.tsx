@@ -3,11 +3,11 @@ import { ClipboardCheck, ClipboardList, FileText, HardDrive, Headset, LayoutDash
 import { cn } from "cn"
 
 import { Sheet, SheetContent, SheetDescription, SheetTitle } from "@/components/ui/sheet"
-import { OlivineLogo } from "@/components/layout/olivine-logo"
+import { OlivineEmblem, OlivineLogo } from "@/components/layout/olivine-logo"
 import { openPanel } from "@/lib/ui-store"
 import { actionFor, useMyJobs } from "@/lib/work"
 
-/** One section of the app, and the route prefixes that belong to it */
+/** One section of the app, and the badge it carries */
 type NavItem = { path: string; title: string; icon: LucideIcon; badge?: "work" | "inspection" }
 
 /**
@@ -26,29 +26,94 @@ const navigation: NavItem[] = [
 const under = (current: string, path: string) =>
   path === "/" ? current === "/" : current === path || current.startsWith(`${path}/`)
 
-/**
- * EVITA's navigation, drawn as OCC draws its own: the cream logo header, navy
- * body, the active section filled in the brand blue, and the mountain artwork
- * from the mockups along the foot.
- *
- * It is a drawer rather than a docked rail. EVITA is held in two hands on a
- * tablet, and a rail that pushed the page across would take width from the
- * thing the engineer actually came to read - so it stays shut, and when it is
- * opened it comes over the screen and shuts again on the way out.
- *
- * Scanning is here too, at the top: it is the one thing started from anywhere,
- * and it opens the scanner over whatever screen is showing rather than
- * navigating away from it.
- */
-export function AppSidebar({ open, onOpenChange }: { open: boolean; onOpenChange: (open: boolean) => void }) {
-  const { pathname } = useLocation()
-  // Work still needing the engineer's hands, counted per section
+/** Work still needing the engineer's hands, counted per section */
+function useCounts() {
   const waiting = useMyJobs().filter((j) => actionFor(j) !== "view")
-  const counts = {
+  return {
     work: waiting.filter((j) => j.kind === "maintenance").length,
     inspection: waiting.filter((j) => j.kind === "inspection").length,
   }
+}
 
+/**
+ * The rail that is always there: the emblem on cream, then one icon per
+ * section with the one you are on filled in the brand blue, as OCC draws its
+ * collapsed sidebar.
+ *
+ * Narrow enough to cost the page almost nothing, which is why it can stay. The
+ * names are on each icon as its label, so a hover and a screen reader both get
+ * them; the menu button on the bar opens the full list over the page.
+ *
+ * Hidden on a phone, where sixty-four pixels is a column the page needs.
+ */
+export function AppRail() {
+  const { pathname } = useLocation()
+  const counts = useCounts()
+
+  return (
+    <aside className="sticky top-0 z-30 hidden h-svh w-16 shrink-0 flex-col border-r border-sidebar-border bg-sidebar text-sidebar-foreground sm:flex">
+      <div className="flex h-16 shrink-0 items-center justify-center bg-[#f7f4ee]">
+        <OlivineEmblem className="size-9" />
+      </div>
+
+      <nav aria-label="Sections" className="min-h-0 flex-1 overflow-y-auto py-3">
+        <ul className="flex flex-col items-center gap-2">
+          {navigation.map((item) => (
+            <li key={item.path}>
+              <RailLink item={item} active={under(pathname, item.path)} badge={item.badge ? counts[item.badge] : 0} />
+            </li>
+          ))}
+
+          <li className="mt-1 w-full border-t border-sidebar-border pt-3">
+            <button
+              type="button"
+              title="Scan Asset QR"
+              aria-label="Scan an asset QR code"
+              onClick={() => openPanel({ kind: "scan" })}
+              className="mx-auto flex size-11 items-center justify-center rounded-xl hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+            >
+              <QrCode className="size-5" />
+            </button>
+          </li>
+        </ul>
+      </nav>
+    </aside>
+  )
+}
+
+/** One icon on the rail, with its count riding the corner */
+function RailLink({ item, active, badge }: { item: NavItem; active: boolean; badge: number }) {
+  return (
+    <NavLink
+      to={item.path}
+      end={item.path === "/"}
+      title={item.title}
+      aria-label={item.title}
+      className={cn(
+        "relative flex size-11 items-center justify-center rounded-xl transition-colors",
+        active ? "bg-sidebar-primary text-sidebar-primary-foreground" : "hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+      )}
+    >
+      <item.icon className="size-5" />
+      {badge ? (
+        <span className="absolute -top-0.5 -right-0.5 min-w-4 rounded-full bg-critical px-1 text-center text-[0.6rem] leading-4 font-bold text-critical-foreground">
+          {badge > 9 ? "9+" : badge}
+        </span>
+      ) : null}
+    </NavLink>
+  )
+}
+
+/**
+ * The same sections with their names, opened from the menu button.
+ *
+ * It comes over the page rather than pushing it across: EVITA is held in two
+ * hands on a tablet, and widening the rail in place would reflow whatever the
+ * engineer was reading. It shuts again on the way out.
+ */
+export function AppSidebar({ open, onOpenChange }: { open: boolean; onOpenChange: (open: boolean) => void }) {
+  const { pathname } = useLocation()
+  const counts = useCounts()
   const close = () => onOpenChange(false)
 
   return (
