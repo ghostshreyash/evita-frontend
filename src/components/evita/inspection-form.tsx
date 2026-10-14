@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react"
-import { ArrowLeft, ArrowRight, Camera, Check, Flame, Gauge, Lock, Save, Send, Thermometer, Zap, type LucideIcon } from "lucide-react"
+import { ArrowLeft, ArrowRight, Camera, Check, Flame, Gauge, Save, Send, Thermometer, type LucideIcon } from "lucide-react"
 import { toast } from "sonner"
 import { format } from "date-fns"
 import { cn } from "cn"
@@ -30,15 +30,14 @@ import { urlFor } from "@/lib/object-url"
 import { emptyCapture, newId, observationsFrom, resultsFrom, scoreCapture, sectionsDone } from "@/lib/testing"
 import type { Job } from "@/lib/work"
 
-type Section = "images" | "thermal" | "technical" | "fps" | "pd"
+type Section = "images" | "thermal" | "technical" | "fps"
 
-/** The five sections in the order the ELPREMAR works through them */
-const sections: { key: Section; title: string; icon: LucideIcon; phase2?: boolean }[] = [
+/** The four sections in the order the ELPREMAR works through them */
+const sections: { key: Section; title: string; icon: LucideIcon }[] = [
   { key: "images", title: "Asset Images", icon: Camera },
   { key: "thermal", title: "Thermal Images", icon: Thermometer },
   { key: "technical", title: "Technical Details", icon: Gauge },
   { key: "fps", title: "Fire Prevention", icon: Flame },
-  { key: "pd", title: "Partial Discharge", icon: Zap, phase2: true },
 ]
 
 
@@ -49,8 +48,7 @@ type Setter = (p: Partial<InspectionCapture>) => void
 /**
  * The inspection task capture, in the client's Phase-1 order: the asset images
  * (angle views), the thermal images (one per point), the electrical readings
- * the asset type calls for, then the fire prevention system. Partial Discharge
- * is Phase 2 and stays disabled until the measuring device integration arrives.
+ * the asset type calls for, then the fire prevention system.
  *
  * The one free-text note sits with the Technical Details readings rather than
  * under every section: it is there to explain a reading, not to stand in for
@@ -109,11 +107,9 @@ export function InspectionForm({ job, detail }: { job: Job; detail: InspectionDe
 
   const readings = inspectionReadingsFor(category)
   const done = sectionsDone(capture, category, ids)
-  const tabDone: Record<Section, boolean> = { images: done.images, thermal: done.thermal, technical: done.readings, fps: done.fps, pd: false }
+  const tabDone: Record<Section, boolean> = { images: done.images, thermal: done.thermal, technical: done.readings, fps: done.fps }
   const ready = done.images && done.thermal && done.readings && done.fps
-  /* The sections that can actually be worked on, in order - Phase 2 is locked */
-  const steps = sections.filter((sec) => !sec.phase2)
-  const at = Math.max(0, steps.findIndex((sec) => sec.key === section))
+  const at = Math.max(0, sections.findIndex((sec) => sec.key === section))
   const set: Setter = (p) => setCapture((c) => ({ ...c, ...p }))
   const removeEvidence = (id: string) => setEvidence((ev) => ev.filter((e) => e.id !== id))
 
@@ -128,7 +124,7 @@ export function InspectionForm({ job, detail }: { job: Job; detail: InspectionDe
   return (
     <div className="space-y-5">
       {/* ---------- Section tabs ---------- */}
-      <nav aria-label="Testing sections" className="grid grid-cols-2 gap-2 rounded-2xl bg-card p-2 shadow-xs ring-1 ring-foreground/10 sm:grid-cols-3 lg:grid-cols-5">
+      <nav aria-label="Testing sections" className="grid grid-cols-2 gap-2 rounded-2xl bg-card p-2 shadow-xs ring-1 ring-foreground/10 sm:grid-cols-4">
         {sections.map((s, i) => {
           const on = section === s.key
           const complete = tabDone[s.key]
@@ -136,14 +132,11 @@ export function InspectionForm({ job, detail }: { job: Job; detail: InspectionDe
             <button
               key={s.key}
               type="button"
-              disabled={s.phase2}
               aria-current={on ? "step" : undefined}
-              title={s.phase2 ? "Available in Phase 2, with the measuring device" : undefined}
               onClick={() => setSection(s.key)}
               className={cn(
                 "flex min-h-14 items-center gap-2.5 rounded-xl px-3 text-left text-sm font-semibold transition-colors",
-                on ? "bg-primary text-primary-foreground shadow-md shadow-primary/30" : "hover:bg-muted",
-                s.phase2 && "cursor-not-allowed text-muted-foreground hover:bg-transparent"
+                on ? "bg-primary text-primary-foreground shadow-md shadow-primary/30" : "hover:bg-muted"
               )}
             >
               <span
@@ -152,12 +145,9 @@ export function InspectionForm({ job, detail }: { job: Job; detail: InspectionDe
                   on ? "bg-white/20" : complete ? "bg-healthy text-healthy-foreground" : "bg-muted text-muted-foreground"
                 )}
               >
-                {complete && !on ? <Check className="size-4" strokeWidth={3} /> : s.phase2 ? <Lock className="size-4" /> : i + 1}
+                {complete && !on ? <Check className="size-4" strokeWidth={3} /> : i + 1}
               </span>
-              <span className="leading-tight">
-                {s.title}
-                {s.phase2 ? <span className="block text-xs font-medium text-muted-foreground/80">Phase 2</span> : null}
-              </span>
+              <span className="leading-tight">{s.title}</span>
             </button>
           )
         })}
@@ -187,20 +177,20 @@ export function InspectionForm({ job, detail }: { job: Job; detail: InspectionDe
               size="lg"
               className="h-12 bg-card"
               disabled={at === 0}
-              onClick={() => setSection(steps[at - 1].key)}
+              onClick={() => setSection(sections[at - 1].key)}
             >
-              <ArrowLeft /> {at === 0 ? "Back" : steps[at - 1].title}
+              <ArrowLeft /> {at === 0 ? "Back" : sections[at - 1].title}
             </Button>
             <span className="text-sm font-medium text-muted-foreground tabular-nums">
-              {at + 1} of {steps.length}
+              {at + 1} of {sections.length}
             </span>
             <Button
               size="lg"
               className="h-12"
-              disabled={at === steps.length - 1}
-              onClick={() => setSection(steps[at + 1].key)}
+              disabled={at === sections.length - 1}
+              onClick={() => setSection(sections[at + 1].key)}
             >
-              {at === steps.length - 1 ? "Next" : steps[at + 1].title} <ArrowRight />
+              {at === sections.length - 1 ? "Next" : sections[at + 1].title} <ArrowRight />
             </Button>
           </nav>
         </div>

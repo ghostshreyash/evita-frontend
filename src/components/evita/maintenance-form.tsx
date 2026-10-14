@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react"
 import { format } from "date-fns"
-import { Activity, Camera, Check, Droplets, Flame, NotebookPen, Send, Sparkles, Timer } from "lucide-react"
+import { Camera, Check, Droplets, Flame, NotebookPen, Send, Sparkles, Timer } from "lucide-react"
 import { toast } from "sonner"
 import { cn } from "cn"
 
@@ -14,7 +14,7 @@ import { CaptureTile } from "@/components/evita/photo-capture"
 import { Checklist, CountPill, EvidenceStrip, FieldLabel, Segmented, StepCard } from "@/components/evita/field-kit"
 import { TimeLog } from "@/components/evita/time-log"
 import type { EvidenceItem } from "@/data/evidence"
-import { fireSystems, pdMethods, products, type InstaProduct, type MaintenanceDetail } from "@/data/maintenance-detail"
+import { fireSystems, products, type InstaProduct, type MaintenanceDetail } from "@/data/maintenance-detail"
 import { instaUse, recommendInsta, type InstaProduct as InstaName } from "@/data/insta"
 import { useInspectionDetails } from "@/data/inspection-store"
 import { resumeMaintenanceClock, saveMaintenanceDraft, stopMaintenanceClock, submitMaintenance, type MaintenanceDraft } from "@/data/maintenance-store"
@@ -39,13 +39,7 @@ export function MaintenanceForm({ job, detail }: { job: Job; detail: Maintenance
     system: detail.firePrevention?.system ?? "",
     remarks: detail.firePrevention?.remarks ?? "",
   })
-  const [pd, setPd] = useState<{ done?: "Yes" | "No"; method: string; before: string; after: string; remarks: string }>({
-    done: detail.pdMitigation ? "Yes" : undefined,
-    method: detail.pdMitigation?.method ?? "",
-    before: "",
-    after: "",
-    remarks: detail.pdMitigation?.remarks ?? "",
-  })
+
   const [savedAt, setSavedAt] = useState<string | null>(null)
   const timeLog = detail.timeLog ?? []
   const running = timeLog.length > 0 && !timeLog.at(-1)!.end
@@ -53,16 +47,13 @@ export function MaintenanceForm({ job, detail }: { job: Job; detail: Maintenance
   const patch = useMemo<MaintenanceDraft>(
     () => ({
       notes: [notes, cleaned.length ? `Checklist: ${cleaned.join("; ")}.` : ""].filter(Boolean).join(" "),
-      products: items.filter((p) => p.name && p.quantity > 0),
+      products: items.filter((p) => p.name),
       evidence,
       // The type is optional: answering Yes is what the record needs
       firePrevention: fire.done === "Yes" ? { system: fire.system, remarks: fire.remarks } : undefined,
-      pdMitigation:
-        pd.done === "Yes" && pd.method
-          ? { method: pd.method, remarks: [pd.before && pd.after ? `PD ${pd.before} dB before, ${pd.after} dB after.` : "", pd.remarks].filter(Boolean).join(" ") }
-          : undefined,
+
     }),
-    [notes, cleaned, items, evidence, fire, pd]
+    [notes, cleaned, items, evidence, fire]
   )
 
   const first = useRef(true)
@@ -81,7 +72,7 @@ export function MaintenanceForm({ job, detail }: { job: Job; detail: Maintenance
   const before = evidence.filter((e) => e.label.startsWith("Before"))
   const after = evidence.filter((e) => e.label.startsWith("After"))
   const thermal = evidence.filter((e) => e.kind === "thermal")
-  const usedProducts = items.filter((p) => p.name && p.quantity > 0)
+  const usedProducts = items.filter((p) => p.name)
 
   /* The inspection this cleaning came out of, and what it asked for */
   const inspections = useInspectionDetails()
@@ -93,7 +84,6 @@ export function MaintenanceForm({ job, detail }: { job: Job; detail: Maintenance
     { label: "Cleaning checklist complete", done: cleaned.length === cleaningSteps.length },
     { label: "After-maintenance photos uploaded", done: after.length > 0 },
     { label: "Fire prevention answered", done: !!fire.done },
-    { label: "PD mitigation answered", done: !!pd.done && (pd.done === "No" || !!pd.method) },
   ]
   const ready = checklist.every((c) => c.done)
 
@@ -132,7 +122,7 @@ export function MaintenanceForm({ job, detail }: { job: Job; detail: Maintenance
               </p>
             ) : null}
 
-            {/* The products as cards: tap to book one, then enter the quantity used */}
+            {/* The products as cards: tap to book one against the job */}
             <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
               {products.map((x) => {
                 const row = items.find((r) => r.name === x.name)
@@ -141,7 +131,7 @@ export function MaintenanceForm({ job, detail }: { job: Job; detail: Maintenance
                     <button
                       type="button"
                       aria-pressed={!!row}
-                      onClick={() => setItems((rows) => (row ? rows.filter((r) => r.name !== x.name) : [...rows, { name: x.name, quantity: 0, unit: x.unit }]))}
+                      onClick={() => setItems((rows) => (row ? rows.filter((r) => r.name !== x.name) : [...rows, { name: x.name }]))}
                       className="flex min-h-12 items-center gap-3 text-left"
                     >
                       <span className={cn("flex size-11 shrink-0 items-center justify-center rounded-lg", row ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground")}>
@@ -164,19 +154,6 @@ export function MaintenanceForm({ job, detail }: { job: Job; detail: Maintenance
                         {row ? <Check className="size-4" strokeWidth={3} /> : null}
                       </span>
                     </button>
-                    {row ? (
-                      <div className="flex items-center gap-2">
-                        <Input
-                          inputMode="decimal"
-                          aria-label={`Quantity of ${x.name}`}
-                          placeholder="Qty"
-                          value={row.quantity ? String(row.quantity) : ""}
-                          onChange={(e) => setItems((rows) => rows.map((r) => (r.name === x.name ? { ...r, quantity: Number(e.target.value.replace(/[^\d.]/g, "")) || 0 } : r)))}
-                          className="bg-card tabular-nums"
-                        />
-                        <span className="w-10 text-sm font-medium text-muted-foreground">{x.unit}</span>
-                      </div>
-                    ) : null}
                   </div>
                 )
               })}
@@ -219,8 +196,8 @@ export function MaintenanceForm({ job, detail }: { job: Job; detail: Maintenance
           </div>
         </StepCard>
 
-        {/* ---------- 5 & 6. Add-ons ---------- */}
-        <div className="grid gap-4 lg:grid-cols-2">
+        {/* ---------- 5. Fire prevention ---------- */}
+        <div className="grid gap-4">
           <StepCard title="Fire Prevention System" icon={Flame} done={!!fire.done}>
             <div className="space-y-3">
               <div>
@@ -246,39 +223,6 @@ export function MaintenanceForm({ job, detail }: { job: Job; detail: Maintenance
             </div>
           </StepCard>
 
-          <StepCard title="Partial Discharge Mitigation" icon={Activity} done={!!pd.done && (pd.done === "No" || !!pd.method)}>
-            <div className="space-y-3">
-              <div>
-                <FieldLabel required>PD reduction activity performed?</FieldLabel>
-                <Segmented label="PD mitigation performed" value={pd.done} options={["Yes", "No"] as const} onChange={(v) => setPd((p) => ({ ...p, done: v }))} />
-              </div>
-              {pd.done === "Yes" ? (
-                <>
-                  <div>
-                    <FieldLabel required>Method</FieldLabel>
-                    <Select value={pd.method} onValueChange={(v) => setPd((p) => ({ ...p, method: v }))}>
-                      <SelectTrigger className="w-full"><SelectValue placeholder="Choose method" /></SelectTrigger>
-                      <SelectContent>{pdMethods.map((m) => <SelectItem key={m} value={m}>{m}</SelectItem>)}</SelectContent>
-                    </Select>
-                  </div>
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <FieldLabel>PD before (dB)</FieldLabel>
-                      <Input inputMode="decimal" value={pd.before} onChange={(e) => setPd((p) => ({ ...p, before: e.target.value }))} className="tabular-nums" />
-                    </div>
-                    <div>
-                      <FieldLabel>PD after (dB)</FieldLabel>
-                      <Input inputMode="decimal" value={pd.after} onChange={(e) => setPd((p) => ({ ...p, after: e.target.value }))} className="tabular-nums" />
-                    </div>
-                  </div>
-                  <div>
-                    <FieldLabel>Remarks</FieldLabel>
-                    <Input value={pd.remarks} onChange={(e) => setPd((p) => ({ ...p, remarks: e.target.value }))} placeholder="e.g. All joints tightened" />
-                  </div>
-                </>
-              ) : null}
-            </div>
-          </StepCard>
         </div>
       </div>
 

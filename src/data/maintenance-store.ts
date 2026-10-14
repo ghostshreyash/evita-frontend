@@ -107,7 +107,7 @@ export function reviewMaintenance(id: string, outcome: "approved" | "rejected", 
  * What the maintenance form saves. The clock (`timeLog`, start / end times) is
  * written only by Start / Stop / Resume, so a draft can never roll it back.
  */
-export type MaintenanceDraft = Pick<MaintenanceDetail, "products" | "evidence" | "firePrevention" | "pdMitigation"> & { notes: string }
+export type MaintenanceDraft = Pick<MaintenanceDetail, "products" | "evidence" | "firePrevention"> & { notes: string }
 
 const withDraft = (detail: MaintenanceDetail, { notes, ...rest }: MaintenanceDraft): MaintenanceDetail => ({
   ...detail,
@@ -178,7 +178,6 @@ export function startMaintenance(id: string, by: string) {
           products: [],
           evidence: [],
           firePrevention: undefined,
-          pdMitigation: undefined,
           review: undefined,
         },
   }

@@ -1,4 +1,4 @@
-import { Activity, Camera, ClipboardList, Droplets, Eye, Flame, Gauge, Timer, Wrench } from "lucide-react"
+import { Camera, ClipboardList, Droplets, Eye, Flame, Gauge, Timer, Wrench } from "lucide-react"
 import { cn } from "cn"
 
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
@@ -187,7 +187,15 @@ export function MaintenanceRecord({ detail }: { detail: MaintenanceDetail }) {
         </TaskPanel>
 
         <TaskPanel icon={Droplets} title="INSTA Consumables">
-          {detail.products.length ? <DetailList rows={detail.products.map((p) => ({ label: p.name, value: `${p.quantity} ${p.unit}` }))} /> : empty("None booked.")}
+          {detail.products.length ? (
+            <ul className="space-y-1 text-sm font-medium">
+              {detail.products.map((p) => (
+                <li key={p.name}>{p.name}</li>
+              ))}
+            </ul>
+          ) : (
+            empty("None booked.")
+          )}
         </TaskPanel>
 
         <TaskPanel icon={Flame} title="Fire Prevention System">
@@ -203,18 +211,6 @@ export function MaintenanceRecord({ detail }: { detail: MaintenanceDetail }) {
           )}
         </TaskPanel>
 
-        <TaskPanel icon={Activity} title="PD Mitigation">
-          {detail.pdMitigation ? (
-            <DetailList
-              rows={[
-                { label: "Method", value: detail.pdMitigation.method, always: true },
-                { label: "Remarks", value: detail.pdMitigation.remarks },
-              ]}
-            />
-          ) : (
-            empty("Not performed on this job.")
-          )}
-        </TaskPanel>
       </div>
 
       {detail.timeLog?.length ? (
