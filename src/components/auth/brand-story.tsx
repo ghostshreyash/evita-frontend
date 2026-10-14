@@ -1,6 +1,7 @@
 import { Leaf } from "lucide-react"
 
-import { Rise, SystemName } from "@/components/auth/auth-screen"
+import { Rise } from "@/components/auth/auth-screen"
+import { SystemName } from "@/components/common/system-name"
 import { brand } from "@/config/brand"
 
 /**

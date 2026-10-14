@@ -3,6 +3,7 @@ import { format } from "date-fns"
 import { CalendarDays, ClipboardList, MapPin } from "lucide-react"
 
 import { NextTask, QuickActions, UpcomingTasks } from "@/components/evita/home-hero"
+import { SystemName } from "@/components/common/system-name"
 import { useCurrentElpremar } from "@/lib/me"
 import { isThisWeek, useMyJobs } from "@/lib/work"
 
@@ -28,7 +29,9 @@ export function DashboardPage() {
         <div className="absolute inset-0 bg-gradient-to-r from-brand-navy via-brand-navy/90 to-brand-navy/30" />
 
         <div className="relative p-5">
-          <h2 className="text-2xl font-bold tracking-tight sm:text-3xl">Hello, {me.name} 👋</h2>
+          {/* What the app they are standing in is called, in full */}
+          <SystemName className="text-xs tracking-wide text-white/70 uppercase" />
+          <h2 className="mt-1 text-2xl font-bold tracking-tight sm:text-3xl">Hello, {me.name} 👋</h2>
           <p className="mt-0.5 text-sm font-medium text-white/90">
             {me.designation} · ELPREMAR <span className="tabular-nums">{me.id}</span>
           </p>
