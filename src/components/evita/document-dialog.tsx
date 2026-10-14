@@ -42,7 +42,7 @@ export function DocumentDialog({
       <DialogContent
         showCloseButton={false}
         /* Near enough full screen: a PDF page is portrait and read at size */
-        className="grid h-[94svh] w-[calc(100%-1rem)] max-w-[72rem] grid-rows-[auto_1fr] gap-0 overflow-hidden p-0 sm:w-[calc(100%-3rem)]"
+        className="grid h-[94svh] w-[calc(100%-1rem)] max-w-[96rem] grid-rows-[auto_1fr] gap-0 overflow-hidden p-0 sm:w-[calc(100%-2rem)]"
       >
         {/* The bar: what is open on the left, what can be done with it on the right */}
         <header className="flex min-w-0 items-center gap-2 border-b bg-card px-3 py-2.5">

@@ -3,6 +3,7 @@ import { BeginInspectionDialog } from "@/components/evita/begin-inspection-dialo
 import { ReportIssueDialog } from "@/components/evita/report-issue-dialog"
 import { SafetyDialog, SopDialog } from "@/components/evita/guidance-dialogs"
 import { NotificationsSheet } from "@/components/evita/notifications-sheet"
+import { DocumentDialog } from "@/components/evita/document-dialog"
 import { closePanel, usePanel } from "@/lib/ui-store"
 
 /**
@@ -22,6 +23,7 @@ export function Panels() {
       {panel?.kind === "sop" ? <SopDialog key={panel.activity ?? "sop"} activity={panel.activity} onOpenChange={close} /> : null}
       {panel?.kind === "safety" ? <SafetyDialog onOpenChange={close} /> : null}
       {panel?.kind === "notifications" ? <NotificationsSheet onOpenChange={close} /> : null}
+      {panel?.kind === "document" ? <DocumentDialog key={panel.file} document={panel} onOpenChange={close} /> : null}
     </>
   )
 }

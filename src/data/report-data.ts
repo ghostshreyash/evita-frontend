@@ -191,8 +191,15 @@ function reportFor(asset: AssetRecord, index: number): ReportRow {
     finding: faults[i] ?? ("Healthy" as Finding),
   }))
 
-  const lastCleaned = inspected ? dateOffset(-(10 + (s % 200))) : ""
-  const lastMaintenance = inspected ? dateOffset(-(20 + (s % 260))) : ""
+  /*
+   * Not every asset has been cleaned. An inspection raises the cleaning, and on
+   * a live register a good few are still waiting on one - by position rather
+   * than by hash, so the "no cleaning report yet" case is always on screen and
+   * is not left to a divisor to produce.
+   */
+  const cleaned = inspected && index % 4 !== 3
+  const lastCleaned = cleaned ? dateOffset(-(10 + (s % 200))) : ""
+  const lastMaintenance = cleaned ? dateOffset(-(20 + (s % 260))) : ""
 
   return {
     asset,

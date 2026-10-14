@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react"
-import { BookOpen, CalendarClock, ExternalLink, MapPin, Search, TriangleAlert, X } from "lucide-react"
+import { BookOpen, CalendarClock, FileText, MapPin, Search, TriangleAlert, X } from "lucide-react"
 import { cn } from "cn"
 import { toast } from "sonner"
 
@@ -172,12 +172,13 @@ function AssetReportCard({ row }: { row: ReportRow }) {
         {row.hygieneOpen ? `${row.hygieneOpen} of 8 open` : "All points clear"}
       </Badge>
     ),
-    cleaning: (
-      <span className="rounded-full bg-muted px-2 py-0.5 text-xs font-semibold tabular-nums">
-        {row.lastCleaned || "Not yet cleaned"}
-      </span>
-    ),
+    cleaning: row.lastCleaned ? (
+      <span className="rounded-full bg-muted px-2 py-0.5 text-xs font-semibold tabular-nums">{row.lastCleaned}</span>
+    ) : null,
   }
+
+  /* A cleaning report is the before and after of a clean, so it exists only once one has happened */
+  const has = (kind: ReportKind) => kind !== "cleaning" || !!row.lastCleaned
 
   return (
     <article className="flex h-full flex-col rounded-2xl bg-card p-3 shadow-xs ring-1 ring-foreground/10">
@@ -221,17 +222,23 @@ function AssetReportCard({ row }: { row: ReportRow }) {
                 <span className="text-sm font-semibold">{report.title}</span>
                 {note[report.kind]}
               </div>
-              <p className="truncate text-xs text-muted-foreground">{report.detail}</p>
+              <p className="truncate text-xs text-muted-foreground">
+                {has(report.kind) ? report.detail : "Raised once this asset has been cleaned"}
+              </p>
             </div>
-            <Button
-              variant="outline"
-              size="sm"
-              className="h-10 shrink-0 bg-card"
-              onClick={() => openReport(report)}
-              aria-label={`View the ${report.title.toLowerCase()} for ${row.asset.id}`}
-            >
-              <ExternalLink /> View
-            </Button>
+            {has(report.kind) ? (
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-10 shrink-0 bg-card"
+                onClick={() => openReport(report)}
+                aria-label={`View the ${report.title.toLowerCase()} for ${row.asset.id}`}
+              >
+                <FileText /> View
+              </Button>
+            ) : (
+              <span className="shrink-0 text-xs font-medium text-muted-foreground">Not cleaned yet</span>
+            )}
           </li>
         ))}
       </ul>

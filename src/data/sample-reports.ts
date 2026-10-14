@@ -10,6 +10,8 @@
  * TODO(api): swap `file` for the URL the reporting service returns for this
  * asset's own report. Nothing else here should need to change.
  */
+import { openPanel } from "@/lib/ui-store"
+
 export type ReportKind = "contamination" | "hygiene" | "cleaning"
 
 export type SampleReport = {
@@ -41,5 +43,12 @@ export const sampleReports: SampleReport[] = [
   },
 ]
 
-/** Open one in a tab of its own, which is where a PDF is read */
-export const openReport = (report: SampleReport) => window.open(report.file, "_blank", "noopener")
+/**
+ * Read one without leaving the screen it was opened from.
+ *
+ * A tab of its own means leaving EVITA on a tablet, and the engineer loses the
+ * list they were working down - so it opens in the reader over the page, with
+ * Open and Download on its bar for anyone who does want it elsewhere.
+ */
+export const openReport = (report: SampleReport) =>
+  openPanel({ kind: "document", title: report.title, file: report.file, detail: report.detail })
