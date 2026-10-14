@@ -1,4 +1,4 @@
-import { Camera, ClipboardList, Droplets, Eye, Flame, Gauge, Timer, Wrench } from "lucide-react"
+import { Camera, ClipboardList, Eye, Flame, Gauge, Timer, Wrench } from "lucide-react"
 import { cn } from "cn"
 
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
@@ -183,18 +183,6 @@ export function MaintenanceRecord({ detail }: { detail: MaintenanceDetail }) {
             />
           ) : (
             empty("Not started.")
-          )}
-        </TaskPanel>
-
-        <TaskPanel icon={Droplets} title="INSTA Consumables">
-          {detail.products.length ? (
-            <ul className="space-y-1 text-sm font-medium">
-              {detail.products.map((p) => (
-                <li key={p.name}>{p.name}</li>
-              ))}
-            </ul>
-          ) : (
-            empty("None booked.")
           )}
         </TaskPanel>
 

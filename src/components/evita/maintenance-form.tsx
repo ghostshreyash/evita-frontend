@@ -1,26 +1,21 @@
 import { useEffect, useMemo, useRef, useState } from "react"
 import { format } from "date-fns"
-import { Camera, Check, Droplets, Flame, NotebookPen, Send, Sparkles, Timer } from "lucide-react"
+import { Camera, Flame, NotebookPen, Send, Timer } from "lucide-react"
 import { toast } from "sonner"
-import { cn } from "cn"
 
 import { Button } from "@/components/ui/button"
-import { Checkbox } from "@/components/ui/checkbox"
 import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { CaptureTile } from "@/components/evita/photo-capture"
 import { Checklist, CountPill, EvidenceStrip, FieldLabel, Segmented, StepCard } from "@/components/evita/field-kit"
 import { TimeLog } from "@/components/evita/time-log"
 import type { EvidenceItem } from "@/data/evidence"
-import { fireSystems, products, type InstaProduct, type MaintenanceDetail } from "@/data/maintenance-detail"
-import { instaUse, recommendInsta, type InstaProduct as InstaName } from "@/data/insta"
+import { fireSystems, type MaintenanceDetail } from "@/data/maintenance-detail"
 import { useInspectionDetails } from "@/data/inspection-store"
 import { resumeMaintenanceClock, saveMaintenanceDraft, stopMaintenanceClock, submitMaintenance, type MaintenanceDraft } from "@/data/maintenance-store"
 import type { Job } from "@/lib/work"
 
-const cleaningSteps = ["Surface cleaning completed", "Internal cleaning (as applicable)", "Post-cleaning drying completed"]
 
 /**
  * Perform Maintenance for one job, as on EVITA mockup p.29: the real-time log,
@@ -50,10 +45,7 @@ export function MaintenanceForm({ job, detail }: { job: Job; detail: Maintenance
   const inspections = useInspectionDetails()
   const source = job.inspectionId ? inspections[job.inspectionId] : undefined
 
-  // The cleaning checklist is stored at the end of the notes; split it back out when reopening
-  const [notes, setNotes] = useState((detail.execution?.notes ?? "").replace(/\s*Checklist: .*$/, ""))
-  const [items, setItems] = useState<InstaProduct[]>(detail.products)
-  const [cleaned, setCleaned] = useState<string[]>(() => cleaningSteps.filter((step) => detail.execution?.notes.includes(step)))
+  const [notes, setNotes] = useState(detail.execution?.notes ?? "")
   /*
    * The before set is the inspection's own images, carried over.
    *
@@ -78,14 +70,14 @@ export function MaintenanceForm({ job, detail }: { job: Job; detail: Maintenance
 
   const patch = useMemo<MaintenanceDraft>(
     () => ({
-      notes: [notes, cleaned.length ? `Checklist: ${cleaned.join("; ")}.` : ""].filter(Boolean).join(" "),
-      products: items.filter((p) => p.name),
+      notes,
+      products: detail.products,
       evidence,
       // The type is optional: answering Yes is what the record needs
       firePrevention: fire.done === "Yes" ? { system: fire.system, remarks: fire.remarks } : undefined,
 
     }),
-    [notes, cleaned, items, evidence, fire]
+    [notes, detail.products, evidence, fire]
   )
 
   const first = useRef(true)
@@ -106,14 +98,10 @@ export function MaintenanceForm({ job, detail }: { job: Job; detail: Maintenance
   const after = evidence.filter((e) => e.kind === "photo" && !isBefore(e))
   const thermalBefore = evidence.filter((e) => e.kind === "thermal" && isBefore(e))
   const thermalAfter = evidence.filter((e) => e.kind === "thermal" && !isBefore(e))
-  const usedProducts = items.filter((p) => p.name)
 
-  const advice = recommendInsta(source?.capture)
 
   const checklist = [
     { label: "Work time logged", done: timeLog.length > 0 },
-    { label: "INSTA consumables booked", done: usedProducts.length > 0 },
-    { label: "Cleaning checklist complete", done: cleaned.length === cleaningSteps.length },
     { label: "After-maintenance photos uploaded", done: after.length > 0 },
   ]
   const ready = checklist.every((c) => c.done)
@@ -135,73 +123,6 @@ export function MaintenanceForm({ job, detail }: { job: Job; detail: Maintenance
           <Textarea value={notes} rows={3} onChange={(e) => setNotes(e.target.value)} placeholder="What was done, e.g. Busbar chamber de-dusted, terminations re-torqued." />
         </StepCard>
 
-        {/* ---------- 3. Consumables ---------- */}
-        <StepCard title="INSTA CLEAN" icon={Droplets} done={usedProducts.length > 0 && cleaned.length === cleaningSteps.length} actions={<CountPill done={usedProducts.length > 0}>{usedProducts.length} Used</CountPill>}>
-          <div className="space-y-3">
-            {/*
-              * What the inspection asked for. The client was explicit that the
-              * field judgement wins, so it is a recommendation on the card the
-              * engineer may well not take.
-              */}
-            {advice ? (
-              <p className="flex flex-wrap items-center gap-x-2 gap-y-1 rounded-xl bg-info-soft px-3 py-2.5 text-sm ring-1 ring-primary/20">
-                <Sparkles className="size-4 shrink-0 text-primary" />
-                <span>
-                  The inspection recommends <strong className="font-semibold">{advice.product}</strong> — {advice.because}.
-                </span>
-                <span className="text-muted-foreground">Pick another if the panel says otherwise.</span>
-              </p>
-            ) : null}
-
-            {/* The products as cards: tap to book one against the job */}
-            <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-              {products.map((x) => {
-                const row = items.find((r) => r.name === x.name)
-                return (
-                  <div key={x.name} className={cn("flex flex-col gap-3 rounded-xl p-3 ring-1 transition-colors", row ? "bg-info-soft/50 ring-2 ring-primary" : "bg-card ring-foreground/10")}>
-                    <button
-                      type="button"
-                      aria-pressed={!!row}
-                      onClick={() => setItems((rows) => (row ? rows.filter((r) => r.name !== x.name) : [...rows, { name: x.name }]))}
-                      className="flex min-h-12 items-center gap-3 text-left"
-                    >
-                      <span className={cn("flex size-11 shrink-0 items-center justify-center rounded-lg", row ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground")}>
-                        <Droplets className="size-5" />
-                      </span>
-                      <span className="min-w-0 flex-1 leading-tight">
-                        <span className="block text-sm font-semibold">
-                          {x.name}
-                          {advice?.product === x.name ? (
-                            <span className="ml-1.5 rounded-full bg-primary px-1.5 py-0.5 text-[0.65rem] font-bold text-primary-foreground">
-                              Recommended
-                            </span>
-                          ) : null}
-                        </span>
-                        <span className="mt-0.5 block text-xs text-muted-foreground">
-                          {instaUse[x.name as InstaName].condition} · {instaUse[x.name as InstaName].detail}
-                        </span>
-                      </span>
-                      <span className={cn("flex size-6 shrink-0 items-center justify-center rounded-md ring-2", row ? "bg-primary text-primary-foreground ring-primary" : "ring-foreground/20")}>
-                        {row ? <Check className="size-4" strokeWidth={3} /> : null}
-                      </span>
-                    </button>
-                  </div>
-                )
-              })}
-            </div>
-            <div className="space-y-1 border-t pt-3">
-              {cleaningSteps.map((step) => (
-                <Label key={step} className="flex min-h-11 cursor-pointer items-center gap-3 text-sm font-normal">
-                  <Checkbox
-                    checked={cleaned.includes(step)}
-                    onCheckedChange={(v) => setCleaned((c) => (v ? [...c, step] : c.filter((x) => x !== step)))}
-                  />
-                  {step}
-                </Label>
-              ))}
-            </div>
-          </div>
-        </StepCard>
 
         {/* ---------- 4. Evidence ---------- */}
         <StepCard title="Maintenance Images" icon={Camera} done={after.length > 0} actions={<CountPill done={after.length > 0}>{evidence.length} Captured</CountPill>}>
