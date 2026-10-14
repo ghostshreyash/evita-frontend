@@ -31,8 +31,9 @@ const ANY = "all"
  * opening as a PDF.
  *
  * The filters open on the engineer's own enterprise and plant, and an ELPREMAR
- * cannot reach outside their assignment, so there is no site chooser. Rows come
- * in Asset ID order, which is the order the client asked for.
+ * cannot reach outside their assignment, so there is no site chooser. Assets
+ * still waiting on a clean lead, and asset id orders the rest - the order the
+ * client asked for, with what is outstanding where it can be seen.
  *
  * Trend Analysis is deliberately absent, on the client's instruction at review.
  */
@@ -51,7 +52,7 @@ export function ReportsPage() {
 
   const rows = useMemo(() => {
     const q = query.trim().toLowerCase()
-    return reportRows.filter(
+    const matched = reportRows.filter(
       (r) =>
         (!q ||
           r.asset.id.toLowerCase().includes(q) ||
@@ -62,6 +63,15 @@ export function ReportsPage() {
         (category === ANY || r.asset.category === category) &&
         (status === ANY || r.contaminationStatus === status || r.hygieneStatus === status)
     )
+    /*
+     * Assets still waiting on a clean come first.
+     *
+     * They are the ones with something outstanding, and in asset-id order alone
+     * they fell past the first page entirely - a register where every card on
+     * screen has all three reports reads as though nothing is owed. Asset id
+     * still orders within each group.
+     */
+    return [...matched].sort((a, b) => Number(!!a.lastCleaned) - Number(!!b.lastCleaned))
   }, [query, department, category, status])
 
   const clear = () => {
