@@ -202,7 +202,7 @@ export function MaintenanceRecord({ detail }: { detail: MaintenanceDetail }) {
       </div>
 
       {detail.timeLog?.length ? (
-        <TaskPanel icon={Timer} title="Real Time Maintenance Log">
+        <TaskPanel icon={Timer} title="Real Time Cleaning Log">
           <TimeLog entries={detail.timeLog} readOnly />
         </TaskPanel>
       ) : null}

@@ -187,7 +187,7 @@ export function useMyJobs(): Job[] {
           plant: m.plant,
           enterprise: m.enterprise,
           country: m.country,
-          activity: `${m.type} Maintenance`,
+          activity: `${m.type} Cleaning`,
           date: m.scheduled,
           slot: m.slot,
           priority: maintenanceDetails[m.id]?.priority ?? "Medium",
