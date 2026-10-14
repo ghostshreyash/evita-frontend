@@ -24,7 +24,7 @@ export function AppLayout() {
   return (
     <div className="flex min-h-svh bg-background">
       {/* Always there, icon-wide; the menu button opens the same list named */}
-      <AppRail />
+      <AppRail onMenu={() => setMenu(true)} />
       <AppSidebar open={menu} onOpenChange={setMenu} />
 
       <div className="flex min-w-0 flex-1 flex-col">

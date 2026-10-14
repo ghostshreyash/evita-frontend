@@ -1,9 +1,9 @@
 import { NavLink, useLocation } from "react-router"
-import { ClipboardCheck, ClipboardList, FileText, HardDrive, Headset, LayoutDashboard, Leaf, QrCode, type LucideIcon } from "lucide-react"
+import { ClipboardCheck, ClipboardList, FileText, HardDrive, Headset, LayoutDashboard, Leaf, Menu, QrCode, type LucideIcon } from "lucide-react"
 import { cn } from "cn"
 
 import { Sheet, SheetContent, SheetDescription, SheetTitle } from "@/components/ui/sheet"
-import { OlivineEmblem, OlivineLogo } from "@/components/layout/olivine-logo"
+import { OlivineLogo } from "@/components/layout/olivine-logo"
 import { openPanel } from "@/lib/ui-store"
 import { actionFor, useMyJobs } from "@/lib/work"
 
@@ -36,7 +36,7 @@ function useCounts() {
 }
 
 /**
- * The rail that is always there: the emblem on cream, then one icon per
+ * The rail that is always there: the button that opens it, then one icon per
  * section with the one you are on filled in the brand blue, as OCC draws its
  * collapsed sidebar.
  *
@@ -46,14 +46,22 @@ function useCounts() {
  *
  * Hidden on a phone, where sixty-four pixels is a column the page needs.
  */
-export function AppRail() {
+export function AppRail({ onMenu }: { onMenu: () => void }) {
   const { pathname } = useLocation()
   const counts = useCounts()
 
   return (
     <aside className="sticky top-0 z-30 hidden h-svh w-16 shrink-0 flex-col border-r border-sidebar-border bg-sidebar text-sidebar-foreground sm:flex">
-      <div className="flex h-16 shrink-0 items-center justify-center bg-[#f7f4ee]">
-        <OlivineEmblem className="size-9" />
+      {/* The rail's own head opens it: the emblem is already on the bar beside it */}
+      <div className="flex h-16 shrink-0 items-center justify-center border-b border-sidebar-border">
+        <button
+          type="button"
+          aria-label="Open the sections menu"
+          onClick={onMenu}
+          className="flex size-11 items-center justify-center rounded-xl hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+        >
+          <Menu className="size-5" />
+        </button>
       </div>
 
       <nav aria-label="Sections" className="min-h-0 flex-1 overflow-y-auto py-3">

@@ -44,7 +44,7 @@ export function AppBar({ onMenu }: { onMenu: () => void }) {
         type="button"
         aria-label="Open the sections menu"
         onClick={onMenu}
-        className="flex size-11 shrink-0 items-center justify-center rounded-full text-foreground/70 hover:bg-muted"
+        className="flex size-11 shrink-0 items-center justify-center rounded-full text-foreground/70 hover:bg-muted sm:hidden"
       >
         <Menu className="size-6" />
       </button>
