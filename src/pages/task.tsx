@@ -287,6 +287,8 @@ export function TaskPage() {
               {inspection ? <InspectionRecord detail={inspection} activity={job.activity} /> : maintenance ? <MaintenanceRecord detail={maintenance} /> : null}
               {/* The two reports the inspection produces, and the clean they ask for */}
               {inspection ? <InspectionReports job={job} detail={inspection} /> : null}
+              {/* What the clean changed, on every job that has been carried out */}
+              {maintenance?.execution?.endedAt ? <CleaningReportPanel job={job} detail={maintenance} /> : null}
             </div>
             <aside className="space-y-5">
               {inspection?.result ? (
@@ -303,8 +305,6 @@ export function TaskPage() {
                   <Timeline steps={timeline} />
                 </TaskPanel>
               ) : null}
-              {/* What the clean changed, on every job that has been carried out */}
-              {maintenance?.execution?.endedAt ? <CleaningReportPanel job={job} detail={maintenance} /> : null}
             </aside>
           </div>
         </div>
