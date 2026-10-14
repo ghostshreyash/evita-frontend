@@ -102,7 +102,7 @@ export function MaintenanceForm({ job, detail }: { job: Job; detail: Maintenance
 
   const checklist = [
     { label: "Work time logged", done: timeLog.length > 0 },
-    { label: "After-maintenance photos uploaded", done: after.length > 0 },
+    { label: "After-cleaning photos uploaded", done: after.length > 0 },
   ]
   const ready = checklist.every((c) => c.done)
 
@@ -114,7 +114,7 @@ export function MaintenanceForm({ job, detail }: { job: Job; detail: Maintenance
     <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_19rem]">
       <div className="min-w-0 space-y-5">
         {/* ---------- 1. Real-time log ---------- */}
-        <StepCard title="Real Time Maintenance Log" icon={Timer} done={timeLog.length > 0 && !running}>
+        <StepCard title="Real Time Cleaning Log" icon={Timer} done={timeLog.length > 0 && !running}>
           <TimeLog entries={timeLog} onStop={() => stopMaintenanceClock(job.id)} onResume={() => resumeMaintenanceClock(job.id)} />
         </StepCard>
 
@@ -125,10 +125,10 @@ export function MaintenanceForm({ job, detail }: { job: Job; detail: Maintenance
 
 
         {/* ---------- 4. Evidence ---------- */}
-        <StepCard title="Maintenance Images" icon={Camera} done={after.length > 0} actions={<CountPill done={after.length > 0}>{evidence.length} Captured</CountPill>}>
+        <StepCard title="Cleaning Images" icon={Camera} done={after.length > 0} actions={<CountPill done={after.length > 0}>{evidence.length} Captured</CountPill>}>
           <div className="space-y-4">
             <div>
-              <FieldLabel>Before maintenance ({before.length})</FieldLabel>
+              <FieldLabel>Before cleaning ({before.length})</FieldLabel>
               {job.inspectionId ? (
                 <p className="mb-1.5 text-xs text-muted-foreground">
                   Carried over from inspection {job.inspectionId}. Drop any that are not useful, or add your own.
@@ -139,7 +139,7 @@ export function MaintenanceForm({ job, detail }: { job: Job; detail: Maintenance
               </EvidenceStrip>
             </div>
             <div>
-              <FieldLabel required>After maintenance ({after.length})</FieldLabel>
+              <FieldLabel required>After cleaning ({after.length})</FieldLabel>
               <EvidenceStrip items={after} onRemove={remove}>
                 <CaptureTile kind="photo" label="After Photo" onCapture={capture("After — as left")} />
               </EvidenceStrip>
@@ -193,7 +193,7 @@ export function MaintenanceForm({ job, detail }: { job: Job; detail: Maintenance
       {/* ---------- Submit for approval ---------- */}
       <aside className="space-y-4 lg:sticky lg:top-20 lg:self-start">
         <section className="space-y-4 rounded-2xl bg-card p-4 shadow-xs ring-1 ring-foreground/10">
-          <h3 className="text-lg font-semibold text-brand-navy dark:text-foreground">Maintenance Summary</h3>
+          <h3 className="text-lg font-semibold text-brand-navy dark:text-foreground">Cleaning Summary</h3>
           <p className="rounded-xl bg-muted/50 p-3 text-sm text-muted-foreground">OCC reviews the evidence and approves the work, or sends it back with remarks. The asset's health report updates after approval.</p>
           <Checklist items={checklist} />
           <Button

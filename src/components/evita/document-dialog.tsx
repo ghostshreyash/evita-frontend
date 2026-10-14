@@ -41,13 +41,19 @@ export function DocumentDialog({
     <Dialog open onOpenChange={onOpenChange}>
       <DialogContent
         showCloseButton={false}
-        /* Near enough full screen: a PDF page is portrait and read at size */
         /*
-          * Landscape is where a report is actually read - the tablet is turned,
-          * the page is wide and short - so the cap comes off and the reader
-          * takes the screen but for a margin.
+          * Tall rather than wide. A PDF page is portrait, so width past about
+          * three quarters of the height is margin the viewer pads out either
+          * side of the page - on a desk monitor an uncapped reader stretched
+          * the full screen to show the same column. It still takes the width it
+          * is given on a tablet, where the cap is above the screen anyway.
+          *
+          * Marked important, as the other wide dialogs are: DialogContent's own
+          * `max-w-[calc(100%-2rem)]` is an arbitrary value that `cn` does not
+          * merge away, and it is written after this one, so without the `!` the
+          * dialog goes back to full width.
           */
-        className="grid h-[94svh] w-[calc(100%-1rem)] max-w-[96rem] grid-rows-[auto_1fr] gap-0 overflow-hidden p-0 sm:w-[calc(100%-2rem)] landscape:w-[calc(100%-1.5rem)] landscape:max-w-none"
+        className="grid h-[94svh] w-[calc(100%-1rem)] max-w-[68rem]! grid-rows-[auto_1fr] gap-0 overflow-hidden p-0 sm:w-[calc(100%-2rem)]"
       >
         {/* The bar: what is open on the left, what can be done with it on the right */}
         <header className="flex min-w-0 items-center gap-2 border-b bg-card px-3 py-2.5">

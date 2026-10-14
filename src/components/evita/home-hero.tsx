@@ -183,7 +183,11 @@ export function NextTask() {
               {/* A cleaning job is a task on the book; an inspection is not */}
               <kind.icon className="size-3.5" /> {inspection ? kind.label : `${kind.label} Task`}
             </Chip>
-            <Chip className="bg-info-soft text-info">{job.activity}</Chip>
+            {/*
+              * Only an inspection names its activity here. A clean's reads
+              * "Preventive Cleaning", which is the chip beside it said twice.
+              */}
+            {inspection ? <Chip className="bg-info-soft text-info">{job.activity}</Chip> : null}
             <Chip className={criticalityTone[job.priority === "Low" ? "Low" : job.priority === "Medium" ? "Medium" : "High"]}>
               {job.priority}
             </Chip>
