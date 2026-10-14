@@ -1,13 +1,13 @@
 import { NavLink, useLocation } from "react-router"
-import { ClipboardCheck, ClipboardList, FileText, HardDrive, Headset, LayoutDashboard, Leaf, QrCode, type LucideIcon } from "lucide-react"
+import { ClipboardCheck, ClipboardList, FileText, HardDrive, Headset, LayoutDashboard, QrCode, type LucideIcon } from "lucide-react"
 import { cn } from "cn"
 
 import { Sheet, SheetContent, SheetDescription, SheetTitle } from "@/components/ui/sheet"
-import { OlivineLogo } from "@/components/layout/olivine-logo"
+import { OlivineEmblem } from "@/components/layout/olivine-logo"
 import { openPanel } from "@/lib/ui-store"
 import { actionFor, useMyJobs } from "@/lib/work"
 
-/** One section of the app, and the route prefixes that belong to it */
+/** One section of the app, and the badge it carries */
 type NavItem = { path: string; title: string; icon: LucideIcon; badge?: "work" | "inspection" }
 
 /**
@@ -27,18 +27,19 @@ const under = (current: string, path: string) =>
   path === "/" ? current === "/" : current === path || current.startsWith(`${path}/`)
 
 /**
- * EVITA's navigation, drawn as OCC draws its own: the cream logo header, navy
- * body, the active section filled in the brand blue, and the mountain artwork
- * from the mockups along the foot.
+ * EVITA's navigation, drawn as OCC draws its collapsed sidebar: the emblem on
+ * cream at the top, a navy rail of icons under it, and the section you are on
+ * filled in the brand blue.
  *
- * It is a drawer rather than a docked rail. EVITA is held in two hands on a
- * tablet, and a rail that pushed the page across would take width from the
- * thing the engineer actually came to read - so it stays shut, and when it is
- * opened it comes over the screen and shuts again on the way out.
+ * A rail rather than a list of names. It is also a drawer rather than a docked
+ * column: EVITA is held in two hands on a tablet, and anything permanently down
+ * the left takes width from the thing the engineer came to read - so it stays
+ * shut, comes over the screen when it is opened, and shuts again on the way
+ * out. Each icon carries its name as its label, which is what a tooltip and a
+ * screen reader both read.
  *
- * Scanning is here too, at the top: it is the one thing started from anywhere,
- * and it opens the scanner over whatever screen is showing rather than
- * navigating away from it.
+ * Scanning closes the rail: it is the one thing started from anywhere, and it
+ * opens the scanner over whatever screen is showing.
  */
 export function AppSidebar({ open, onOpenChange }: { open: boolean; onOpenChange: (open: boolean) => void }) {
   const { pathname } = useLocation()
@@ -56,17 +57,17 @@ export function AppSidebar({ open, onOpenChange }: { open: boolean; onOpenChange
       <SheetContent
         side="left"
         showCloseButton={false}
-        className="flex w-60 flex-col gap-0 border-sidebar-border bg-sidebar p-0 text-sidebar-foreground"
+        className="flex w-16 flex-col gap-0 border-sidebar-border bg-sidebar p-0 text-sidebar-foreground"
       >
         <SheetTitle className="sr-only">Sections</SheetTitle>
         <SheetDescription className="sr-only">Move between the screens of the field app.</SheetDescription>
 
-        <header className="flex h-16 shrink-0 items-center justify-center bg-[#f7f4ee] p-1.5">
-          <OlivineLogo className="h-full" />
+        <header className="flex h-16 shrink-0 items-center justify-center bg-[#f7f4ee]">
+          <OlivineEmblem className="size-9" />
         </header>
 
-        <nav aria-label="Sections" className="min-h-0 flex-1 overflow-y-auto p-2">
-          <ul className="space-y-1">
+        <nav aria-label="Sections" className="min-h-0 flex-1 overflow-y-auto py-3">
+          <ul className="flex flex-col items-center gap-2">
             {navigation.map((item) => {
               const active = under(pathname, item.path)
               const badge = item.badge ? counts[item.badge] : 0
@@ -76,17 +77,18 @@ export function AppSidebar({ open, onOpenChange }: { open: boolean; onOpenChange
                     to={item.path}
                     end={item.path === "/"}
                     onClick={close}
+                    title={item.title}
+                    aria-label={item.title}
                     className={cn(
-                      "flex min-h-11 items-center gap-2.5 rounded-lg px-2.5 text-sm font-medium transition-colors",
+                      "relative flex size-11 items-center justify-center rounded-xl transition-colors",
                       active
                         ? "bg-sidebar-primary text-sidebar-primary-foreground"
                         : "hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
                     )}
                   >
-                    <item.icon className="size-[18px] shrink-0" />
-                    <span className="min-w-0 flex-1 truncate">{item.title}</span>
+                    <item.icon className="size-5" />
                     {badge ? (
-                      <span className="min-w-5 rounded-full bg-critical px-1.5 text-center text-xs leading-5 font-bold text-critical-foreground">
+                      <span className="absolute -top-0.5 -right-0.5 min-w-4 rounded-full bg-critical px-1 text-center text-[0.6rem] leading-4 font-bold text-critical-foreground">
                         {badge > 9 ? "9+" : badge}
                       </span>
                     ) : null}
@@ -94,31 +96,23 @@ export function AppSidebar({ open, onOpenChange }: { open: boolean; onOpenChange
                 </li>
               )
             })}
+
+            <li className="mt-1 border-t border-sidebar-border pt-3">
+              <button
+                type="button"
+                title="Scan Asset QR"
+                aria-label="Scan an asset QR code"
+                onClick={() => {
+                  close()
+                  openPanel({ kind: "scan" })
+                }}
+                className="flex size-11 items-center justify-center rounded-xl hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+              >
+                <QrCode className="size-5" />
+              </button>
+            </li>
           </ul>
-
-          <button
-            type="button"
-            onClick={() => {
-              close()
-              openPanel({ kind: "scan" })
-            }}
-            className="mt-3 flex min-h-11 w-full items-center gap-2.5 rounded-lg border border-sidebar-border px-2.5 text-sm font-medium hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
-          >
-            <QrCode className="size-[18px] shrink-0" />
-            Scan Asset QR
-          </button>
         </nav>
-
-        {/* Mountain artwork from the mockups, fading into the navy sidebar */}
-        <div className="relative shrink-0 overflow-hidden">
-          <img src="/brand/sidebar-mountains.jpg" alt="" className="h-40 w-full object-cover" />
-          <div className="absolute inset-0 bg-gradient-to-b from-sidebar via-transparent to-sidebar/80" />
-          <div className="absolute inset-x-0 bottom-3 flex flex-col items-center gap-1 text-center text-sm text-white">
-            <Leaf className="size-6 fill-healthy text-healthy" />
-            <span>People. Technology. Reliability.</span>
-            <span>A Greener Future.</span>
-          </div>
-        </div>
       </SheetContent>
     </Sheet>
   )
