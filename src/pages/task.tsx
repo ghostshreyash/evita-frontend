@@ -83,7 +83,7 @@ function Group({ title, last, children }: { title: string; last?: boolean; child
  *
  * Inspection: Open → Start → record images and evidence → Submit (Completed).
  * Maintenance: Open → Start → log the work against the clock → Submit for
- * Approval (Completed) → OCC approves, or sends it back (Open again).
+ * Submit, which closes the job out (Completed).
  */
 export function TaskPage() {
   const { id } = useParams()
@@ -258,20 +258,6 @@ export function TaskPage() {
         </Group>
       </TaskPanel>
 
-      {/* Work OCC sent back: the one thing the engineer must read before starting again */}
-      {maintenance?.review?.outcome === "rejected" ? (
-        <section className="flex items-start gap-3 rounded-2xl bg-critical-soft p-5 text-sm shadow-xs ring-1 ring-critical/25">
-          <TriangleAlert className="mt-0.5 size-5 shrink-0 text-critical" />
-          <span>
-            <span className="block font-semibold text-critical-soft-foreground">
-              Sent back by {maintenance.review.by} · {maintenance.review.at}
-            </span>
-            {maintenance.review.remarks}
-            {action === "start" ? <span className="mt-1 block text-muted-foreground">Start the task to correct the record and resubmit.</span> : null}
-          </span>
-        </section>
-      ) : null}
-
       {/* ---------- The work itself ---------- */}
       {action === "start" ? (
         <StartSection job={job} onStart={() => startJob(job, me.name)} />
@@ -379,9 +365,7 @@ function OutcomeBanner({ job }: { job: Job }) {
   const note =
     job.kind === "inspection"
       ? { title: "Inspection Completed", body: "The readings and evidence are saved against the asset." }
-      : job.status === "open"
-        ? { title: "Submitted for Approval", body: "OCC will review the evidence and approve the work or send it back with remarks." }
-        : { title: "Cleaning Completed", body: "Closed out and recorded against the asset." }
+      : { title: "Cleaning Completed", body: "Closed out and recorded against the asset." }
   return (
     <section className="flex items-center gap-4 rounded-2xl bg-gradient-to-r from-healthy to-[#0f7a5c] p-5 text-white shadow-sm">
       <span className="flex size-14 shrink-0 items-center justify-center rounded-full bg-white/15 ring-2 ring-white/40">

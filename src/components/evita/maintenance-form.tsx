@@ -20,7 +20,7 @@ import type { Job } from "@/lib/work"
 /**
  * Perform Maintenance for one job, as on EVITA mockup p.29: the real-time log,
  * the INSTA consumables used, evidence, the fire prevention and PD mitigation
- * add-ons, then Submit for Approval to OCC. Everything saves as it is entered;
+ * add-ons, then Submit. Everything saves as it is entered;
  * the clock is written straight to the record by Start / Stop / Resume.
  */
 /**
@@ -194,7 +194,7 @@ export function MaintenanceForm({ job, detail }: { job: Job; detail: Maintenance
       <aside className="space-y-4 lg:sticky lg:top-20 lg:self-start">
         <section className="space-y-4 rounded-2xl bg-card p-4 shadow-xs ring-1 ring-foreground/10">
           <h3 className="text-lg font-semibold text-brand-navy dark:text-foreground">Cleaning Summary</h3>
-          <p className="rounded-xl bg-muted/50 p-3 text-sm text-muted-foreground">OCC reviews the evidence and approves the work, or sends it back with remarks. The asset's health report updates after approval.</p>
+          <p className="rounded-xl bg-muted/50 p-3 text-sm text-muted-foreground">Submitting closes the job out and records it against the asset. The asset's health report is updated from what was captured here.</p>
           <Checklist items={checklist} />
           <Button
             size="lg"
@@ -202,10 +202,10 @@ export function MaintenanceForm({ job, detail }: { job: Job; detail: Maintenance
             disabled={!ready}
             onClick={() => {
               submitMaintenance(job.id, patch)
-              toast.success("Submitted for approval", { description: `${job.id} · ${job.asset} is with OCC for review` })
+              toast.success("Cleaning submitted", { description: `${job.id} · ${job.asset} is closed out` })
             }}
           >
-            <Send /> Submit for Approval
+            <Send /> Submit
           </Button>
           <p className="text-center text-xs text-muted-foreground">{savedAt ? `Draft saved at ${savedAt}` : "Saved automatically as you work"}</p>
         </section>

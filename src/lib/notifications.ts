@@ -1,15 +1,14 @@
 import { useMemo, useState, useSyncExternalStore } from "react"
 import { format, formatDistanceToNowStrict, isToday, parse } from "date-fns"
 
-import { useMaintenanceDetails } from "@/data/maintenance-store"
 import { useTicketRows } from "@/data/ticket-store"
 import { useCurrentElpremar } from "@/lib/me"
 import { actionFor, jobPath, parseDay, useMyJobs, when } from "@/lib/work"
 import { workStatus } from "@/lib/status"
 
 /**
- * What the ELPREMAR is told about: work booked to them, OCC's verdict on
- * maintenance they submitted, and progress on tickets they raised.
+ * What the ELPREMAR is told about: work booked to them, and progress on the
+ * tickets they raised.
  *
  * Derived from the same books the screens show, so a notification can never
  * point at work that does not exist. Read state is kept on the tablet.
@@ -69,7 +68,6 @@ const stamp = (s: string) => parse(s, "dd-MM-yyyy HH:mm", new Date()).getTime()
 export function useNotifications() {
   const me = useCurrentElpremar()
   const jobs = useMyJobs()
-  const maintenance = useMaintenanceDetails()
   const tickets = useTicketRows()
   useSyncExternalStore(subscribe, () => version)
   // Fixed when the screen opens; the list is rebuilt whenever the books change anyway
@@ -91,16 +89,6 @@ export function useNotifications() {
           tone: "info",
         })
 
-      const review = job.kind === "maintenance" ? maintenance[job.id]?.review : undefined
-      if (review)
-        list.push({
-          id: `review:${job.id}:${review.at}`,
-          title: review.outcome === "approved" ? `Approved: ${job.asset}` : `Sent back for correction: ${job.asset}`,
-          detail: review.outcome === "approved" ? `${job.id} signed off by ${review.by}` : review.remarks,
-          at: stamp(review.at),
-          to: jobPath(job),
-          tone: review.outcome === "approved" ? "success" : "critical",
-        })
     }
 
     for (const t of tickets.filter((t) => t.raisedBy === me.name))
@@ -115,7 +103,7 @@ export function useNotifications() {
       })
 
     return list.filter((n) => n.at <= now + 86_400_000).sort((a, b) => b.at - a.at).slice(0, 30)
-  }, [jobs, maintenance, tickets, me, now])
+  }, [jobs, tickets, me, now])
 
   return {
     notices: notices.map((n) => ({ ...n, unread: !read.has(n.id) })),

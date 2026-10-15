@@ -1,6 +1,6 @@
 /**
  * Everything the Maintenance Activity Details screen shows beyond the list row:
- * what OCC originally assigned, and what the ELPREMAR actually executed.
+ * what was originally assigned, and what the ELPREMAR actually executed.
  *
  * Derived from the row with a seeded RNG so a given activity always reads the
  * same. Replace with GET /maintenance-activities/:id later — the shapes below
@@ -25,13 +25,6 @@ type Priority = (typeof priorities)[number]
  */
 export type InstaProduct = { name: string }
 
-
-export type MaintenanceReview = {
-  outcome: "approved" | "rejected"
-  by: string
-  at: string
-  remarks: string
-}
 
 /** What the ELPREMAR did on site — absent until the work actually starts */
 export type Execution = {
@@ -63,11 +56,10 @@ export type MaintenanceDetail = {
   products: InstaProduct[]
   firePrevention?: { system: string; remarks: string }
   evidence: EvidenceItem[]
-  review?: MaintenanceReview
   /**
    * EVITA: every Start / Stop on site, with exact times (ISO strings), so the
-   * log shows each stretch of work rather than one start and one end. OCC
-   * reads `execution.startedAt` / `endedAt`, which EVITA keeps in step.
+   * log shows each stretch of work rather than one start and one end.
+   * `execution.startedAt` / `endedAt` are kept in step with it.
    */
   timeLog?: TimeEntry[]
 }
@@ -171,36 +163,18 @@ export function maintenanceDetail(row: MaintenanceRow): MaintenanceDetail {
       detail.evidence.push({ id: `${row.id}-d2`, kind: "document", label: "Thermography report.pdf", caption: "Full scan, 14 measurement points", meta: "1.8 MB" })
   }
 
-  if (row.status === "assigned" || row.status === "completed")
-    detail.review = {
-      outcome: "approved",
-      by: pick(supervisors),
-      at: at(row.scheduled, row.slot + 2),
-      remarks:
-        row.status === "completed"
-          ? "Evidence verified and the activity closed out. Health report updated."
-          : "Evidence complete and consistent with the scope. Approved for health report update.",
-    }
-  if (row.status === "rejected")
-    detail.review = {
-      outcome: "rejected",
-      by: pick(supervisors),
-      at: at(row.scheduled, row.slot + 2),
-      remarks: "Thermal image is out of focus and the completion certificate is unsigned. Please re-upload both.",
-    }
-
   return detail
 }
 
 /**
  * The maintenance lifecycle as it stands for this activity. Steps with no
  * timestamp have not happened yet, which is how the screen greys them out.
- * Every completed activity is submitted for approval, so that step is only
- * open while the ELPREMAR is still on site.
+ * Submitting closes the activity out, so that step is only open while the
+ * ELPREMAR is still on site.
  */
 export function maintenanceTimeline(row: MaintenanceRow, detail: MaintenanceDetail): TimelineStep[] {
-  const { execution, evidence, review } = detail
-  // Everything that has finished goes to OCC; only work still in the field has not
+  const { execution, evidence } = detail
+  // Everything that has finished is recorded; only work still in the field has not
   const submitted = row.status !== "in_progress"
 
   return [
@@ -208,12 +182,7 @@ export function maintenanceTimeline(row: MaintenanceRow, detail: MaintenanceDeta
     { step: "Maintenance started", at: execution?.startedAt, note: execution && `Booked ${slotLabel(row.slot)} · ${execution.performedBy}` },
     { step: "Maintenance completed", at: execution?.endedAt, note: execution?.endedAt ? `Performed by ${execution.performedBy}` : undefined },
     { step: "Evidence uploaded", at: evidence.length ? evidence.at(-1)!.meta.includes(":") ? evidence.at(-1)!.meta : execution?.endedAt : undefined, note: evidence.length ? `${evidence.length} items` : undefined },
-    { step: "Submitted for approval", at: submitted ? execution?.endedAt : undefined },
-    {
-      step: review?.outcome === "rejected" ? "Correction requested" : "Approved",
-      at: review?.at,
-      note: review && `${review.by} · ${review.outcome === "rejected" ? "sent back" : "approved"}`,
-    },
-    { step: "Health report updated", at: review?.outcome === "approved" ? at(row.scheduled, row.slot + 3) : undefined },
+    { step: "Submitted", at: submitted ? execution?.endedAt : undefined },
+    { step: "Health report updated", at: submitted ? at(row.scheduled, row.slot + 3) : undefined },
   ]
 }
