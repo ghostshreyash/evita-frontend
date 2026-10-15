@@ -57,9 +57,10 @@ function missingFrom(section: Section, capture: InspectionCapture, category: str
   }
   if (section === "thermal") {
     const short = MIN_THERMAL_POINTS - capture.thermal.length
-    return short > 0
-      ? `${MIN_THERMAL_POINTS} thermal images are needed - ${capture.thermal.length} so far, ${short} to go.`
-      : ""
+    if (short <= 0) return ""
+    return MIN_THERMAL_POINTS === 1
+      ? "At least one thermal image is needed."
+      : `${MIN_THERMAL_POINTS} thermal images are needed - ${capture.thermal.length} so far, ${short} to go.`
   }
   if (section === "technical") {
     const owed = missingReadings(category, capture.readings)
@@ -255,7 +256,7 @@ export function InspectionForm({ job, detail }: { job: Job; detail: InspectionDe
             <Checklist
               items={[
                 { label: "At least one asset image", done: done.images },
-                { label: `${MIN_THERMAL_POINTS} or more thermal images`, done: done.thermal },
+                { label: MIN_THERMAL_POINTS === 1 ? "A thermal image" : `${MIN_THERMAL_POINTS} or more thermal images`, done: done.thermal },
                 {
                   label: readings.length ? "Electrical readings recorded" : "Electrical readings not applicable",
                   done: done.readings,
@@ -360,7 +361,7 @@ function ImagesSection({
 
   return (
     <div className="rounded-2xl bg-card p-4 shadow-xs ring-1 ring-foreground/10">
-      <UploadSection icon={Camera} title="Asset Images" noun="photograph" items={items} suggestions={slots.map((s) => s.label)} onAdd={add} onRemove={remove} />
+      <UploadSection icon={Camera} title="Asset Images" required noun="photograph" items={items} suggestions={slots.map((s) => s.label)} onAdd={add} onRemove={remove} />
       <OfflineNote />
     </div>
   )
@@ -410,7 +411,10 @@ function ThermalImagesSection({
 
   return (
     <div className="rounded-2xl bg-card p-4 shadow-xs ring-1 ring-foreground/10">
-      <p className="mb-3 text-sm text-muted-foreground">Add a thermal image for each joint or termination you scan, at least {MIN_THERMAL_POINTS}.</p>
+      <p className="mb-3 text-sm text-muted-foreground">
+        Add a thermal image for each joint or termination you scan
+        {MIN_THERMAL_POINTS === 1 ? " — at least one" : `, at least ${MIN_THERMAL_POINTS}`}.
+      </p>
       {/* Every point is judged on its rise over ambient, so the reading is taken once for the whole scan */}
       <label className="mb-4 flex max-w-xs items-center gap-3">
         <span className="shrink-0 text-sm font-medium">Ambient temperature (°C)</span>
@@ -422,7 +426,7 @@ function ThermalImagesSection({
           placeholder="32"
         />
       </label>
-      <UploadSection icon={Thermometer} title="Thermal Images" noun="thermal image" thermal items={items} suggestions={thermalPointsFor(category)} onAdd={add} onRemove={remove} />
+      <UploadSection icon={Thermometer} title="Thermal Images" required noun="thermal image" thermal items={items} suggestions={thermalPointsFor(category)} onAdd={add} onRemove={remove} />
       <OfflineNote thermal />
     </div>
   )
