@@ -24,6 +24,7 @@ const MAX_IMAGE_MB = 5
 export function UploadSection({
   icon: Icon,
   title,
+  required,
   noun,
   thermal,
   items,
@@ -34,6 +35,8 @@ export function UploadSection({
 }: {
   icon: React.ComponentType<{ className?: string }>
   title: string
+  /** Marks the heading, for a section the work cannot be submitted without */
+  required?: boolean
   /** What one upload is called in the dialog, e.g. "photograph" or "thermal image" */
   noun: string
   thermal?: boolean
@@ -64,6 +67,7 @@ export function UploadSection({
         <span className="flex items-center gap-2 text-base font-semibold text-brand-navy dark:text-foreground">
           <Icon className="size-5 text-primary" />
           {title}
+          {required ? <span className="text-critical" aria-label="required">*</span> : null}
           <span className="rounded-full bg-background/70 px-2 py-0.5 text-xs font-semibold tabular-nums">{items.length}</span>
         </span>
         <span className="text-xs text-muted-foreground">JPG or PNG · up to {MAX_IMAGE_MB} MB each</span>

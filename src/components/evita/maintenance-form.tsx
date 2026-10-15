@@ -113,6 +113,7 @@ export function MaintenanceForm({ job, detail }: { job: Job; detail: Maintenance
   const checklist = [
     { label: "Work time logged", done: timeLog.length > 0 },
     { label: "After-cleaning photos uploaded", done: after.length > 0 },
+    { label: "Thermal image taken after the clean", done: thermalAfter.length > 0 },
   ]
   const ready = checklist.every((c) => c.done)
 
@@ -174,7 +175,7 @@ export function MaintenanceForm({ job, detail }: { job: Job; detail: Maintenance
               </EvidenceStrip>
             </div>
             <div>
-              <FieldLabel>Thermal after ({thermalAfter.length})</FieldLabel>
+              <FieldLabel required>Thermal after ({thermalAfter.length})</FieldLabel>
               <EvidenceStrip items={thermalAfter} onRemove={remove}>
                 <CaptureTile kind="thermal" label="Thermal After" onCapture={capture("Thermal scan — after")} />
               </EvidenceStrip>

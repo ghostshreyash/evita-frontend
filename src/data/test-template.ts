@@ -73,8 +73,14 @@ export function thermalPointsFor(category: string): string[] {
   return ["Incomer Terminations", "Busbar Chamber", "Outgoing Feeders", "Cable Terminations"]
 }
 
-/** At least this many thermal points for a valid thermography record */
-export const MIN_THERMAL_POINTS = 2
+/**
+ * At least this many thermal points for a valid thermography record.
+ *
+ * One, on the client's instruction (14-10-2026). It was two, which asked the
+ * engineer for a second shot of a panel that only has one thing worth pointing
+ * a camera at; more are still welcome, and the engineer adds them as they go.
+ */
+export const MIN_THERMAL_POINTS = 1
 
 /**
  * Temperature rise of a point over ambient (ΔT), the usual way a thermal image
