@@ -1,8 +1,18 @@
 import { useEffect, useMemo, useRef, useState } from "react"
 import { format } from "date-fns"
-import { Camera, Flame, NotebookPen, Send, Timer } from "lucide-react"
+import { Camera, Flame, NotebookPen, Send, Timer, Trash2 } from "lucide-react"
 import { toast } from "sonner"
 
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
@@ -108,7 +118,20 @@ export function MaintenanceForm({ job, detail }: { job: Job; detail: Maintenance
 
   const capture = (label: string) => (captured: EvidenceItem[]) =>
     setEvidence((ev) => [...ev, ...captured.map((c) => ({ ...c, label }))])
-  const remove = (id: string) => setEvidence((ev) => ev.filter((e) => e.id !== id))
+  /*
+   * Removing a picture asks first.
+   *
+   * The before set is carried over from the inspection and cannot be shot
+   * again - the panel has been cleaned since - and the remove control sits in
+   * the corner of a thumbnail on a touch screen, which is where an accidental
+   * tap lands. So the tap stages it and the dialog does the deleting.
+   */
+  const [dropping, setDropping] = useState<EvidenceItem>()
+  const remove = (id: string) => setDropping(evidence.find((e) => e.id === id))
+  const confirmRemove = () => {
+    if (dropping) setEvidence((ev) => ev.filter((e) => e.id !== dropping.id))
+    setDropping(undefined)
+  }
 
   return (
     <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_19rem]">
@@ -190,7 +213,28 @@ export function MaintenanceForm({ job, detail }: { job: Job; detail: Maintenance
         </div>
       </div>
 
-      {/* ---------- Submit for approval ---------- */}
+      <AlertDialog open={!!dropping} onOpenChange={(open) => !open && setDropping(undefined)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Remove {dropping?.label}?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This deletes the image from the record permanently - it is not kept anywhere else, and a before image
+              cannot be taken again once the panel has been cleaned.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Keep it</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={confirmRemove}
+              className="bg-critical text-critical-foreground hover:bg-critical/90"
+            >
+              <Trash2 /> Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* ---------- Submit ---------- */}
       <aside className="space-y-4 lg:sticky lg:top-20 lg:self-start">
         <section className="space-y-4 rounded-2xl bg-card p-4 shadow-xs ring-1 ring-foreground/10">
           <h3 className="text-lg font-semibold text-brand-navy dark:text-foreground">Cleaning Summary</h3>

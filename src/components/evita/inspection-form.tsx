@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react"
-import { ArrowLeft, ArrowRight, Camera, Check, Flame, Gauge, Save, Send, Thermometer, type LucideIcon } from "lucide-react"
+import { ArrowLeft, ArrowRight, Camera, Check, Flame, Gauge, Save, Send, Thermometer, TriangleAlert, type LucideIcon } from "lucide-react"
 import { toast } from "sonner"
 import { format } from "date-fns"
 import { cn } from "cn"
@@ -40,6 +40,34 @@ const sections: { key: Section; title: string; icon: LucideIcon }[] = [
   { key: "fps", title: "Fire Prevention", icon: Flame },
 ]
 
+
+/**
+ * What a section is still waiting for, as a sentence.
+ *
+ * The checklist beside the form has always said which sections are short, but
+ * only once the engineer had walked all the way to Submit and found it
+ * disabled. Saying it at the point they try to leave the section is the whole
+ * difference: one thermal image instead of two is caught where it happened,
+ * not four screens later.
+ */
+function missingFrom(section: Section, capture: InspectionCapture, category: string, evidenceIds: Set<string>) {
+  if (section === "images") {
+    const shot = Object.values(capture.angles).filter((id) => evidenceIds.has(id)).length
+    return shot ? "" : "Add at least one photograph of the asset."
+  }
+  if (section === "thermal") {
+    const short = MIN_THERMAL_POINTS - capture.thermal.length
+    return short > 0
+      ? `${MIN_THERMAL_POINTS} thermal images are needed - ${capture.thermal.length} so far, ${short} to go.`
+      : ""
+  }
+  if (section === "technical") {
+    const owed = missingReadings(category, capture.readings)
+    return owed.length ? `Still needed: ${owed.join(", ")}.` : ""
+  }
+  if (!capture.fps.installed) return "Say whether a fire prevention system is installed in the panel."
+  return capture.fps.installed === "Yes" && !capture.fps.status ? "Record the status of the fire prevention system." : ""
+}
 
 const yesNoTone = (v: "Yes" | "No") => (v === "Yes" ? "bg-healthy text-healthy-foreground ring-healthy" : "bg-attention text-attention-foreground ring-attention")
 
@@ -110,6 +138,18 @@ export function InspectionForm({ job, detail }: { job: Job; detail: InspectionDe
   const tabDone: Record<Section, boolean> = { images: done.images, thermal: done.thermal, technical: done.readings, fps: done.fps }
   const ready = done.images && done.thermal && done.readings && done.fps
   const at = Math.max(0, sections.findIndex((sec) => sec.key === section))
+  /** What this section still owes, if anything */
+  const owed = missingFrom(section, capture, category, ids)
+
+  const go = (to: number) => {
+    // Backwards is always allowed; a section is only gated on the way out of it
+    if (to > at && owed) {
+      toast.error(`${sections[at].title} is not complete`, { description: owed })
+      return
+    }
+    setSection(sections[to].key)
+    window.scrollTo({ top: 0, behavior: "smooth" })
+  }
   const set: Setter = (p) => setCapture((c) => ({ ...c, ...p }))
   const removeEvidence = (id: string) => setEvidence((ev) => ev.filter((e) => e.id !== id))
 
@@ -133,7 +173,7 @@ export function InspectionForm({ job, detail }: { job: Job; detail: InspectionDe
               key={s.key}
               type="button"
               aria-current={on ? "step" : undefined}
-              onClick={() => setSection(s.key)}
+              onClick={() => go(i)}
               className={cn(
                 "flex min-h-14 items-center gap-2.5 rounded-xl px-3 text-left text-sm font-semibold transition-colors",
                 on ? "bg-primary text-primary-foreground shadow-md shadow-primary/30" : "hover:bg-muted"
@@ -165,6 +205,14 @@ export function InspectionForm({ job, detail }: { job: Job; detail: InspectionDe
             <FpsSection capture={capture} set={set} />
           )}
 
+          {/* What this section still owes, where the engineer can act on it */}
+          {owed ? (
+            <p className="flex items-start gap-2 rounded-xl bg-attention-soft px-3 py-2.5 text-sm text-attention-soft-foreground">
+              <TriangleAlert className="mt-0.5 size-4 shrink-0" />
+              {owed}
+            </p>
+          ) : null}
+
           {/*
             * Step through them rather than only tapping the tabs. On a tablet
             * held in two hands the tab row is at the top of a scrolled page by
@@ -177,7 +225,7 @@ export function InspectionForm({ job, detail }: { job: Job; detail: InspectionDe
               size="lg"
               className="h-12 bg-card"
               disabled={at === 0}
-              onClick={() => setSection(sections[at - 1].key)}
+              onClick={() => go(at - 1)}
             >
               <ArrowLeft /> {at === 0 ? "Back" : sections[at - 1].title}
             </Button>
@@ -188,7 +236,7 @@ export function InspectionForm({ job, detail }: { job: Job; detail: InspectionDe
               size="lg"
               className="h-12"
               disabled={at === sections.length - 1}
-              onClick={() => setSection(sections[at + 1].key)}
+              onClick={() => go(at + 1)}
             >
               {at === sections.length - 1 ? "Next" : sections[at + 1].title} <ArrowRight />
             </Button>

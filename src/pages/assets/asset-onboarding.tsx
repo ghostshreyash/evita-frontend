@@ -52,6 +52,13 @@ export function AssetOnboardingPage() {
   const held = useMemo(() => (asset ? valuesFrom(asset) : undefined), [asset])
 
   const [current, setCurrent] = useState(0)
+  /*
+   * How far the stepper can jump. Registering an asset walks forward one step
+   * at a time, each validated before it is left, so nothing half-filled reaches
+   * the review. Correcting one that is already on the register is different:
+   * every answer is there, and the engineer came to change one of them - so the
+   * whole bar is live from the start.
+   */
   const [furthest, setFurthest] = useState(0)
   const [pending, setPending] = useState(false)
   /** Set once the asset is registered; switches the route to the Asset ID screen */
@@ -165,7 +172,7 @@ export function AssetOnboardingPage() {
         }
       />
 
-      <StepperBar steps={steps} current={current} furthest={furthest} onSelect={goTo} />
+      <StepperBar steps={steps} current={current} furthest={asset ? steps.length - 1 : furthest} onSelect={goTo} />
 
       {current === 0 ? <StepDetails form={form} site={site} /> : null}
       {current === 1 ? <StepTechnical form={form} /> : null}
