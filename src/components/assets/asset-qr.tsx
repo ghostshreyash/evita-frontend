@@ -2,6 +2,8 @@ import { useRef, useState } from "react"
 import { QRCodeCanvas } from "qrcode.react"
 import { Check, Copy, Download, Printer } from "lucide-react"
 import { toast } from "sonner"
+
+import { printDocument } from "@/lib/print"
 import { cn } from "cn"
 
 import { Button } from "@/components/ui/button"
@@ -85,14 +87,7 @@ export function AssetQrPanel({ asset }: { asset: AssetRecord }) {
       toast.error("The QR code is still rendering. Try again in a moment.")
       return
     }
-    /* No `noopener`: with it window.open returns null and the sheet comes up blank */
-    const sheet = window.open("", "_blank", "width=460,height=620")
-    if (!sheet) {
-      toast.error("Allow pop-ups for this site to print the label.")
-      return
-    }
-    sheet.document.write(labelSheet(asset, url))
-    sheet.document.close()
+    printDocument(labelSheet(asset, url))
   }
 
   return (
