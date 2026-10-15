@@ -162,7 +162,7 @@ function NameUploadsDialog({
         <DialogHeader>
           <DialogTitle>{files?.length === 1 ? `Name this ${noun}` : `Name these ${files?.length} ${noun}s`}</DialogTitle>
           <DialogDescription>
-            Say what each one shows. This is the name OCC and the next engineer see against the asset, so make it describe the
+            Say what each one shows. This is the name that stands against the asset, so make it describe the
             thing rather than the file.
           </DialogDescription>
         </DialogHeader>

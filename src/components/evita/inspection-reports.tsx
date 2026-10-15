@@ -148,7 +148,7 @@ export function InspectionReports({ job, detail }: { job: Job; detail: Inspectio
 }
 
 /** One report, on screen, with the way to get it off the tablet */
-function ReportCard({ report, onPrint }: { report: InspectionReport; onPrint: () => boolean }) {
+function ReportCard({ report, onPrint }: { report: InspectionReport; onPrint: () => void }) {
   return (
     <section className="rounded-xl ring-1 ring-foreground/10">
       <header className="flex flex-wrap items-center gap-2 border-b bg-muted/40 px-3 py-2">
@@ -163,9 +163,8 @@ function ReportCard({ report, onPrint }: { report: InspectionReport; onPrint: ()
           variant="outline"
           size="sm"
           className="bg-card"
-          onClick={() => {
-            if (!onPrint()) toast.error("The browser blocked the print window. Allow pop-ups for this site and try again.")
-          }}
+          /* printReport says so itself if the browser blocks the window */
+          onClick={onPrint}
         >
           <Printer /> Save as PDF
         </Button>

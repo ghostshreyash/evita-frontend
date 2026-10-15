@@ -1,8 +1,18 @@
 import { useEffect, useMemo, useRef, useState } from "react"
 import { format } from "date-fns"
-import { Camera, Flame, NotebookPen, Send, Timer } from "lucide-react"
+import { Camera, Flame, NotebookPen, Send, Timer, Trash2 } from "lucide-react"
 import { toast } from "sonner"
 
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
@@ -20,7 +30,7 @@ import type { Job } from "@/lib/work"
 /**
  * Perform Maintenance for one job, as on EVITA mockup p.29: the real-time log,
  * the INSTA consumables used, evidence, the fire prevention and PD mitigation
- * add-ons, then Submit for Approval to OCC. Everything saves as it is entered;
+ * add-ons, then Submit. Everything saves as it is entered;
  * the clock is written straight to the record by Start / Stop / Resume.
  */
 /**
@@ -108,7 +118,20 @@ export function MaintenanceForm({ job, detail }: { job: Job; detail: Maintenance
 
   const capture = (label: string) => (captured: EvidenceItem[]) =>
     setEvidence((ev) => [...ev, ...captured.map((c) => ({ ...c, label }))])
-  const remove = (id: string) => setEvidence((ev) => ev.filter((e) => e.id !== id))
+  /*
+   * Removing a picture asks first.
+   *
+   * The before set is carried over from the inspection and cannot be shot
+   * again - the panel has been cleaned since - and the remove control sits in
+   * the corner of a thumbnail on a touch screen, which is where an accidental
+   * tap lands. So the tap stages it and the dialog does the deleting.
+   */
+  const [dropping, setDropping] = useState<EvidenceItem>()
+  const remove = (id: string) => setDropping(evidence.find((e) => e.id === id))
+  const confirmRemove = () => {
+    if (dropping) setEvidence((ev) => ev.filter((e) => e.id !== dropping.id))
+    setDropping(undefined)
+  }
 
   return (
     <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_19rem]">
@@ -190,11 +213,32 @@ export function MaintenanceForm({ job, detail }: { job: Job; detail: Maintenance
         </div>
       </div>
 
-      {/* ---------- Submit for approval ---------- */}
+      <AlertDialog open={!!dropping} onOpenChange={(open) => !open && setDropping(undefined)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Remove {dropping?.label}?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This deletes the image from the record permanently - it is not kept anywhere else, and a before image
+              cannot be taken again once the panel has been cleaned.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Keep it</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={confirmRemove}
+              className="bg-critical text-critical-foreground hover:bg-critical/90"
+            >
+              <Trash2 /> Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* ---------- Submit ---------- */}
       <aside className="space-y-4 lg:sticky lg:top-20 lg:self-start">
         <section className="space-y-4 rounded-2xl bg-card p-4 shadow-xs ring-1 ring-foreground/10">
           <h3 className="text-lg font-semibold text-brand-navy dark:text-foreground">Cleaning Summary</h3>
-          <p className="rounded-xl bg-muted/50 p-3 text-sm text-muted-foreground">OCC reviews the evidence and approves the work, or sends it back with remarks. The asset's health report updates after approval.</p>
+          <p className="rounded-xl bg-muted/50 p-3 text-sm text-muted-foreground">Submitting closes the job out and records it against the asset. The asset's health report is updated from what was captured here.</p>
           <Checklist items={checklist} />
           <Button
             size="lg"
@@ -202,10 +246,10 @@ export function MaintenanceForm({ job, detail }: { job: Job; detail: Maintenance
             disabled={!ready}
             onClick={() => {
               submitMaintenance(job.id, patch)
-              toast.success("Submitted for approval", { description: `${job.id} · ${job.asset} is with OCC for review` })
+              toast.success("Cleaning submitted", { description: `${job.id} · ${job.asset} is closed out` })
             }}
           >
-            <Send /> Submit for Approval
+            <Send /> Submit
           </Button>
           <p className="text-center text-xs text-muted-foreground">{savedAt ? `Draft saved at ${savedAt}` : "Saved automatically as you work"}</p>
         </section>

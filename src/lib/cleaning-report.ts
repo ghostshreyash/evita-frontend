@@ -18,7 +18,7 @@
  * Those are the lines to replace once readings are captured on both visits.
  */
 import type { MaintenanceDetail } from "@/data/maintenance-detail"
-import type { InspectionReport } from "@/lib/inspection-report"
+import type { InspectionReport, ReportImage } from "@/lib/inspection-report"
 import { healthBandFor } from "@/data/master-data"
 
 /** One parameter, read on both visits */
@@ -141,14 +141,20 @@ export function cleaningComparison(
  * The same comparison as a printable report, so it goes out through the same
  * print window the inspection reports use.
  */
-export function cleaningReport(comparison: CleaningComparison): InspectionReport {
+export function cleaningReport(
+  comparison: CleaningComparison,
+  /** The asset the clean was carried out on, and the pictures it left behind */
+  record?: { rows: { label: string; value: string }[]; images?: ReportImage[] }
+): InspectionReport {
   const { before, after, product } = comparison
   return {
     kind: "Cleaning",
     title: product ? `Cleaning Report — ${product}` : "Cleaning Report",
     summary: `${before.score} / 100 (${before.band}) before cleaning, ${after.score} / 100 (${after.band}) after.`,
     score: after.score,
+    images: record?.images,
     sections: [
+      ...(record?.rows.length ? [{ title: "Asset", rows: record.rows }] : []),
       {
         title: "Key parameters, before and after",
         note: "Read on the inspection that raised the job, and again once the work was done.",

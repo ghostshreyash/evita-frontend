@@ -17,6 +17,8 @@
  * (see data/insta.ts); the hygiene one asks for the physical faults to be
  * rectified.
  */
+import { toast } from "sonner"
+
 import type { InspectionCapture } from "@/data/inspection-detail"
 import { recommendInsta } from "@/data/insta"
 import { contaminationKinds, hygieneChecks, inspectionReadingsFor, readingKeys } from "@/data/test-template"
@@ -25,11 +27,22 @@ import { levelOf, thermalReadings } from "@/lib/testing"
 export type ReportRow = { label: string; value: string; tone?: "healthy" | "attention" | "critical" }
 export type ReportSection = { title: string; rows: ReportRow[]; note?: string }
 
+/**
+ * One photograph on a report.
+ *
+ * `src` is only there for an image captured on this tablet - a record the
+ * server already holds carries the name and the time it was taken, and the
+ * printed sheet names it rather than pretending to show it.
+ */
+export type ReportImage = { label: string; caption?: string; src?: string }
+
 export type InspectionReport = {
   kind: "Contamination" | "Hygiene" | "Cleaning"
   title: string
   summary: string
   sections: ReportSection[]
+  /** The evidence the report stands on, printed after the sections */
+  images?: ReportImage[]
   recommendations: string[]
   /** Absent on the hygiene report, deliberately */
   score?: number
@@ -212,6 +225,12 @@ export function hygieneReport(capture: InspectionCapture): InspectionReport {
  *
  * Printed from a window of its own rather than the app, so the page needs no
  * print stylesheet and what comes out carries only the report.
+ *
+ * The window is opened WITHOUT `noopener`. With it, `window.open` is specified
+ * to return null even though the window itself opens, so the report could never
+ * be written into it and the engineer got an empty `about:blank`. Nothing
+ * untrusted is loaded here - the markup below is the whole document - so there
+ * is no opener to protect.
  */
 export function printReport(report: InspectionReport, header: { asset: string; assetId: string; plant: string; when: string }) {
   const esc = (s: string) => s.replace(/[&<>]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" })[c] ?? c)
@@ -232,6 +251,30 @@ export function printReport(report: InspectionReport, header: { asset: string; a
     )
     .join("")
 
+  const shown = (report.images ?? []).filter((i) => i.src)
+  const named = (report.images ?? []).filter((i) => !i.src)
+  const evidence = report.images?.length
+    ? `<section><h2>Evidence (${report.images.length})</h2>
+      ${
+        shown.length
+          ? `<div class="shots">${shown
+              .map(
+                (i) =>
+                  `<figure><img src="${esc(i.src!)}" alt=""><figcaption>${esc(i.label)}${i.caption ? ` — ${esc(i.caption)}` : ""}</figcaption></figure>`
+              )
+              .join("")}</div>`
+          : ""
+      }
+      ${
+        named.length
+          ? `<table>${named
+              .map((i) => `<tr><th>${esc(i.label)}</th><td>${esc(i.caption ?? "Held against the record")}</td></tr>`)
+              .join("")}</table>`
+          : ""
+      }
+    </section>`
+    : ""
+
   const html = `<!doctype html><html><head><meta charset="utf-8"><title>${esc(report.title)} — ${esc(header.assetId)}</title>
   <style>
     body { font: 13px/1.5 system-ui, sans-serif; color: #111; margin: 32px; }
@@ -244,6 +287,10 @@ export function printReport(report: InspectionReport, header: { asset: string; a
     td { padding: 4px 0; vertical-align: top }
     .score { display: inline-block; margin-top: 8px; padding: 4px 10px; border: 1px solid #ccc; border-radius: 999px; font-weight: 700 }
     ul { margin: 6px 0 0 18px; padding: 0 }
+    .shots { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-top: 6px }
+    .shots img { width: 100%; height: 120px; object-fit: cover; border-radius: 4px; border: 1px solid #ddd }
+    .shots figcaption { font-size: 11px; color: #555; margin-top: 3px }
+    figure { margin: 0 }
   </style></head><body>
   <h1>${esc(report.title)}</h1>
   <p class="meta">${esc(header.asset)} · ${esc(header.assetId)} · ${esc(header.plant)}</p>
@@ -251,14 +298,17 @@ export function printReport(report: InspectionReport, header: { asset: string; a
   <p class="meta"><strong>${esc(report.summary)}</strong></p>
   ${report.score === undefined ? "" : `<div class="score">Health score ${report.score} / 100</div>`}
   ${body}
+  ${evidence}
   ${report.recommendations.length ? `<section><h2>Recommendations</h2><ul>${report.recommendations.map((r) => `<li>${esc(r)}</li>`).join("")}</ul></section>` : ""}
   </body></html>`
 
-  const win = window.open("", "_blank", "noopener,width=820,height=1000")
-  if (!win) return false
+  const win = window.open("", "_blank", "width=820,height=1000")
+  if (!win) {
+    toast.error("Allow pop-ups for this site to save the report as a PDF.")
+    return
+  }
   win.document.write(html)
   win.document.close()
   win.focus()
   win.print()
-  return true
 }

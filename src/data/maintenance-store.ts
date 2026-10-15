@@ -3,7 +3,6 @@ import { useSyncExternalStore } from "react"
 import { maintenanceDetail, type MaintenanceDetail } from "@/data/maintenance-detail"
 import { maintenanceActivities, type MaintenanceRow } from "@/data/occ-tables"
 import { loadSnapshot, saveSnapshot, stampNow } from "@/data/persist"
-import type { WorkStatus } from "@/lib/status"
 
 /**
  * One copy of the maintenance book plus the execution record behind each row,
@@ -13,7 +12,7 @@ import type { WorkStatus } from "@/lib/status"
  *
  * Same store as occ-frontend's, plus the field-side mutations EVITA makes. The
  * lifecycle both apps follow: the ELPREMAR works the job (In Progress) and
- * submits it for approval (Pending For Approval); OCC approves it (Approved) or
+ * submits it, which closes it out (Completed). Formerly it
  * sends it back (Rejected), and the ELPREMAR reworks and resubmits.
  */
 type Snapshot = { rows: MaintenanceRow[]; details: Record<string, MaintenanceDetail> }
@@ -47,7 +46,7 @@ export function updateMaintenance(id: string, patch: Partial<MaintenanceRow>) {
 
 /**
  * Raise a maintenance activity off the back of an inspection, carrying the
- * enterprise, plant and asset across so OCC never re-keys them. Returns the new
+ * enterprise, plant and asset across so nothing is re-keyed. Returns the new
  * task id so the caller can navigate straight to it.
  */
 export function addMaintenanceFromInspection(source: {
@@ -86,19 +85,10 @@ export function addMaintenanceFromInspection(source: {
       execution: undefined,
       products: [],
       evidence: [],
-      review: undefined,
     },
   }
   emit()
   return id
-}
-
-/** Sign an activity off, or send it back to the field for correction */
-export function reviewMaintenance(id: string, outcome: "approved" | "rejected", by: string, remarks: string) {
-  const status: WorkStatus = outcome === "approved" ? "assigned" : "rejected"
-  rows = rows.map((r) => (r.id === id ? { ...r, status } : r))
-  details = { ...details, [id]: { ...details[id], review: { outcome, by, at: stampNow(), remarks } } }
-  emit()
 }
 
 /* ---------- Field-side (EVITA) ---------- */
@@ -121,7 +111,14 @@ export function saveMaintenanceDraft(id: string, draft: MaintenanceDraft) {
   emit()
 }
 
-/** Work finished on site: stop the clock and hand it to OCC for approval */
+/**
+ * Work finished on site: stop the clock and close the job out.
+ *
+ * There is no approval step. The ELPREMAR is the certified person doing the
+ * work, and what they record is the record - an inspection is not held pending
+ * someone else's verdict, and the client asked for a cleaning to work the same
+ * way (14-10-2026).
+ */
 export function submitMaintenance(id: string, draft: MaintenanceDraft) {
   const now = new Date().toISOString()
   const detail = withDraft(details[id], draft)
@@ -133,15 +130,13 @@ export function submitMaintenance(id: string, draft: MaintenanceDraft) {
       ...detail,
       timeLog,
       execution: detail.execution && { ...detail.execution, endedAt: lastEnd ? stampOf(lastEnd) : (detail.execution.endedAt ?? stampNow()) },
-      // A resubmission replaces the earlier verdict
-      review: undefined,
     },
   }
-  rows = rows.map((r) => (r.id === id ? { ...r, status: "open" } : r))
+  rows = rows.map((r) => (r.id === id ? { ...r, status: "completed" } : r))
   emit()
 }
 
-/** `dd-MM-yyyy HH:mm` for an ISO time, the format OCC's records carry */
+/** `dd-MM-yyyy HH:mm` for an ISO time, the format the records carry */
 const stampOf = (iso: string) => {
   const d = new Date(iso)
   const p = (n: number) => String(n).padStart(2, "0")
@@ -149,7 +144,7 @@ const stampOf = (iso: string) => {
 }
 
 /**
- * Jobs the ELPREMAR has started from this tablet. OCC books maintenance
+ * Jobs the ELPREMAR has started from this tablet. A cleaning is booked
  * straight into In Progress, so until the engineer presses Start on site the
  * job reads as Open in EVITA.
  */
@@ -158,7 +153,7 @@ export const useStartedMaintenance = () => useSyncExternalStore(subscribe, () =>
 
 /**
  * Start (or restart) work on site. A fresh job opens an empty record with the
- * first time-log entry; a job OCC sent back keeps what was recorded, returns
+ * first time-log entry; a job reopened for correction keeps what was recorded, returns
  * to In Progress and gets a new entry.
  */
 export function startMaintenance(id: string, by: string) {
@@ -178,7 +173,6 @@ export function startMaintenance(id: string, by: string) {
           products: [],
           evidence: [],
           firePrevention: undefined,
-          review: undefined,
         },
   }
   rows = rows.map((r) => (r.id === id ? { ...r, status: "in_progress" } : r))
