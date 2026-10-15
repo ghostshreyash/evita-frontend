@@ -2,7 +2,8 @@ import { useMemo } from "react"
 import { ArrowRight, Printer, SprayCan } from "lucide-react"
 import { cn } from "cn"
 
-import { TaskPanel } from "@/components/evita/field-kit"
+import { EvidenceStrip, TaskPanel } from "@/components/evita/field-kit"
+import type { EvidenceItem } from "@/data/evidence"
 import { Button } from "@/components/ui/button"
 import { useAssetRows } from "@/data/asset-store"
 import type { MaintenanceDetail } from "@/data/maintenance-detail"
@@ -48,6 +49,32 @@ export function CleaningReportPanel({ job, detail }: { job: Job; detail: Mainten
     when: detail.execution?.endedAt ?? detail.execution?.startedAt ?? job.date,
   }
 
+  /*
+   * The asset the clean was carried out on, as the customer needs it named.
+   * A report that says only "35 became 85" is not evidence of anything.
+   */
+  const rows = [
+    { label: "Asset ID", value: detail.assetTag },
+    { label: "Asset Name", value: job.asset },
+    { label: "Category", value: detail.assetCategory },
+    { label: "Location / Area", value: detail.area },
+    { label: "Department", value: [detail.department, detail.subDepartment].filter(Boolean).join(" · ") },
+    { label: "Plant", value: job.plant },
+    { label: "Enterprise", value: job.enterprise },
+    { label: "Criticality", value: detail.assetCriticality },
+    { label: "Commissioned", value: detail.commissionedOn },
+    { label: "Cleaned By", value: detail.execution?.performedBy ?? "—" },
+    { label: "Carried Out", value: detail.execution?.endedAt ?? detail.execution?.startedAt ?? job.date },
+    { label: "Mode", value: detail.execution?.mode ?? "—" },
+  ].filter((r) => r.value)
+
+  /* The pictures, in the order the report reads them: as found, then as left */
+  const isBefore = (e: EvidenceItem) => e.label.startsWith("Before")
+  const shots = detail.evidence.filter((e) => e.kind !== "document")
+  const beforeShots = shots.filter(isBefore)
+  const afterShots = shots.filter((e) => !isBefore(e))
+  const images = [...beforeShots, ...afterShots].map((e) => ({ label: e.label, caption: e.caption, src: e.src }))
+
   return (
     <TaskPanel icon={SprayCan} title="Cleaning Report">
       <p className="text-sm text-muted-foreground">
@@ -79,6 +106,39 @@ export function CleaningReportPanel({ job, detail }: { job: Job; detail: Mainten
         ))}
       </dl>
 
+      {shots.length ? (
+        <>
+          <h4 className="mt-4 text-xs font-bold tracking-wide text-muted-foreground uppercase">
+            Evidence ({shots.length})
+          </h4>
+          <div className="mt-1.5 space-y-3">
+            {beforeShots.length ? (
+              <div>
+                <p className="mb-1 text-xs font-semibold text-critical">As found</p>
+                <EvidenceStrip items={beforeShots} />
+              </div>
+            ) : null}
+            {afterShots.length ? (
+              <div>
+                <p className="mb-1 text-xs font-semibold text-healthy">As left</p>
+                <EvidenceStrip items={afterShots} />
+              </div>
+            ) : null}
+          </div>
+        </>
+      ) : null}
+
+      {/* The asset the clean was carried out on */}
+      <h4 className="mt-4 text-xs font-bold tracking-wide text-muted-foreground uppercase">Asset</h4>
+      <dl className="mt-1.5 grid border-t text-sm sm:grid-cols-2 sm:gap-x-6">
+        {rows.map((row) => (
+          <div key={row.label} className="flex items-center justify-between gap-3 border-b py-1.5">
+            <dt className="text-muted-foreground">{row.label}</dt>
+            <dd className="truncate text-right font-medium">{row.value}</dd>
+          </div>
+        ))}
+      </dl>
+
       <h4 className="mt-4 text-xs font-bold tracking-wide text-muted-foreground uppercase">After cleaning</h4>
       <ul className="mt-1.5 list-disc space-y-1 pl-5 text-sm">
         {comparison.benefits.map((b) => (
@@ -89,7 +149,7 @@ export function CleaningReportPanel({ job, detail }: { job: Job; detail: Mainten
       <Button
         variant="outline"
         className="mt-4 h-12 w-full bg-card sm:w-auto"
-        onClick={() => printReport(cleaningReport(comparison), header)}
+        onClick={() => printReport(cleaningReport(comparison, { rows, images }), header)}
       >
         <Printer /> Save as PDF
       </Button>
