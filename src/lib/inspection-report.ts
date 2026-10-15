@@ -17,11 +17,11 @@
  * (see data/insta.ts); the hygiene one asks for the physical faults to be
  * rectified.
  */
-import { toast } from "sonner"
 
 import type { InspectionCapture } from "@/data/inspection-detail"
 import { recommendInsta } from "@/data/insta"
 import { contaminationKinds, hygieneChecks, inspectionReadingsFor, readingKeys } from "@/data/test-template"
+import { printDocument } from "@/lib/print"
 import { levelOf, thermalReadings } from "@/lib/testing"
 
 export type ReportRow = { label: string; value: string; tone?: "healthy" | "attention" | "critical" }
@@ -223,14 +223,9 @@ export function hygieneReport(capture: InspectionCapture): InspectionReport {
  * Hand the report to the browser's print dialogue, which is where a PDF comes
  * from on a tablet.
  *
- * Printed from a window of its own rather than the app, so the page needs no
- * print stylesheet and what comes out carries only the report.
- *
- * The window is opened WITHOUT `noopener`. With it, `window.open` is specified
- * to return null even though the window itself opens, so the report could never
- * be written into it and the engineer got an empty `about:blank`. Nothing
- * untrusted is loaded here - the markup below is the whole document - so there
- * is no opener to protect.
+ * Printed from a document of its own rather than the app, so the page needs no
+ * print stylesheet and what comes out carries only the report - see
+ * `printDocument`, which does it without a pop-up for a blocker to stop.
  */
 export function printReport(report: InspectionReport, header: { asset: string; assetId: string; plant: string; when: string }) {
   const esc = (s: string) => s.replace(/[&<>]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" })[c] ?? c)
@@ -302,13 +297,5 @@ export function printReport(report: InspectionReport, header: { asset: string; a
   ${report.recommendations.length ? `<section><h2>Recommendations</h2><ul>${report.recommendations.map((r) => `<li>${esc(r)}</li>`).join("")}</ul></section>` : ""}
   </body></html>`
 
-  const win = window.open("", "_blank", "width=820,height=1000")
-  if (!win) {
-    toast.error("Allow pop-ups for this site to save the report as a PDF.")
-    return
-  }
-  win.document.write(html)
-  win.document.close()
-  win.focus()
-  win.print()
+  printDocument(html)
 }
