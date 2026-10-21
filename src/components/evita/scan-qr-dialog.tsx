@@ -1,16 +1,13 @@
 import { useEffect, useMemo, useRef, useState } from "react"
-import { Camera, CameraOff, QrCode, Search } from "lucide-react"
+import { Camera, CameraOff, ImageUp, Loader2, QrCode, Search } from "lucide-react"
+import { toast } from "sonner"
 
 import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { ScanResult } from "@/components/assets/scan-result"
 import { useAssetRows } from "@/data/asset-store"
-
-/** Chrome on Android ships BarcodeDetector; TypeScript's DOM types do not include it yet */
-type Detector = { detect: (source: CanvasImageSource) => Promise<{ rawValue: string }[]> }
-type DetectorCtor = new (options: { formats: string[] }) => Detector
-const BarcodeDetectorImpl = (globalThis as unknown as { BarcodeDetector?: DetectorCtor }).BarcodeDetector
+import { decodeQr, decodeQrFile, usingNativeDetector } from "@/lib/qr-decode"
 
 /**
  * Scan an asset's QR label with the tablet's rear camera, or type the Digital
@@ -32,6 +29,9 @@ export function ScanQrDialog({ open, onOpenChange }: { open: boolean; onOpenChan
   const [code, setCode] = useState("")
   /** The code being answered; null while the camera is still looking */
   const [read, setRead] = useState<string | null>(null)
+  /** A picked picture is being read */
+  const [reading, setReading] = useState(false)
+  const fileRef = useRef<HTMLInputElement>(null)
 
   /** A label can carry the Digital Asset ID, the plant's own tag, or the name */
   const found = useMemo(() => {
@@ -56,7 +56,7 @@ export function ScanQrDialog({ open, onOpenChange }: { open: boolean; onOpenChan
     let cancelled = false
 
     async function start() {
-      if (!navigator.mediaDevices?.getUserMedia || !BarcodeDetectorImpl) {
+      if (!navigator.mediaDevices?.getUserMedia) {
         setCamera("unsupported")
         return
       }
@@ -66,16 +66,20 @@ export function ScanQrDialog({ open, onOpenChange }: { open: boolean; onOpenChan
         videoRef.current.srcObject = stream
         await videoRef.current.play()
         setCamera("live")
-        const detector = new BarcodeDetectorImpl({ formats: ["qr_code"] })
         const scan = async () => {
-          if (cancelled || !videoRef.current) return
+          const video = videoRef.current
+          if (cancelled || !video) return
           try {
-            const [hit] = await detector.detect(videoRef.current)
-            if (hit?.rawValue && answer(hit.rawValue)) return
+            const found = await decodeQr(video, {
+              width: video.videoWidth,
+              height: video.videoHeight,
+            })
+            if (found && answer(found)) return
           } catch {
             // A frame that cannot be read yet; try the next one
           }
-          timer = window.setTimeout(scan, 350)
+          // jsQR reads every pixel itself, so it is given a little more room
+          timer = window.setTimeout(scan, usingNativeDetector ? 350 : 500)
         }
         scan()
       } catch {
@@ -98,6 +102,30 @@ export function ScanQrDialog({ open, onOpenChange }: { open: boolean; onOpenChan
     setCamera("starting")
   }
 
+  /**
+   * Read a label out of a picture instead of off the camera.
+   *
+   * A photograph of a panel door answers the same question a live scan does,
+   * and it is the only way to exercise the scan path on a machine with no
+   * camera - or in a browser whose own detector is missing.
+   */
+  const pickImage = async (file?: File) => {
+    if (!file) return
+    setReading(true)
+    try {
+      const found = await decodeQrFile(file)
+      if (!found) {
+        toast.error("No QR code could be read in that picture.")
+        return
+      }
+      answer(found)
+    } catch {
+      toast.error("That file could not be read as an image.")
+    } finally {
+      setReading(false)
+    }
+  }
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-lg">
@@ -114,6 +142,29 @@ export function ScanQrDialog({ open, onOpenChange }: { open: boolean; onOpenChan
           <ScanResult code={read} asset={found} onClose={() => onOpenChange(false)} onRetry={retry} />
         ) : (
           <>
+            {/* Reads a label out of a picture - the same decoder the camera
+                uses, so what works here works on the panel door */}
+            <input
+              ref={fileRef}
+              type="file"
+              accept="image/*"
+              hidden
+              onChange={(event) => {
+                void pickImage(event.target.files?.[0])
+                event.target.value = ""
+              }}
+            />
+            <Button
+              type="button"
+              variant="outline"
+              className="w-full"
+              disabled={reading}
+              onClick={() => fileRef.current?.click()}
+            >
+              {reading ? <Loader2 className="animate-spin" /> : <ImageUp />}
+              {reading ? "Reading the picture…" : "Upload a QR image"}
+            </Button>
+
             <div className="relative aspect-[4/3] overflow-hidden rounded-xl bg-brand-navy">
               <video ref={videoRef} playsInline muted className="size-full object-cover" hidden={camera !== "live"} />
               {camera === "live" ? (
@@ -128,7 +179,7 @@ export function ScanQrDialog({ open, onOpenChange }: { open: boolean; onOpenChan
                       ? "Starting the camera…"
                       : camera === "blocked"
                         ? "Camera access was refused. Allow it in Chrome's site settings, or enter the ID below."
-                        : "This browser cannot scan QR codes. Enter the Asset ID below."}
+                        : "No camera on this device. Upload a picture of the label above, or enter the Asset ID below."}
                   </p>
                 </div>
               )}
