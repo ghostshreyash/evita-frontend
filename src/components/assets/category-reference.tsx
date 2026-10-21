@@ -16,19 +16,30 @@ import { categoryLook, shortCategory } from "@/lib/category-icons"
  * hidden behind a scroll: "Other" opens a dialog carrying every category from
  * the parameter sheet, so an unusual asset is still registered under its proper
  * name rather than as "Other".
+ *
+ * The dialog can be opened from outside as well, so that picking Other on the
+ * form's own Asset Category dropdown reaches the same list and the same naming
+ * step rather than settling for the bare word "Other".
  */
 
 export function CategoryReference({
   value,
   onSelect,
   className,
+  open: openProp,
+  onOpenChange,
 }: {
   /** The category currently chosen on the form, highlighted in the grid */
   value?: string
   onSelect: (category: string) => void
   className?: string
+  /** Opens the all-categories dialog from outside; left out, the grid owns it */
+  open?: boolean
+  onOpenChange?: (open: boolean) => void
 }) {
-  const [open, setOpen] = useState(false)
+  const [openSelf, setOpenSelf] = useState(false)
+  const open = openProp ?? openSelf
+  const setOpen = onOpenChange ?? setOpenSelf
 
   // "Other" on the grid means "show me everything", so it opens the dialog
   const choose = (category: string) => (category === "Other" ? setOpen(true) : onSelect(category))

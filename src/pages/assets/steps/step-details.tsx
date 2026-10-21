@@ -52,6 +52,13 @@ export function StepDetails({
     ? buildAssetId({ enterprise: site.enterprise, city: site.plant.city, category, existing: register })
     : ""
 
+  /*
+   * Other on the dropdown opens the same dialog Other on the grid does, so the
+   * engineer reaches the full list and the naming step either way instead of
+   * being left with the bare word "Other" and no ratings to fill in.
+   */
+  const [browsingCategories, setBrowsingCategories] = useState(false)
+
   /* A category typed by hand behind Other is not on the master list */
   const categoryOptions =
     category && !(assetCategories as readonly string[]).includes(category)
@@ -103,6 +110,7 @@ export function StepDetails({
             required
             options={categoryOptions}
             placeholder="Select, or tap a category on the right"
+            onValueChange={(value) => setBrowsingCategories(value === "Other")}
           />
 
           <TextField
@@ -144,6 +152,8 @@ export function StepDetails({
         <CategoryReference
           value={category}
           onSelect={(value) => setValue("category", value, { shouldValidate: true, shouldDirty: true })}
+          open={browsingCategories}
+          onOpenChange={setBrowsingCategories}
         />
         <TipBox
           items={[
