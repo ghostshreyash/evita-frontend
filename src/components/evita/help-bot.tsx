@@ -46,7 +46,7 @@ type Turn = {
 }
 
 const greeting =
-  "Hello. I can walk you through how something is done in EVITA - the answers are OLIVINE's own, word for word. Tap a question or type your own."
+  "Hello. I can walk you through how something is done in EVITA-AI - the answers are OLIVINE's own, word for word. Tap a question or type your own."
 
 const nothingMatched =
   "I don't have an approved answer for that one. The FAQ is all I read from, and guessing about an electrical asset is not worth the risk - raise a ticket and the helpdesk will take it from here."
@@ -161,7 +161,7 @@ export function HelpBot() {
       ref={panel}
       tabIndex={-1}
       role="dialog"
-      aria-label="EVITA help assistant"
+      aria-label="EVITA-AI help assistant"
       onKeyDown={(event) => {
         if (event.key === "Escape") setOpen(false)
       }}
@@ -172,7 +172,7 @@ export function HelpBot() {
           <Bot className="size-5" />
         </span>
         <span className="min-w-0 flex-1">
-          <span className="block text-sm font-semibold text-brand-navy dark:text-foreground">EVITA Help</span>
+          <span className="block text-sm font-semibold text-brand-navy dark:text-foreground">EVITA-AI Help</span>
           <span className="block truncate text-xs text-muted-foreground">Answers from OLIVINE's approved FAQ</span>
         </span>
         <Button type="button" variant="ghost" size="icon-sm" aria-label="Close the help assistant" onClick={() => setOpen(false)}>

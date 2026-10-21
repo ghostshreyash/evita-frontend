@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button"
 import { OlivineLogo } from "@/components/layout/olivine-logo"
 import { brand } from "@/config/brand"
 import { SystemName } from "@/components/common/system-name"
+import { Wordmark } from "@/components/common/wordmark"
 
 /** Staggered entrance, so the screen assembles rather than appearing at once. */
 export function Rise({
@@ -130,7 +131,7 @@ export function AuthCard({
   footer,
   delay = 120,
 }: {
-  /** The EVITA wordmark over the title; the later steps of a flow leave it off. */
+  /** The EVITA-AI wordmark over the title; the later steps of a flow leave it off. */
   emblem?: boolean
   title: string
   description?: string
@@ -148,7 +149,7 @@ export function AuthCard({
         {emblem ? (
           <div className="mb-6 text-center">
             <div className="bg-gradient-to-r from-[#164d9b] via-[#0b3b80] to-[#68a83c] bg-clip-text text-[3.3rem] leading-none font-black tracking-[-0.06em] text-transparent">
-              EVITA<sup className="ml-1 align-super text-sm font-bold text-[#164d9b]">™</sup>
+              <Wordmark tmClassName="ml-1 text-sm font-bold text-[#164d9b]" />
             </div>
             {/* Tight under the wordmark, where an expansion belongs */}
             <SystemName className="mt-1 text-[0.7rem] text-[#163b72]" />

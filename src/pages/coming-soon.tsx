@@ -13,7 +13,7 @@ export function ComingSoonPage({ title }: { title: string }) {
         </div>
         <h3 className="text-lg font-semibold">Screen design pending</h3>
         <p className="max-w-md text-sm text-muted-foreground">
-          This EVITA screen is not built yet. It will follow the approved design.
+          This EVITA-AI screen is not built yet. It will follow the approved design.
         </p>
       </div>
     </div>

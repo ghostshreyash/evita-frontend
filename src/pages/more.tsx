@@ -88,7 +88,7 @@ export function MorePage() {
             ]}
           />
           <p className="mt-3 text-sm text-muted-foreground">
-            EVITA works one posting at a time. A move is made by EMMS-E and reaches the tablet at the next sync.
+            EVITA-AI works one posting at a time. A move is made by EMMS-E and reaches the tablet at the next sync.
           </p>
         </DetailPanel>
       </div>
@@ -114,7 +114,7 @@ export function MorePage() {
       </Button>
 
       <p className="mt-3 flex items-center justify-between px-1 text-xs text-muted-foreground">
-        <span>EVITA PWA Client</span>
+        <span>EVITA-AI PWA Client</span>
         <span className="tabular-nums">v1.0.0</span>
       </p>
     </div>

@@ -6,6 +6,7 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
 import { OlivineEmblem } from "@/components/layout/olivine-logo"
 import { SystemName } from "@/components/common/system-name"
+import { Wordmark } from "@/components/common/wordmark"
 import { useOnline } from "@/hooks/use-media"
 import { useAuth } from "@/lib/auth/context"
 import { useInspectionDetails } from "@/data/inspection-store"
@@ -13,7 +14,7 @@ import { useNotifications } from "@/lib/notifications"
 import { openPanel } from "@/lib/ui-store"
 
 /**
- * EVITA's top bar: the Olivine emblem with the EVITA FIELD wordmark, whether
+ * EVITA's top bar: the Olivine emblem with the EVITA-AI FIELD wordmark, whether
  * what was recorded has reached OCC, notifications, and their own avatar.
  *
  * Light rather than the navy of the desk consoles — the field app is used at
@@ -55,7 +56,7 @@ export function AppBar({ onMenu }: { onMenu: () => void }) {
         <span className="min-w-0">
           <span className="flex items-center gap-2">
             <span className="text-xl leading-none font-black tracking-[-0.03em] text-brand-navy dark:text-foreground">
-              EVITA<sup className="ml-0.5 align-super text-[0.55rem] font-bold text-muted-foreground">™</sup>
+              <Wordmark tmClassName="ml-0.5 text-[0.55rem] font-bold text-muted-foreground" />
             </span>
             <span className="rounded bg-primary px-1.5 py-0.5 text-[0.65rem] font-bold tracking-wide text-primary-foreground">
               FIELD

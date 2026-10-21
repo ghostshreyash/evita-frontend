@@ -94,7 +94,7 @@ export function AssetIdScreen({
               <Lightbulb className="size-5 text-healthy" /> How to use it
             </h4>
             <ul className="ml-4 list-disc space-y-1 text-sm text-foreground/80">
-              <li>Scan the QR code from the EVITA app, or any scanner.</li>
+              <li>Scan the QR code from the EVITA-AI app, or any scanner.</li>
               <li>Print the label and fix it to the panel door or the asset itself.</li>
               <li>Tap the Asset ID to open the full asset record.</li>
               <li>The record syncs to the central server for inspection and maintenance planning.</li>

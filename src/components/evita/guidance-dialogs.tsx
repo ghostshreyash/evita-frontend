@@ -91,7 +91,7 @@ export function SopDialog({ activity, onOpenChange }: { activity?: string; onOpe
               <p className="text-sm leading-relaxed">{sop.body}</p>
             </section>
             <section>
-              <h4 className="mb-2 text-sm font-semibold">Record in EVITA</h4>
+              <h4 className="mb-2 text-sm font-semibold">Record in EVITA-AI</h4>
               <p className="text-sm leading-relaxed text-muted-foreground">
                 Readings with their instrument, anything abnormal as an observation with its severity, and photos or thermal
                 images of the asset as found and as left. Submit only when the checklist on the task is complete.
