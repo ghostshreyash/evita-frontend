@@ -29,6 +29,16 @@ const lists = {
   networkKit: ["Router", "Firewall", "Media Converter", "Gateway", "Other"],
   comms: ["Ethernet", "Fiber", "Serial", "Modbus", "Other"],
   tapChanger: ["OLTC", "Off-circuit", "None"],
+  plcPresent: ["Yes", "No"],
+  instrumentType: ["CT", "PT", "Isolation"],
+  motorStarterTechnology: ["DOL", "STAR-DELTA"],
+  switchType: [
+    "Power over Ethernet (PoE) Switches",
+    "Smart Switch",
+    "Managed",
+    "Unmanaged",
+    "Other",
+  ],
 } as const satisfies Record<string, readonly string[]>
 
 type ListName = keyof typeof lists
@@ -152,7 +162,7 @@ const byType: Record<string, string[]> = {
     "Model / Type|O|text",
     "Control Voltage|M|number|V DC/AC",
     "Rated Current|O|number|A",
-    "PLC/Controller Present|M|choice",
+    "PLC/Controller Present|M|choice|#plcPresent",
   ],
   "Distribution Board (DB)": [
     "Manufacturer|M|choice|#manufacturer",
@@ -196,7 +206,7 @@ const byType: Record<string, string[]> = {
   "Instrument Transformer (CT/PT)": [
     "Manufacturer|M|choice|#manufacturer",
     "Model / Type|O|text",
-    "Instrument Type|M|choice",
+    "Instrument Type|M|choice|#instrumentType",
     "Primary Rating|M|text|A or kV",
     "Secondary Rating|M|text|A or V",
     "Accuracy Class|O|choice",
@@ -220,8 +230,8 @@ const byType: Record<string, string[]> = {
     "Model / Type|O|text",
     "Rated Voltage|M|number|V",
     "Rated Current|M|number|A",
-    "Incomer Type|M|choice",
-    "Busbar Material / Rating|M|choice",
+    "Incomer Type|O|choice",
+    "Busbar Material|M|choice",
   ],
   "MCC (Motor Control Center)": [
     "Manufacturer|M|choice|#manufacturer",
@@ -230,7 +240,7 @@ const byType: Record<string, string[]> = {
     "Rated Current|M|number|A",
     "Busbar Rating|O|number|A",
     "Number of Motor Feeders|O|number|Nos.",
-    "Motor Starter Technology|M|choice",
+    "Motor Starter Technology|M|choice|#motorStarterTechnology",
   ],
   MCCB: [
     "Manufacturer|M|choice|#manufacturer",
@@ -244,7 +254,7 @@ const byType: Record<string, string[]> = {
   "Network Switch": [
     "Manufacturer|M|choice|#manufacturer",
     "Model / Type|O|text",
-    "Switch Type|O|choice",
+    "Switch Type|O|choice|#switchType",
     "Power Supply|M|text|V DC/AC",
   ],
   Other: [
@@ -406,12 +416,8 @@ export const typesWithoutParameters = assetCategories.filter((c) => !(c in byTyp
  * or given invented options.
  */
 export const missingOptionLists = [
-  "PLC/Controller Present (Control Panel)",
-  "Instrument Type (Instrument Transformer CT/PT)",
   "Accuracy Class (Instrument Transformer CT/PT)",
   "Incomer Type (LT Panel)",
-  "Busbar Material / Rating (LT Panel)",
-  "Motor Starter Technology (MCC)",
-  "Switch Type (Network Switch)",
+  "Busbar Material (LT Panel)",
   "Operating Mechanism (VCB)",
 ] as const
