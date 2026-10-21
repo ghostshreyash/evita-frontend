@@ -231,7 +231,7 @@ const byType: Record<string, string[]> = {
     "Rated Voltage|M|number|V",
     "Rated Current|M|number|A",
     "Incomer Type|O|choice",
-    "Busbar Material|M|choice",
+    "Busbar Material|M|choice|#busbarMaterial",
   ],
   "MCC (Motor Control Center)": [
     "Manufacturer|M|choice|#manufacturer",
@@ -376,12 +376,18 @@ export const parameterisedTypes = Object.keys(byType)
  * What to ask for this asset type: its own specification, then the criticality
  * every type carries.
  *
- * A type the sheet has no row for is asked only for the common parameters.
- * Nothing is borrowed from another type: a parameter the sheet does not give
- * for an asset is not asked of that asset - see `typesWithoutParameters`.
+ * A type the sheet has no row for - the two master categories it misses, and
+ * any category named by hand behind Other - falls back to the sheet's own Other
+ * row rather than to nothing at all. Naming an asset properly used to ask for
+ * less than leaving it as "Other" did, which is the wrong way round. Every
+ * parameter on that row is optional, so the fallback offers more to fill in
+ * without making anything new mandatory.
+ *
+ * Nothing is borrowed from another *named* type: a parameter the sheet gives a
+ * transformer is still not asked of a busbar - see `typesWithoutParameters`.
  */
 export function parametersFor(category: string): ParamSpec[] {
-  return [...(byType[category] ?? []), ...common].map(parse)
+  return [...(byType[category] ?? byType.Other), ...common].map(parse)
 }
 
 /** Whether the sheet has a row for this asset type at all */
@@ -407,7 +413,7 @@ export function missingParameters(category: string, answers: Record<string, stri
   return requiredParameters(category).filter((p) => !answers[p.key]?.trim())
 }
 
-/** Master categories the sheet has no row for; they carry the common set only */
+/** Master categories the sheet has no row for; they fall back to its Other row */
 export const typesWithoutParameters = assetCategories.filter((c) => !(c in byType))
 
 /**
@@ -418,6 +424,5 @@ export const typesWithoutParameters = assetCategories.filter((c) => !(c in byTyp
 export const missingOptionLists = [
   "Accuracy Class (Instrument Transformer CT/PT)",
   "Incomer Type (LT Panel)",
-  "Busbar Material (LT Panel)",
   "Operating Mechanism (VCB)",
 ] as const
