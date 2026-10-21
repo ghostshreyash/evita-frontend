@@ -16,9 +16,10 @@
  * Six rows are the exception and have been corrected here by hand: FAQ-133,
  * FAQ-196, FAQ-208, FAQ-209, FAQ-214 and FAQ-220. The parameter review moved
  * LT Panel's Incomer Type to optional, renamed Busbar Material / Rating to
- * Busbar Material, and fixed the option lists for Instrument Type, Motor
- * Starter Technology and Switch Type - so the sheet's wording now states values
- * and a mandatory flag the form does not have. THE SHEET STILL CARRIES THE OLD
+ * Busbar Material and gave it the Copper / Aluminium list, and fixed the option
+ * lists for Instrument Type, Motor Starter Technology and Switch Type - so the
+ * sheet's wording now states values, field names and a mandatory flag the form
+ * does not have. THE SHEET STILL CARRIES THE OLD
  * WORDING: correct `Olivine_APP_AI_Chatbot_FAQ_.xlsx` for those six rows, or
  * the next export reverts this and the Phase-2 chatbot keeps answering with the
  * old values. `data/asset-parameters.ts` is the authority on what the form asks.
@@ -1537,7 +1538,7 @@ export const faqEntries: FaqEntry[] = [
     id: "FAQ-209",
     category: "Asset Technical Parameters – LT Panel",
     question: "For LT Panel, what does the 'Busbar Material' onboarding field mean and how should I fill it?",
-    answer: "For LT Panel, **Busbar Material** is marked mandatory in the supplied onboarding parameter matrix. This field captures copper / aluminium. Use the equipment nameplate, approved manufacturer documentation, or verified site record as the source; do not estimate or copy a value from another asset. Enter it using text as indicated by the form. If the value is unavailable and the field is mandatory, consult the responsible technical person rather than inventing a value.",
+    answer: "For LT Panel, **Busbar Material** is marked mandatory in the supplied onboarding parameter matrix. This field captures Copper / Aluminium. Use the equipment nameplate, approved manufacturer documentation, or verified site record as the source; do not estimate or copy a value from another asset. Enter it using dropdown as indicated by the form. If the value is unavailable and the field is mandatory, consult the responsible technical person rather than inventing a value.",
     keywords: [
       "LT Panel; Busbar Material; onboarding; technical parameter"
     ]
