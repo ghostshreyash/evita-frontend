@@ -32,7 +32,7 @@ export type NewPasswordValues = z.infer<typeof newPasswordSchema>
 export const recoverySchema = z.object({
   fullName: required("Full name"),
   employeeId: required("Employee / User ID"),
-  registeredEmail: z.email("Enter the e-mail address on your EVITA account"),
+  registeredEmail: z.email("Enter the e-mail address on your EVITA-AI account"),
   alternateContact: required("Alternate contact"),
   reason: required("Details").max(500),
 })

@@ -2,10 +2,11 @@ import { Leaf } from "lucide-react"
 
 import { Rise } from "@/components/auth/auth-screen"
 import { SystemName } from "@/components/common/system-name"
+import { Wordmark } from "@/components/common/wordmark"
 import { brand } from "@/config/brand"
 
 /**
- * The panel beside the form on the photo: the EVITA wordmark, what the app is
+ * The panel beside the form on the photo: the EVITA-AI wordmark, what the app is
  * for, and the four things an ELPREMAR does with it. Landscape only — in
  * portrait the auth screen hides it and centres the card.
  */
@@ -14,8 +15,7 @@ export function BrandStory() {
     <div className="max-w-xl">
       <Rise delay={60}>
         <h2 className="mt-3 text-6xl font-black tracking-tight text-white">
-          EVITA
-          <sup className="ml-1 align-super text-base font-semibold text-white/60">™</sup>
+          <Wordmark tmClassName="ml-1 text-base font-semibold text-white/60" />
         </h2>
         <SystemName className="mt-1.5 max-w-md text-sm text-white/90" />
         <p className="mt-3 max-w-md text-lg text-white/85">{brand.strapline}</p>

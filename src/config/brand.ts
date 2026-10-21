@@ -8,6 +8,12 @@ import { BarChart3, ClipboardCheck, Leaf, ShieldCheck, Wrench, type LucideIcon }
  * keep the wording in step with that file when either changes.
  */
 export const brand = {
+  /**
+   * The name as it is drawn, in two pieces: the client brands the product
+   * EVITA-AI and asked for the AI to be visible as the AI, so `Wordmark` sets
+   * the two in different colours rather than writing the name out flat.
+   */
+  wordmark: { lead: "EVITA-", ai: "AI" },
   /** What the wordmark stands for, shown under it on the sign-in screen */
   system: "Electrical Visual and Input Based Technical Assessment",
   /**
