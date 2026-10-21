@@ -17,32 +17,35 @@ import { categoryLook, shortCategory } from "@/lib/category-icons"
  * the parameter sheet, so an unusual asset is still registered under its proper
  * name rather than as "Other".
  *
- * The dialog can be opened from outside as well, so that picking Other on the
- * form's own Asset Category dropdown reaches the same list and the same naming
- * step rather than settling for the bare word "Other".
+ * Picking Other on the form's own Asset Category dropdown opens the same dialog
+ * straight on its naming card - the dropdown has already said none of the
+ * categories applies, so there is nothing to browse.
  */
 
 export function CategoryReference({
   value,
   onSelect,
   className,
-  open: openProp,
-  onOpenChange,
+  naming,
+  onNamingChange,
 }: {
   /** The category currently chosen on the form, highlighted in the grid */
   value?: string
   onSelect: (category: string) => void
   className?: string
-  /** Opens the all-categories dialog from outside; left out, the grid owns it */
-  open?: boolean
-  onOpenChange?: (open: boolean) => void
+  /** Set by the form's own Other: open on the naming card, with no list */
+  naming?: boolean
+  onNamingChange?: (naming: boolean) => void
 }) {
-  const [openSelf, setOpenSelf] = useState(false)
-  const open = openProp ?? openSelf
-  const setOpen = onOpenChange ?? setOpenSelf
+  const [browsing, setBrowsing] = useState(false)
 
   // "Other" on the grid means "show me everything", so it opens the dialog
-  const choose = (category: string) => (category === "Other" ? setOpen(true) : onSelect(category))
+  const choose = (category: string) => (category === "Other" ? setBrowsing(true) : onSelect(category))
+
+  const close = () => {
+    setBrowsing(false)
+    onNamingChange?.(false)
+  }
 
   return (
     <div className={cn("rounded-2xl bg-card p-3 shadow-xs ring-1 ring-foreground/10", className)}>
@@ -62,13 +65,16 @@ export function CategoryReference({
         <span className="tabular-nums">{assetCategories.length}</span> categories from the platform parameter sheet.
       </p>
 
+      {/* Keyed on the mode so a fresh dialog opens on the right thing */}
       <AllCategoriesDialog
-        open={open}
-        onOpenChange={setOpen}
+        key={naming ? "name" : "list"}
+        open={browsing || !!naming}
+        naming={!!naming}
+        onClose={close}
         value={value}
         onSelect={(category) => {
           onSelect(category)
-          setOpen(false)
+          close()
         }}
       />
     </div>
@@ -107,21 +113,29 @@ function CategoryTile({
   )
 }
 
-/** Every category from the parameter sheet, searchable */
+/**
+ * Every category from the parameter sheet, searchable.
+ *
+ * In `naming` mode the list is not rendered at all: the form's Other has
+ * already said none of the categories applies, so the dialog opens on the
+ * naming card rather than asking for Other to be tapped a second time.
+ */
 function AllCategoriesDialog({
   open,
-  onOpenChange,
+  naming: namingOnly,
+  onClose,
   value,
   onSelect,
 }: {
   open: boolean
-  onOpenChange: (open: boolean) => void
+  naming: boolean
+  onClose: () => void
   value?: string
   onSelect: (category: string) => void
 }) {
   const [query, setQuery] = useState("")
   /** Set once Other is tapped: the engineer is naming the category themselves */
-  const [custom, setCustom] = useState<string>()
+  const [custom, setCustom] = useState<string | undefined>(namingOnly ? "" : undefined)
   const matches = useMemo(() => {
     const q = query.trim().toLowerCase()
     return q ? assetCategories.filter((c) => c.toLowerCase().includes(q)) : assetCategories
@@ -138,69 +152,73 @@ function AllCategoriesDialog({
     <Dialog
       open={open}
       onOpenChange={(next) => {
-        if (!next) {
-          setQuery("")
-          setCustom(undefined)
-        }
-        onOpenChange(next)
+        if (next) return
+        setQuery("")
+        setCustom(namingOnly ? "" : undefined)
+        onClose()
       }}
     >
-      <DialogContent className="sm:max-w-2xl!">
+      <DialogContent className={namingOnly ? "sm:max-w-lg!" : "sm:max-w-2xl!"}>
         <DialogHeader>
-          <DialogTitle>All asset categories</DialogTitle>
+          <DialogTitle>{namingOnly ? "Name the asset category" : "All asset categories"}</DialogTitle>
           <DialogDescription>
-            Every category the platform recognises. Pick the closest match — tap Other only when none of them applies,
-            and name the asset type yourself.
+            {namingOnly
+              ? "None of the platform's categories applies, so name the asset type yourself. Use the name on the nameplate or the drawing — it is what every later inspection will be filed under."
+              : "Every category the platform recognises. Pick the closest match — tap Other only when none of them applies, and name the asset type yourself."}
           </DialogDescription>
         </DialogHeader>
 
-        <div className="relative">
-          <Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
-          <Input
-            autoFocus
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            placeholder="Search categories"
-            aria-label="Search asset categories"
-            className="pl-9"
-          />
-        </div>
+        {namingOnly ? null : (
+          <div className="relative">
+            <Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              autoFocus
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="Search categories"
+              aria-label="Search asset categories"
+              className="pl-9"
+            />
+          </div>
+        )}
 
-        {/*
-          The same tiles as the quick-pick grid, two to a row so the long names -
-          "Instrument Transformer (CT/PT)", "Lighting Distribution Board (LDB)" -
-          are written out in full rather than clipped as they are on the grid.
-        */}
-        <ul className="-mx-1 grid max-h-[55vh] gap-1.5 overflow-y-auto px-1 sm:grid-cols-2">
-          {matches.map((category) => (
-            <li key={category}>
-              <button
-                type="button"
-                onClick={() => (category === "Other" ? setCustom("") : onSelect(category))}
-                aria-pressed={value === category}
-                className={cn(
-                  "flex min-h-16 w-full items-center gap-2.5 rounded-lg px-2 py-2 text-left text-sm ring-1 transition-colors",
-                  value === category
-                    ? "bg-info-soft font-semibold text-primary ring-2 ring-primary"
-                    : "bg-card ring-foreground/10 hover:bg-muted active:bg-muted"
-                )}
-              >
-                <span className={cn("flex size-10 shrink-0 items-center justify-center rounded-md", categoryLook(category).tint)}>
-                  <CategoryIcon category={category} className="size-6" />
-                </span>
-                <span className="min-w-0 flex-1 leading-tight">{category}</span>
-              </button>
-            </li>
-          ))}
-          {matches.length === 0 ? (
-            <li className="py-8 text-center text-sm text-muted-foreground sm:col-span-2">
-              <p>No category matches “{query}”.</p>
-              <Button type="button" variant="link" onClick={() => setCustom(query.trim())}>
-                Use “{query.trim()}” as the category
-              </Button>
-            </li>
-          ) : null}
-        </ul>
+        {namingOnly ? null : (
+          /*
+            The same tiles as the quick-pick grid, two to a row so the long names -
+            "Instrument Transformer (CT/PT)", "Lighting Distribution Board (LDB)" -
+            are written out in full rather than clipped as they are on the grid.
+          */
+          <ul className="-mx-1 grid max-h-[55vh] gap-1.5 overflow-y-auto px-1 sm:grid-cols-2">
+            {matches.map((category) => (
+              <li key={category}>
+                <button
+                  type="button"
+                  onClick={() => (category === "Other" ? setCustom("") : onSelect(category))}
+                  aria-pressed={value === category}
+                  className={cn(
+                    "flex min-h-16 w-full items-center gap-2.5 rounded-lg px-2 py-2 text-left text-sm ring-1 transition-colors",
+                    value === category
+                      ? "bg-info-soft font-semibold text-primary ring-2 ring-primary"
+                      : "bg-card ring-foreground/10 hover:bg-muted active:bg-muted"
+                  )}
+                >
+                  <span className={cn("flex size-10 shrink-0 items-center justify-center rounded-md", categoryLook(category).tint)}>
+                    <CategoryIcon category={category} className="size-6" />
+                  </span>
+                  <span className="min-w-0 flex-1 leading-tight">{category}</span>
+                </button>
+              </li>
+            ))}
+            {matches.length === 0 ? (
+              <li className="py-8 text-center text-sm text-muted-foreground sm:col-span-2">
+                <p>No category matches “{query}”.</p>
+                <Button type="button" variant="link" onClick={() => setCustom(query.trim())}>
+                  Use “{query.trim()}” as the category
+                </Button>
+              </li>
+            ) : null}
+          </ul>
+        )}
 
         {/*
           Naming it by hand. The typed name is stored as the category itself
@@ -208,17 +226,22 @@ function AllCategoriesDialog({
           filter on it - and so the same wording turns up next time it is typed.
         */}
         {naming ? (
-          <div className="rounded-lg bg-info-soft p-3 ring-1 ring-primary/20">
-            <label htmlFor="custom-category" className="text-sm font-semibold">
-              Name the asset category
-            </label>
-            <p className="mt-0.5 mb-2 text-xs text-muted-foreground">
-              Use the name on the nameplate or the drawing — it is what every later inspection will be filed under.
-            </p>
+          <div className={cn(!namingOnly && "rounded-lg bg-info-soft p-3 ring-1 ring-primary/20")}>
+            {namingOnly ? null : (
+              <>
+                <label htmlFor="custom-category" className="text-sm font-semibold">
+                  Name the asset category
+                </label>
+                <p className="mt-0.5 mb-2 text-xs text-muted-foreground">
+                  Use the name on the nameplate or the drawing — it is what every later inspection will be filed under.
+                </p>
+              </>
+            )}
             <div className="flex flex-wrap gap-2">
               <Input
                 id="custom-category"
                 autoFocus
+                aria-label={namingOnly ? "Asset category name" : undefined}
                 value={custom ?? ""}
                 maxLength={60}
                 onChange={(e) => setCustom(e.target.value)}
@@ -231,7 +254,7 @@ function AllCategoriesDialog({
                 placeholder="e.g. Earthing Transformer"
                 className="min-w-48 flex-1"
               />
-              <Button type="button" variant="outline" onClick={() => setCustom(undefined)}>
+              <Button type="button" variant="outline" onClick={() => (namingOnly ? onClose() : setCustom(undefined))}>
                 Cancel
               </Button>
               <Button type="button" disabled={!typed} onClick={confirm}>
