@@ -75,6 +75,7 @@ export function StepUploads({ form }: { form: UseFormReturn<AssetFormValues> }) 
         <Section
           icon={Camera}
           title="Asset Images"
+          required
           count={images.length}
           hint={`JPG or PNG · up to ${MAX_IMAGE_MB} MB each`}
         >
@@ -332,6 +333,7 @@ function Thumb({ item, onRemove, className }: { item: AssetUpload; onRemove: () 
 function Section({
   icon: Icon,
   title,
+  required,
   count,
   hint,
   className,
@@ -339,6 +341,8 @@ function Section({
 }: {
   icon: React.ComponentType<{ className?: string }>
   title: string
+  /** Marks the heading, for a section the asset cannot be registered without */
+  required?: boolean
   count: number
   hint: string
   className?: string
@@ -350,6 +354,7 @@ function Section({
         <span className="flex items-center gap-2 text-base font-semibold text-brand-navy dark:text-foreground">
           <Icon className="size-5 text-primary" />
           {title}
+          {required ? <span className="text-critical" aria-label="required">*</span> : null}
           <span className="rounded-full bg-background/70 px-2 py-0.5 text-xs font-semibold tabular-nums">{count}</span>
         </span>
         <span className="text-xs text-muted-foreground">{hint}</span>
