@@ -85,6 +85,24 @@ export type ServerParamSpec = {
   sortOrder: number
 }
 
+/** One enterprise with the plants under it - the first two levels of the cascade */
+export type EnterpriseSummary = {
+  id: string
+  name: string
+  shortName: string
+  industry: string
+  plants: {
+    id: string
+    code: string
+    name: string
+    city: string | null
+    state: string | null
+    country: string | null
+    latitude: number | null
+    longitude: number | null
+  }[]
+}
+
 export type SiteResponse = {
   enterprise: { id: string; name: string; shortName: string }
   plant: {
@@ -195,7 +213,10 @@ export const fetchCategories = () =>
     "/asset-categories",
   )
 
-/** The plant this engineer is posted to, with its department tree */
+/** Every enterprise, with its plants. Fills the first two dropdowns on step 1. */
+export const fetchSites = () => apiGet<EnterpriseSummary[]>("/sites")
+
+/** One plant, with its enterprise and its department tree */
 export const fetchSite = (plant: string) =>
   apiGet<SiteResponse>(`/sites/${encodeURIComponent(plant)}`)
 

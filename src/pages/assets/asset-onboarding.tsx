@@ -12,7 +12,7 @@ import { onboardAsset, updateAsset, useAssetProfile, useAssets, valuesFrom } fro
 import type { AssetRecord } from "@/data/asset-data"
 import { assetSchema, missingUploads, stepFields, type AssetFormValues } from "@/pages/assets/schemas"
 import { keyForLabel, missingParameters, useCategoryParameters } from "@/lib/api/use-category-parameters"
-import { useSite } from "@/lib/api/use-site"
+import { DEFAULT_PLANT, useEnterprises } from "@/lib/api/use-site"
 import { ApiError } from "@/lib/api/client"
 import { AssetsLoading, AssetsUnreachable } from "@/components/assets/asset-states"
 import { StepDetails } from "@/pages/assets/steps/step-details"
@@ -62,8 +62,8 @@ const steps = [
  */
 export function AssetOnboardingPage() {
   const navigate = useNavigate()
-  /* The engineer's own posting: the enterprise and plant are read, not chosen */
-  const { site, status: siteStatus, error: siteError } = useSite()
+  /* Where the asset stands, picked a level at a time on step 1 */
+  const { enterprises, status: siteStatus, error: siteError } = useEnterprises()
 
   /* Correcting an asset rather than registering one, if the route names one */
   const { id: editing } = useParams()
@@ -101,21 +101,32 @@ export function AssetOnboardingPage() {
   const category = form.watch("category")
   const { specs, status: specsStatus } = useCategoryParameters(category)
 
-  /* The engineer's own posting, which is the only site EVITA registers assets at */
+  /*
+   * A posting configured for this build is chosen for the engineer, so the
+   * common case is one tap rather than four. Everything below it is still
+   * theirs to pick, and an unconfigured build simply starts on an empty form.
+   */
   useEffect(() => {
-    if (!site || editing) return
-    form.reset({
-      ...blankValues(),
-      enterprise: site.enterprise.name,
-      plant: site.plant.name,
-      department: site.departments[0]?.name ?? "",
-      // Pre-filled from the plant's own registered location, and editable on site
-      latitude: site.plant.latitude === null ? "" : String(site.plant.latitude),
-      longitude: site.plant.longitude === null ? "" : String(site.plant.longitude),
-    })
+    if (editing || enterprises.length === 0 || !DEFAULT_PLANT) return
+
+    for (const enterprise of enterprises) {
+      const plant = enterprise.plants.find(
+        (p) => p.code === DEFAULT_PLANT || p.name === DEFAULT_PLANT || p.id === DEFAULT_PLANT,
+      )
+      if (!plant) continue
+      form.reset({
+        ...blankValues(),
+        enterprise: enterprise.name,
+        plant: plant.name,
+        // Pre-filled from the plant's own registered location, and editable on site
+        latitude: plant.latitude === null ? "" : String(plant.latitude),
+        longitude: plant.longitude === null ? "" : String(plant.longitude),
+      })
+      return
+    }
     // `form` is stable; resetting on its identity would wipe what was typed
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [site, editing])
+  }, [enterprises, editing])
 
   /*
    * Reading an asset back in to correct it, in two passes: its category first,
@@ -212,10 +223,10 @@ export function AssetOnboardingPage() {
   }
 
   /*
-   * Nothing can be filled in until the plant is known: the enterprise and plant
-   * are read onto the form, and the department list is the plant's own.
+   * Nothing can be filled in until the enterprise list is known: it is the top
+   * of the cascade every other choice on step 1 hangs off.
    */
-  if (siteStatus !== "ready" || !site) {
+  if (siteStatus !== "ready") {
     return (
       <div>
         <PageHeader
@@ -225,7 +236,7 @@ export function AssetOnboardingPage() {
         {siteStatus === "error" ? (
           <AssetsUnreachable message={siteError} backTo="/assets" />
         ) : (
-          <AssetsLoading label="Reading your plant…" />
+          <AssetsLoading label="Reading the enterprise list…" />
         )}
       </div>
     )
@@ -249,7 +260,7 @@ export function AssetOnboardingPage() {
 
       <StepperBar steps={steps} current={current} furthest={asset ? steps.length - 1 : furthest} onSelect={goTo} />
 
-      {current === 0 ? <StepDetails form={form} site={site} /> : null}
+      {current === 0 ? <StepDetails form={form} enterprises={enterprises} /> : null}
       {current === 1 ? (
         specsStatus === "ready" ? <StepTechnical form={form} specs={specs} /> : <AssetsLoading label="Reading what this asset type is asked for…" />
       ) : null}
