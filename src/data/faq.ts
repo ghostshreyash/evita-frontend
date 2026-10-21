@@ -12,6 +12,16 @@
  *
  * Generated from the sheet rather than typed. Re-run the export and regenerate
  * when the sheet changes; do not edit the entries by hand.
+ *
+ * Six rows are the exception and have been corrected here by hand: FAQ-133,
+ * FAQ-196, FAQ-208, FAQ-209, FAQ-214 and FAQ-220. The parameter review moved
+ * LT Panel's Incomer Type to optional, renamed Busbar Material / Rating to
+ * Busbar Material, and fixed the option lists for Instrument Type, Motor
+ * Starter Technology and Switch Type - so the sheet's wording now states values
+ * and a mandatory flag the form does not have. THE SHEET STILL CARRIES THE OLD
+ * WORDING: correct `Olivine_APP_AI_Chatbot_FAQ_.xlsx` for those six rows, or
+ * the next export reverts this and the Phase-2 chatbot keeps answering with the
+ * old values. `data/asset-parameters.ts` is the authority on what the form asks.
  */
 
 export type FaqEntry = {
@@ -808,7 +818,7 @@ export const faqEntries: FaqEntry[] = [
     id: "FAQ-133",
     category: "Technical Basics",
     question: "What is Motor Starter Technology in an MCC?",
-    answer: "Motor starter technology describes how a motor feeder starts or controls a motor, such as direct-on-line, star-delta, soft starter, or variable-frequency drive, where those options are supported by the approved data model. Select the actual installed arrangement based on panel labels or verified documentation.",
+    answer: "Motor starter technology describes how a motor feeder starts or controls a motor, such as direct-on-line, star-delta, soft starter, or variable-frequency drive. The onboarding form offers the two the approved data model carries, DOL and STAR-DELTA. Select the actual installed arrangement based on panel labels or verified documentation.",
     keywords: [
       "motor starter",
       "MCC feeder",
@@ -1410,7 +1420,7 @@ export const faqEntries: FaqEntry[] = [
     id: "FAQ-196",
     category: "Asset Technical Parameters – Instrument Transformer (CT/PT)",
     question: "For Instrument Transformer (CT/PT), what does the 'Instrument Type' onboarding field mean and how should I fill it?",
-    answer: "For Instrument Transformer (CT/PT), **Instrument Type** is marked mandatory in the supplied onboarding parameter matrix. This field captures ct / pt / ct+pt. Use the equipment nameplate, approved manufacturer documentation, or verified site record as the source; do not estimate or copy a value from another asset. Enter it using dropdown as indicated by the form. If the value is unavailable and the field is mandatory, consult the responsible technical person rather than inventing a value.",
+    answer: "For Instrument Transformer (CT/PT), **Instrument Type** is marked mandatory in the supplied onboarding parameter matrix. This field captures CT / PT / Isolation. Use the equipment nameplate, approved manufacturer documentation, or verified site record as the source; do not estimate or copy a value from another asset. Enter it using dropdown as indicated by the form. If the value is unavailable and the field is mandatory, consult the responsible technical person rather than inventing a value.",
     keywords: [
       "Instrument Transformer (CT/PT); Instrument Type; onboarding; technical parameter"
     ]
@@ -1518,7 +1528,7 @@ export const faqEntries: FaqEntry[] = [
     id: "FAQ-208",
     category: "Asset Technical Parameters – LT Panel",
     question: "For LT Panel, what does the 'Incomer Type' onboarding field mean and how should I fill it?",
-    answer: "For LT Panel, **Incomer Type** is marked mandatory in the supplied onboarding parameter matrix. This field captures acb / mccb / switch fuse / other. Use the equipment nameplate, approved manufacturer documentation, or verified site record as the source; do not estimate or copy a value from another asset. Enter it using dropdown as indicated by the form. If the value is unavailable and the field is mandatory, consult the responsible technical person rather than inventing a value.",
+    answer: "For LT Panel, **Incomer Type** is marked optional in the supplied onboarding parameter matrix. This field captures the incoming switching device, for example acb / mccb / switch fuse / other. Use the equipment nameplate, approved manufacturer documentation, or verified site record as the source; do not estimate or copy a value from another asset. Enter it using text as indicated by the form, as no option list has been supplied for it. If the value is unavailable and the field is mandatory, consult the responsible technical person rather than inventing a value.",
     keywords: [
       "LT Panel; Incomer Type; onboarding; technical parameter"
     ]
@@ -1526,10 +1536,10 @@ export const faqEntries: FaqEntry[] = [
   {
     id: "FAQ-209",
     category: "Asset Technical Parameters – LT Panel",
-    question: "For LT Panel, what does the 'Busbar Material / Rating' onboarding field mean and how should I fill it?",
-    answer: "For LT Panel, **Busbar Material / Rating** is marked mandatory in the supplied onboarding parameter matrix. This field captures copper / aluminium. Use the equipment nameplate, approved manufacturer documentation, or verified site record as the source; do not estimate or copy a value from another asset. Enter it using text as indicated by the form. If the value is unavailable and the field is mandatory, consult the responsible technical person rather than inventing a value.",
+    question: "For LT Panel, what does the 'Busbar Material' onboarding field mean and how should I fill it?",
+    answer: "For LT Panel, **Busbar Material** is marked mandatory in the supplied onboarding parameter matrix. This field captures copper / aluminium. Use the equipment nameplate, approved manufacturer documentation, or verified site record as the source; do not estimate or copy a value from another asset. Enter it using text as indicated by the form. If the value is unavailable and the field is mandatory, consult the responsible technical person rather than inventing a value.",
     keywords: [
-      "LT Panel; Busbar Material / Rating; onboarding; technical parameter"
+      "LT Panel; Busbar Material; onboarding; technical parameter"
     ]
   },
   {
@@ -1572,7 +1582,7 @@ export const faqEntries: FaqEntry[] = [
     id: "FAQ-214",
     category: "Asset Technical Parameters – MCC (Motor Control Center)",
     question: "For MCC (Motor Control Center), what does the 'Motor Starter Technology' onboarding field mean and how should I fill it?",
-    answer: "For MCC (Motor Control Center), **Motor Starter Technology** is marked mandatory in the supplied onboarding parameter matrix. This field captures dol / star-delta / soft starter / vfd / mixed. Use the equipment nameplate, approved manufacturer documentation, or verified site record as the source; do not estimate or copy a value from another asset. Enter it using dropdown as indicated by the form. If the value is unavailable and the field is mandatory, consult the responsible technical person rather than inventing a value.",
+    answer: "For MCC (Motor Control Center), **Motor Starter Technology** is marked mandatory in the supplied onboarding parameter matrix. This field captures DOL / STAR-DELTA. Use the equipment nameplate, approved manufacturer documentation, or verified site record as the source; do not estimate or copy a value from another asset. Enter it using dropdown as indicated by the form. If the value is unavailable and the field is mandatory, consult the responsible technical person rather than inventing a value.",
     keywords: [
       "MCC (Motor Control Center); Motor Starter Technology; onboarding; technical parameter"
     ]
@@ -1626,7 +1636,7 @@ export const faqEntries: FaqEntry[] = [
     id: "FAQ-220",
     category: "Asset Technical Parameters – Network Switch",
     question: "For Network Switch, what does the 'Switch Type' onboarding field mean and how should I fill it?",
-    answer: "For Network Switch, **Switch Type** is marked optional in the supplied onboarding parameter matrix. This field captures managed / unmanaged. Use the equipment nameplate, approved manufacturer documentation, or verified site record as the source; do not estimate or copy a value from another asset. Enter it using dropdown as indicated by the form. If the value is unavailable and the field is mandatory, consult the responsible technical person rather than inventing a value.",
+    answer: "For Network Switch, **Switch Type** is marked optional in the supplied onboarding parameter matrix. This field captures Power over Ethernet (PoE) Switches / Smart Switch / Managed / Unmanaged / Other. Use the equipment nameplate, approved manufacturer documentation, or verified site record as the source; do not estimate or copy a value from another asset. Enter it using dropdown as indicated by the form. If the value is unavailable and the field is mandatory, consult the responsible technical person rather than inventing a value.",
     keywords: [
       "Network Switch; Switch Type; onboarding; technical parameter"
     ]
