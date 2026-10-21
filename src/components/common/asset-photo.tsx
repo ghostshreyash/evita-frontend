@@ -12,30 +12,36 @@ import { categoryImage } from "@/lib/asset-images"
  * on a tablet — so a slot with no file renders as a labelled placeholder rather
  * than a broken image. Pass a `file` and it shows the real picture, which is what
  * the onboarding wizard does with what the engineer has just uploaded.
+ *
+ * Pass `src` instead for a photograph the server already holds. A file wins
+ * where both are given: it is the capture in hand, and it needs no network.
  */
 export function AssetPhoto({
   file,
+  src,
   label,
   caption,
   className,
   glyphClassName,
 }: {
   file?: File
+  src?: string
   label?: string
   caption?: string
   className?: string
   glyphClassName?: string
 }) {
-  /** A file whose URL the browser would not load; falls back to the placeholder */
-  const [broken, setBroken] = useState<File>()
-  const url = file && broken !== file ? urlFor(file) : undefined
+  /** A source the browser would not load; falls back to the placeholder */
+  const [broken, setBroken] = useState<File | string>()
+  const source = file ?? src
+  const url = file && broken !== file ? urlFor(file) : !file && src && broken !== src ? src : undefined
 
   if (url) {
     return (
       <img
         src={url}
         alt={caption ?? label ?? "Asset photograph"}
-        onError={() => setBroken(file)}
+        onError={() => setBroken(source)}
         className={cn("size-full object-cover", className)}
       />
     )
