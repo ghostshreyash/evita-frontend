@@ -26,6 +26,7 @@ const lists = {
   cooling: ["ONAN", "ONAF", "OFAF", "OFWF", "Dry type", "Other"],
   firePanel: ["Conventional", "Addressable"],
   htIncomer: ["VCB", "SF6", "ACB", "Other"],
+  ltIncomer: ["VCB", "ACB", "SF6", "MCCB"],
   networkKit: ["Router", "Firewall", "Media Converter", "Gateway", "Other"],
   comms: ["Ethernet", "Fiber", "Serial", "Modbus", "Other"],
   tapChanger: ["OLTC", "Off-circuit", "None"],
@@ -68,10 +69,18 @@ export type ParamSpec = {
 /**
  * The sheet's unit cell as a list of units.
  *
- * "kW/kVA/A" and "A or kV" split cleanly. "V DC/AC" does not - the second
- * alternative drops the V - so cells that need a hand are written out.
+ * "kW/kVA/A" and "A or kV" split cleanly. Two kinds of cell do not, and are
+ * written out by hand:
+ *
+ * - "V DC/AC" - the second alternative drops the V.
+ * - "kV/V" - not alternatives at all. A transformer's HV / LV Voltage is one
+ *   ratio, "33/0.415", with the HV side in kV and the LV side in V, so the
+ *   unit is the whole of "kV/V" and there is nothing to choose between.
  */
-const unitSpellings: Record<string, readonly string[]> = { "V DC/AC": ["V DC", "V AC"] }
+const unitSpellings: Record<string, readonly string[]> = {
+  "V DC/AC": ["V DC", "V AC"],
+  "kV/V": ["kV/V"],
+}
 
 const splitUnits = (unit: string) =>
   unitSpellings[unit] ??
@@ -230,7 +239,7 @@ const byType: Record<string, string[]> = {
     "Model / Type|O|text",
     "Rated Voltage|M|number|V",
     "Rated Current|M|number|A",
-    "Incomer Type|O|choice",
+    "Incomer Type|O|choice|#ltIncomer",
     "Busbar Material|M|choice|#busbarMaterial",
   ],
   "MCC (Motor Control Center)": [
@@ -423,6 +432,5 @@ export const typesWithoutParameters = assetCategories.filter((c) => !(c in byTyp
  */
 export const missingOptionLists = [
   "Accuracy Class (Instrument Transformer CT/PT)",
-  "Incomer Type (LT Panel)",
   "Operating Mechanism (VCB)",
 ] as const
