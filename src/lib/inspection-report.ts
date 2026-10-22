@@ -56,6 +56,21 @@ const num = (v?: string) => {
   return Number.isFinite(n) && (v ?? "").trim() !== "" ? n : undefined
 }
 
+/**
+ * A rating as a number, but only when the whole of it is one.
+ *
+ * `num` strips everything that is not a digit out of what it is given, which is
+ * right for a reading typed as "415 V" and wrong for a rating that is a ratio:
+ * a transformer onboarded at "33/0.415" kV/V came out of it as 330.415, and the
+ * report printed that back at the engineer. A rating that is not a single
+ * number is not comparable, so it is reported as it was entered and left
+ * uncompared rather than mangled into a figure.
+ */
+const ratedNumber = (v?: string) => (/^\s*-?\d+(\.\d+)?\s*$/.test(v ?? "") ? Number(v) : undefined)
+
+/** A rating as the asset was onboarded with it, unit and all */
+const asEntered = (p: RatedParameter) => [p.value.trim(), p.unit].filter(Boolean).join(" ")
+
 const levelTone = (level?: string): ReportRow["tone"] =>
   level === "High" ? "critical" : level === "Medium" ? "attention" : level ? "healthy" : undefined
 
@@ -77,31 +92,32 @@ export function ratingComparison(capture: InspectionCapture, category: string, r
   const running = phases.length ? Math.max(...phases) : num(capture.readings.loadCurrent)
 
   const ratedCurrent = find("rated current") ?? find("busbar rating") ?? find("incomer rating")
-  if (running !== undefined && ratedCurrent) {
-    const limit = num(ratedCurrent.value)
-    if (limit) {
-      const pc = Math.round((running / limit) * 100)
-      rows.push({
-        label: ratedCurrent.label,
-        value: `${limit} ${ratedCurrent.unit ?? "A"} rated · ${running} A measured · ${pc}% of rated`,
-        tone: pc >= 100 ? "critical" : pc >= 90 ? "attention" : "healthy",
-      })
-    }
+  if (running !== undefined && ratedCurrent?.value.trim()) {
+    const limit = ratedNumber(ratedCurrent.value)
+    const pc = limit ? Math.round((running / limit) * 100) : undefined
+    rows.push({
+      label: ratedCurrent.label,
+      value: `${asEntered(ratedCurrent)} rated · ${running} A measured${pc === undefined ? "" : ` · ${pc}% of rated`}`,
+      tone: pc === undefined ? undefined : pc >= 100 ? "critical" : pc >= 90 ? "attention" : "healthy",
+    })
   }
 
   const measuredVoltage = num(capture.readings.voltage)
   const ratedVoltage = find("rated voltage") ?? find("voltage")
-  if (measuredVoltage !== undefined && ratedVoltage) {
-    const limit = num(ratedVoltage.value)
-    if (limit) {
-      const off = Math.round(((measuredVoltage - limit) / limit) * 100)
-      rows.push({
-        label: ratedVoltage.label,
-        value: `${limit} ${ratedVoltage.unit ?? "V"} rated · ${measuredVoltage} V measured · ${off > 0 ? "+" : ""}${off}%`,
-        // The client's own figure for an acceptable supply: within 10% of rated
-        tone: Math.abs(off) > 10 ? "critical" : Math.abs(off) > 5 ? "attention" : "healthy",
-      })
-    }
+  if (measuredVoltage !== undefined && ratedVoltage?.value.trim()) {
+    /*
+     * A transformer's rating is a ratio across two windings - "33/0.415" kV/V -
+     * and the single measured voltage does not stand against it. The row then
+     * says what the asset is rated for and what was read, and stops there.
+     */
+    const limit = ratedNumber(ratedVoltage.value)
+    const off = limit ? Math.round(((measuredVoltage - limit) / limit) * 100) : undefined
+    rows.push({
+      label: ratedVoltage.label,
+      value: `${asEntered(ratedVoltage)} rated · ${measuredVoltage} V measured${off === undefined ? "" : ` · ${off > 0 ? "+" : ""}${off}%`}`,
+      // The client's own figure for an acceptable supply: within 10% of rated
+      tone: off === undefined ? undefined : Math.abs(off) > 10 ? "critical" : Math.abs(off) > 5 ? "attention" : "healthy",
+    })
   }
 
   /* Everything else the sheet asked for, reported as measured */
