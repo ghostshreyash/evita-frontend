@@ -21,6 +21,7 @@ import {
 import { parametersFor } from "@/data/asset-parameters"
 import { installEnvironments } from "@/data/maintenance-schedule"
 import { elpremarRecords } from "@/data/elpremar-data"
+import { postingsFor } from "@/data/postings"
 import { enterpriseRecords, profileFor, type PlantProfile } from "@/data/occ-tables"
 
 /* ---------- Types ---------- */
@@ -137,11 +138,16 @@ const cityCode = (city: string) => city.replace(/[^A-Za-z]/g, "").slice(0, 3).to
  * Taken from the ELPREMAR registry so the plant, its city and its departments
  * are the same ones the rest of the app names.
  */
-export function siteFor(elpremarId: string): { enterprise: string; plant: PlantProfile; department: string } {
+export function siteFor(
+  elpremarId: string,
+  /** One of their other postings, when it is not the one their record names */
+  posting?: { enterprise: string; plant: string }
+): { enterprise: string; plant: PlantProfile; department: string } {
   const person = elpremarRecords.find((e) => e.id === elpremarId) ?? elpremarRecords[0]
-  const enterprise = enterpriseRecords.find((e) => e.name === person.enterprise) ?? enterpriseRecords[0]
+  const at = posting ?? person
+  const enterprise = enterpriseRecords.find((e) => e.name === at.enterprise) ?? enterpriseRecords[0]
   const plants = profileFor(enterprise).plants
-  const plant = plants.find((p) => p.name === person.plant) ?? plants[0]
+  const plant = plants.find((p) => p.name === at.plant) ?? plants[0]
   return { enterprise: enterprise.name, plant, department: person.department || plant.departments[0].name }
 }
 
@@ -268,8 +274,8 @@ const REGISTER_SIZE = 84
  * divisor across a list this short has left a filter option empty before, which
  * reads on screen as a count stuck at zero.
  */
-function buildRegister(elpremarId: string): AssetRecord[] {
-  const { enterprise, plant, department } = siteFor(elpremarId)
+function buildRegister(elpremarId: string, posting?: { enterprise: string; plant: string }): AssetRecord[] {
+  const { enterprise, plant, department } = siteFor(elpremarId, posting)
   const departments = plant.departments
   const counters = new Map<string, number>()
   // Same segment buildAssetId uses, so an asset onboarded now joins the same series
@@ -310,7 +316,13 @@ function buildRegister(elpremarId: string): AssetRecord[] {
 }
 
 /**
- * The register as it stands for the engineer signed in to the demo. One plant's
- * worth of assets — EVITA never shows another site's equipment.
+ * The register as it stands for the engineer signed in to the demo.
+ *
+ * One plant's worth of assets for each enterprise they are posted to — an
+ * ELPREMAR carries work for more than one customer and the tablet shows the one
+ * they have chosen. Nothing outside their own postings is ever in here, so a
+ * filter that failed open could still not show another contractor's register.
  */
-export const assetRegister: AssetRecord[] = buildRegister(elpremarRecords[0].id)
+export const assetRegister: AssetRecord[] = postingsFor(elpremarRecords[0].name).flatMap((posting) =>
+  buildRegister(elpremarRecords[0].id, posting)
+)

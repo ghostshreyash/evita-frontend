@@ -1,4 +1,4 @@
-import { useSyncExternalStore } from "react"
+import { useMemo, useSyncExternalStore } from "react"
 
 import {
   assetProfileFor,
@@ -10,6 +10,7 @@ import {
 import { healthBandFor, type AssetCriticality } from "@/data/master-data"
 import { parametersFor, unitFor } from "@/data/asset-parameters"
 import type { AssetFormValues } from "@/pages/assets/schemas"
+import { useScope } from "@/lib/scope"
 
 /**
  * One copy of the asset register, shared by the list, the onboarding wizard and
@@ -34,7 +35,20 @@ const subscribe = (listener: () => void) => {
   return () => void listeners.delete(listener)
 }
 
-export const useAssetRows = () => useSyncExternalStore(subscribe, () => rows)
+/**
+  * The register for the enterprise the engineer is working in.
+  *
+  * `rows` holds every posting's assets so an onboarding can join any of them;
+  * the screens only ever see one enterprise at a time - see lib/scope.
+  */
+export function useAssetRows() {
+  const all = useSyncExternalStore(subscribe, () => rows)
+  const { enterprise } = useScope()
+  return useMemo(() => all.filter((a) => a.enterprise === enterprise), [all, enterprise])
+}
+
+/** Every posting's assets, for the places that must not be scoped - an id lookup */
+export const useAllAssetRows = () => useSyncExternalStore(subscribe, () => rows)
 
 export const findAsset = (id?: string) => (id ? rows.find((r) => r.id === id) : undefined)
 

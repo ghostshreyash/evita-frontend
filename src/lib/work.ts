@@ -7,6 +7,7 @@ import { useMaintenanceDetails, useMaintenanceRows, useStartedMaintenance } from
 import type { Priority } from "@/data/occ-tables"
 import { categoryFor } from "@/lib/asset-category"
 import { useCurrentElpremar } from "@/lib/me"
+import { useScope } from "@/lib/scope"
 import type { WorkStatus } from "@/lib/status"
 
 /**
@@ -153,6 +154,8 @@ export const when = (job: Pick<Job, "date" | "slot">) => parseDay(job.date).getT
 /** Every job booked to the signed-in ELPREMAR, from both books, soonest first */
 export function useMyJobs(): Job[] {
   const me = useCurrentElpremar()
+  /* One enterprise at a time: whichever the engineer has chosen - see lib/scope */
+  const { enterprise } = useScope()
   const inspections = useInspectionRows()
   const inspectionDetails = useInspectionDetails()
   const maintenance = useMaintenanceRows()
@@ -162,7 +165,7 @@ export function useMyJobs(): Job[] {
   return useMemo(() => {
     const jobs: Job[] = [
       ...inspections
-        .filter((t) => t.elpremar === me.name && t.country === me.country)
+        .filter((t) => t.elpremar === me.name && t.enterprise === enterprise)
         .map((t) => ({
           id: t.id,
           kind: "inspection" as const,
@@ -179,7 +182,7 @@ export function useMyJobs(): Job[] {
           area: inspectionDetails[t.id]?.area ?? "",
         })),
       ...maintenance
-        .filter((m) => m.elpremar === me.name && m.country === me.country)
+        .filter((m) => m.elpremar === me.name && m.enterprise === enterprise)
         .map((m) => ({
           id: m.id,
           kind: "maintenance" as const,
@@ -198,7 +201,7 @@ export function useMyJobs(): Job[] {
         })),
     ]
     return jobs.sort((a, b) => when(a) - when(b))
-  }, [me, inspections, inspectionDetails, maintenance, maintenanceDetails, started])
+  }, [me, enterprise, inspections, inspectionDetails, maintenance, maintenanceDetails, started])
 }
 
 /** The day at a glance, as counted on the dashboard tiles */
