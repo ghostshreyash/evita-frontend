@@ -17,6 +17,7 @@ import { assetCategories } from "@/data/master-data"
 import { healthBandFor } from "@/data/master-data"
 import { healthStatus } from "@/lib/status"
 import { control, PAGE_SIZES } from "@/lib/data-table"
+import { useScope } from "@/lib/scope"
 
 const ANY = "all"
 
@@ -68,14 +69,18 @@ export function ReportsPage() {
   const [page, setPage] = useState(1)
   const [pageSize, setPageSize] = useState(PAGE_SIZES[0])
 
-  const departments = useMemo(() => [...new Set(reportRows.map((r) => r.asset.department))].sort(), [])
-  const categories = useMemo(() => assetCategories.filter((c) => reportRows.some((r) => r.asset.category === c)), [])
+  /* The enterprise the engineer is working in; nothing else is reported on */
+  const { enterprise } = useScope()
+  const scoped = useMemo(() => reportRows.filter((r) => r.asset.enterprise === enterprise), [enterprise])
+
+  const departments = useMemo(() => [...new Set(scoped.map((r) => r.asset.department))].sort(), [scoped])
+  const categories = useMemo(() => assetCategories.filter((c) => scoped.some((r) => r.asset.category === c)), [scoped])
 
   const filtersOn = [query, department, category, status].some((v) => v && v !== ANY)
 
   const rows = useMemo(() => {
     const q = query.trim().toLowerCase()
-    const matched = reportRows.filter(
+    const matched = scoped.filter(
       (r) =>
         (!q ||
           r.asset.id.toLowerCase().includes(q) ||
@@ -96,7 +101,7 @@ export function ReportsPage() {
      * mock data here is: no shuffle, just one taken every so often.
      */
     return mix(matched)
-  }, [query, department, category, status])
+  }, [scoped, query, department, category, status])
 
   const clear = () => {
     setQuery("")

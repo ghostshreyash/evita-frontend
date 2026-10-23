@@ -1,4 +1,4 @@
-import { useSyncExternalStore } from "react"
+import { useMemo, useSyncExternalStore } from "react"
 
 import {
   assetProfileFor,
@@ -9,7 +9,16 @@ import {
 } from "@/data/asset-data"
 import { healthBandFor, type AssetCriticality } from "@/data/master-data"
 import { parametersFor, unitFor } from "@/data/asset-parameters"
+/*
+ * These two stores reference each other: registering an asset raises its
+ * inspection, and finishing an inspection scores the asset. The cycle is safe
+ * because neither call happens while the modules are evaluating - both are
+ * inside functions - and `npx esbuild … && node` on every data module is the
+ * check that keeps it that way. See the verifying section of CLAUDE.md.
+ */
+import { addInspectionForAsset } from "@/data/inspection-store"
 import type { AssetFormValues } from "@/pages/assets/schemas"
+import { useScope } from "@/lib/scope"
 
 /**
  * One copy of the asset register, shared by the list, the onboarding wizard and
@@ -34,7 +43,20 @@ const subscribe = (listener: () => void) => {
   return () => void listeners.delete(listener)
 }
 
-export const useAssetRows = () => useSyncExternalStore(subscribe, () => rows)
+/**
+  * The register for the enterprise the engineer is working in.
+  *
+  * `rows` holds every posting's assets so an onboarding can join any of them;
+  * the screens only ever see one enterprise at a time - see lib/scope.
+  */
+export function useAssetRows() {
+  const all = useSyncExternalStore(subscribe, () => rows)
+  const { enterprise } = useScope()
+  return useMemo(() => all.filter((a) => a.enterprise === enterprise), [all, enterprise])
+}
+
+/** Every posting's assets, for the places that must not be scoped - an id lookup */
+export const useAllAssetRows = () => useSyncExternalStore(subscribe, () => rows)
 
 export const findAsset = (id?: string) => (id ? rows.find((r) => r.id === id) : undefined)
 
@@ -102,7 +124,12 @@ export function profileFrom(values: AssetFormValues, dates: { onboarded: string 
  * can never be handed the same one. Returns the finished record, which is what
  * the Asset ID & QR screen is built from.
  */
-export function onboardAsset(values: AssetFormValues, site: { city: string }): AssetRecord {
+export function onboardAsset(
+  values: AssetFormValues,
+  site: { city: string },
+  /** Who registered it, so the inspection it owes is raised in their name */
+  by: string
+): { record: AssetRecord; inspection: string } {
   const id = buildAssetId({
     enterprise: values.enterprise,
     city: site.city,
@@ -132,7 +159,18 @@ export function onboardAsset(values: AssetFormValues, site: { city: string }): A
   captures = { ...captures, [id]: capturesFrom(values) }
   rows = [record, ...rows]
   emit()
-  return record
+
+  /*
+   * A newly registered asset owes an inspection, so it gets one here and then.
+   *
+   * It is raised rather than started: the engineer has just finished typing a
+   * nameplate and may be moving to the next panel, so the inspection goes on
+   * the book as Open with Start against it. The id exists from this moment,
+   * which is what lets the asset be found on the Inspections page rather than
+   * only from the asset itself.
+   */
+  const inspection = addInspectionForAsset(record, by, { start: false })
+  return { record, inspection }
 }
 
 /** The picked files, keyed by upload, for the detail screen to show back */
@@ -196,6 +234,19 @@ export function updateAsset(id: string, values: AssetFormValues): AssetRecord | 
   rows = rows.map((r) => (r.id === id ? record : r))
   emit()
   return record
+}
+
+/**
+ * The health an inspection left on an asset.
+ *
+ * The score belongs to the asset, not to the record that produced it: the
+ * register, the reports and every card that reads a band are all asking the
+ * asset, and until this was written they went on saying "not inspected yet"
+ * about a panel that had just been inspected.
+ */
+export function setAssetHealth(id: string, health: number) {
+  rows = rows.map((r) => (r.id === id ? { ...r, health } : r))
+  emit()
 }
 
 /** Counts for the tiles above the register, recomputed as assets are added */

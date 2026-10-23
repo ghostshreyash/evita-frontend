@@ -3,6 +3,8 @@ import { useSyncExternalStore } from "react"
 import { inspectionDetail, type InspectionDetail } from "@/data/inspection-detail"
 import { inspectionActivities, type TaskRow } from "@/data/occ-tables"
 import { loadSnapshot, saveSnapshot, stampNow } from "@/data/persist"
+/* Cycle with asset-store, deliberate and lazy-only - see the note there */
+import { setAssetHealth } from "@/data/asset-store"
 import { emptyCapture } from "@/lib/testing"
 
 /**
@@ -79,7 +81,16 @@ export function startInspection(id: string, by: string) {
  */
 export function addInspectionForAsset(
   asset: { id: string; name: string; category: string; plant: string; enterprise: string; area: string },
-  by: string
+  by: string,
+  /**
+   * Whether the engineer is standing at the asset now.
+   *
+   * True when they walked up to it and pressed Start. False when the asset has
+   * only just been registered: it owes an inspection, but nobody has begun one,
+   * so it goes on the book as Open with Start against it rather than pretending
+   * to be under way.
+   */
+  { start = true }: { start?: boolean } = {}
 ) {
   // INS-, not TSK-: an inspection is not a task, and the id is read on site
   const id = `INS-${9000 + rows.filter((r) => r.id.startsWith("INS-9")).length}`
@@ -95,7 +106,7 @@ export function addInspectionForAsset(
     due: today,
     slot: new Date().getHours(),
     priority: "Medium",
-    status: "in_progress",
+    status: start ? "in_progress" : "pending",
   }
   rows = [row, ...rows]
   details = {
@@ -107,7 +118,7 @@ export function addInspectionForAsset(
       assetTag: asset.id,
       assetCategory: asset.category,
       createdBy: `${by} (ELPREMAR)`,
-      execution: { performedBy: by, startedAt: stampNow(), remarks: "" },
+      execution: start ? { performedBy: by, startedAt: stampNow(), remarks: "" } : undefined,
       measurements: [],
       observations: [],
       evidence: [],
@@ -194,6 +205,26 @@ export function completeInspection(id: string, patch: Partial<InspectionDetail>)
   }
   rows = rows.map((r) => (r.id === id ? { ...r, status: "completed" } : r))
   emit()
+
+  /* The score the inspection arrived at is the asset's health from now on */
+  if (detail.assetTag && detail.result) setAssetHealth(detail.assetTag, detail.result.healthScore)
+}
+
+/**
+ * The most recent inspection taken on one asset, completed or not.
+ *
+ * Matched on `assetTag`, which is the asset's own id - a record raised at the
+ * asset carries it, and so does one raised when the asset was onboarded.
+ */
+export function latestInspectionFor(
+  all: Record<string, InspectionDetail>,
+  assetId: string
+): { id: string; detail: InspectionDetail } | undefined {
+  const mine = Object.entries(all).filter(([, d]) => d.assetTag === assetId)
+  if (!mine.length) return undefined
+  // Ids run upwards, so the last one raised is the highest
+  const [id, detail] = mine.sort(([a], [b]) => b.localeCompare(a, undefined, { numeric: true }))[0]
+  return { id, detail }
 }
 
 /** Back online: everything queued while offline is sent */

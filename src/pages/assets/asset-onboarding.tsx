@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react"
-import { useNavigate, useParams } from "react-router"
+import { useNavigate, useParams, useSearchParams } from "react-router"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { ArrowLeft, ArrowRight, Check, Loader2 } from "lucide-react"
@@ -45,6 +45,15 @@ export function AssetOnboardingPage() {
   const me = useCurrentElpremar()
   const site = useMemo(() => siteFor(me.id), [me])
 
+  /*
+   * Opened from a scheduled visit, the wizard already knows where the engineer
+   * is standing: the area comes from the visit, and finishing goes back to it
+   * so the asset just registered can be inspected without hunting for it.
+   */
+  const [params] = useSearchParams()
+  const fromVisit = params.get("visit")
+  const atArea = params.get("area") ?? ""
+
   /* Correcting an asset rather than registering one, if the route names one */
   const { id: editing } = useParams()
   const register = useAssetRows()
@@ -73,7 +82,7 @@ export function AssetOnboardingPage() {
       plant: site.plant.name,
       department: site.department,
       subDepartment: "",
-      area: "",
+      area: atArea,
       category: "",
       tag: "",
       description: "",
@@ -133,11 +142,19 @@ export function AssetOnboardingPage() {
       navigate(`/assets/${record?.id ?? asset.id}`)
       return
     }
-    const record = onboardAsset(values, { city: site.plant.city })
+    const { record, inspection } = onboardAsset(values, { city: site.plant.city }, me.name)
     setPending(false)
+    /* The asset owes an inspection, and it is already on the book - see onboardAsset */
+    toast.success(`${record.id} registered`, {
+      description: `${inspection} raised against it, ready to start.`,
+    })
+    /* Back to the visit it was registered on, where it can now be inspected */
+    if (fromVisit) {
+      navigate(`/visits/${fromVisit}`)
+      return
+    }
     setCreated(record)
     window.scrollTo({ top: 0, behavior: "smooth" })
-    toast.success(`${record.id} registered. It will reach the server at the next sync.`)
   })
 
   // Once the asset exists, the wizard is finished and its result takes the page
