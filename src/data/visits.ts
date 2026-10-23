@@ -1,27 +1,28 @@
 /**
  * A scheduled visit: the unit of work EMMS-E actually books.
  *
- * An enterprise does not book an inspection of one panel. It books a visit -
- * this plant, this area, this day - and the ELPREMAR arrives to find whatever
- * is standing there, five or six assets or twenty. Which assets are inspected
- * is settled on site, by walking the area and scanning labels, not in an office
- * beforehand; a panel may be live, or locked, or not there at all any more.
+ * An enterprise does not book an inspection of one panel, and it usually cannot:
+ * at a site EVITA has not been to before, **the assets are not on the register
+ * yet**. What is booked is a visit - this plant, this area, this day, and
+ * roughly how many assets the enterprise believes are standing there. The
+ * ELPREMAR arrives, onboards what they find, and inspects what they onboarded.
  *
- * So a visit names a place and a day, and carries the assets the register says
- * stand in that area. The engineer works down them, and an inspection is raised
- * against each as it is taken (see `addInspectionForAsset`). A visit is done
- * when its assets are done, which is a count rather than a verdict.
+ * So a visit holds **no asset list**. Its assets are whatever the register
+ * holds for that plant and area at the moment it is opened, which is a number
+ * that grows as the engineer works. `expected` is the enterprise's own count
+ * and is a guide, not a target: finding seven where six were expected is the
+ * normal case, and the visit is not wrong for it.
  *
  * TODO(api):
- *   GET  /visits?elpremar=&enterprise=   → the book of visits for the tablet
- *   GET  /visits/{id}                    → the visit with its assets and their
- *                                          last inspection, so progress survives
- *                                          a reinstall
- *   POST /visits/{id}/start              → stamps the arrival
- * The asset list is the server's to decide - it knows what was onboarded since
- * the visit was booked - so the tablet must not cache it beyond the visit.
+ *   GET  /visits?elpremar=&enterprise=  → the book of visits for the tablet
+ *   GET  /visits/{id}                   → the visit and its area; the assets
+ *                                         come from the register, scoped to
+ *                                         that plant and area
+ *   POST /visits/{id}/start             → stamps the arrival
+ * The asset list is never sent with the visit and never cached: it is the
+ * register's answer to "what stands here", and onboarding changes it.
  */
-import { assetRegister, parseDmy, type AssetRecord } from "@/data/asset-data"
+import { areaPool, parseDmy } from "@/data/asset-data"
 import { elpremarRecords } from "@/data/elpremar-data"
 import { postingsFor } from "@/data/postings"
 
@@ -38,8 +39,15 @@ export type ScheduledVisit = {
   date: string
   /** Hour the visit is booked for, as the rest of the book counts slots */
   slot: number
-  /** The assets the register says stand in that area, in asset-id order */
-  assetIds: string[]
+  /**
+   * How many assets the enterprise says are in that area.
+   *
+   * A guide for the engineer, not a gate: what is actually registered is what
+   * the visit works on, and that is read off the register rather than stored.
+   */
+  expected: number
+  /** What EMMS-E wrote on the booking */
+  note?: string
 }
 
 /** `dd-MM-yyyy` for a date this many days from today */
@@ -50,59 +58,100 @@ function dayOffset(days: number) {
   return `${p(d.getDate())}-${p(d.getMonth() + 1)}-${d.getFullYear()}`
 }
 
-/* ---------- The book, generated last: it reads the register above ---------- */
+/* ---------- The book ---------- */
 
 /*
- * One visit per area that has assets, at each of the engineer's postings,
- * spread over the days around today so the book is never empty and never all
- * on one day. Deterministic: the offsets come from the position in the list,
- * not from a hash and not from the clock beyond today's date.
+ * Two or three visits per posting, deliberately mixed:
+ *
+ *  - areas the register already knows, where the engineer inspects what is
+ *    there and onboards anything new they come across;
+ *  - areas nothing has been onboarded in yet, which is the case the client
+ *    described - the engineer arrives to an empty list and builds it.
+ *
+ * By position rather than by hash, so both cases are always on the book and
+ * neither can be squeezed out by a divisor. Deterministic but for today's date.
  */
+/*
+ * Areas deliberately outside `areaPool`, so nothing has ever been onboarded in
+ * them: these are the first visits, where the engineer arrives to an empty list.
+ */
+const newAreas = ["Effluent Treatment Plant", "Workshop Bay", "Boiler House"]
+
 export const scheduledVisits: ScheduledVisit[] = (() => {
   const me = elpremarRecords[0]
   const out: ScheduledVisit[] = []
-  const offsets = [0, 0, 1, 2, -1, 3, 5, -2, 7, 4]
+  const offsets = [0, 1, 3, 0, 2, 5, 1, 4, 7]
 
-  for (const posting of postingsFor(me.name)) {
-    const here = assetRegister.filter((a) => a.enterprise === posting.enterprise && a.plant === posting.plant)
-    const areas = [...new Set(here.map((a) => a.area))]
+  postingsFor(me.name).forEach((posting, p) => {
+    /* Two in areas the register knows, and one in an area it does not */
+    const known = [areaPool[p % areaPool.length], areaPool[(p + 3) % areaPool.length]]
+    const fresh = newAreas[p % newAreas.length]
 
-    areas.forEach((area, i) => {
-      const assets = here.filter((a) => a.area === area)
-      if (!assets.length) return
+    for (const [i, area] of [...known, fresh].entries()) {
+      const n = out.length
       out.push({
-        id: `VIS-${7000 + out.length}`,
+        id: `VIS-${7000 + n}`,
         enterprise: posting.enterprise,
         plant: posting.plant,
         area,
         elpremar: me.name,
-        date: dayOffset(offsets[(i + out.length) % offsets.length]),
-        slot: 9 + ((i * 2) % 8),
-        assetIds: assets.map((a) => a.id).sort((x, y) => x.localeCompare(y, undefined, { numeric: true })),
+        date: dayOffset(offsets[n % offsets.length]),
+        slot: 9 + ((i * 3) % 8),
+        expected: [6, 8, 5, 11, 7][n % 5],
+        note:
+          area === fresh
+            ? "First visit to this area - onboard the assets you find, then inspect them."
+            : undefined,
       })
-    })
-  }
+    }
+  })
 
   return out.sort((a, b) => parseDmy(a.date).getTime() - parseDmy(b.date).getTime() || a.slot - b.slot)
 })()
 
-/** The assets a visit covers, as the register holds them now */
-export const assetsOnVisit = (visit: ScheduledVisit, register: readonly AssetRecord[]): AssetRecord[] =>
-  visit.assetIds.map((id) => register.find((a) => a.id === id)).filter((a): a is AssetRecord => !!a)
+/**
+ * The assets a visit covers: whatever the register holds for that plant and
+ * area right now.
+ *
+ * Read live rather than stored, because onboarding during the visit is the
+ * point - an asset registered five minutes ago is part of the visit, and a
+ * frozen list taken at booking time could never say so.
+ */
+export const assetsInArea = <T extends { plant: string; area: string; enterprise: string }>(
+  visit: Pick<ScheduledVisit, "enterprise" | "plant" | "area">,
+  register: readonly T[]
+): T[] =>
+  register.filter((a) => a.enterprise === visit.enterprise && a.plant === visit.plant && a.area === visit.area)
 
 /**
  * How far through a visit the engineer is.
  *
- * Counted from the inspections actually taken rather than stored on the visit,
- * so re-inspecting an asset cannot double-count it and a visit reopened after
- * the fact still reads correctly.
+ * Two counts, because there are two jobs: what has been onboarded against what
+ * the enterprise expected, and what has been inspected against what is actually
+ * on the register. Both are read off other records, so nothing has to be kept
+ * in step and a re-inspection cannot double-count.
+ *
+ * A visit with nothing registered yet is Scheduled, however many are expected -
+ * the engineer has not started. It is Completed once something is registered
+ * and all of it is inspected.
  */
-export function visitProgress(visit: ScheduledVisit, inspectedAssetIds: ReadonlySet<string>) {
-  const done = visit.assetIds.filter((id) => inspectedAssetIds.has(id)).length
+export function visitProgress(
+  visit: ScheduledVisit,
+  assetIds: readonly string[],
+  inspectedAssetIds: ReadonlySet<string>
+) {
+  const onboarded = assetIds.length
+  const done = assetIds.filter((id) => inspectedAssetIds.has(id)).length
   return {
+    onboarded,
+    expected: visit.expected,
     done,
-    total: visit.assetIds.length,
-    status: (done === 0 ? "scheduled" : done < visit.assetIds.length ? "in_progress" : "completed") as VisitStatus,
+    total: onboarded,
+    status: (onboarded === 0 || done === 0
+      ? "scheduled"
+      : done < onboarded
+        ? "in_progress"
+        : "completed") as VisitStatus,
   }
 }
 

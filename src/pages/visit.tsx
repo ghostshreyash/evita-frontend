@@ -1,6 +1,6 @@
 import { Link, useNavigate, useParams } from "react-router"
 import { format } from "date-fns"
-import { ArrowLeft, CalendarDays, CheckCircle2, Factory, MapPin, QrCode, TriangleAlert } from "lucide-react"
+import { ArrowLeft, CalendarDays, CheckCircle2, Factory, MapPin, Plus, QrCode, TriangleAlert } from "lucide-react"
 import { cn } from "cn"
 
 import { PageHeader } from "@/components/common/page-header"
@@ -20,13 +20,16 @@ import { isToday, parseDay } from "@/lib/work"
 /**
  * One scheduled visit: the area, and the assets standing in it.
  *
- * The visit names no asset - it names a place - so this screen is the list the
- * engineer works down. Each asset is inspected from here or by scanning its
- * label on the panel door, which comes to the same record either way.
+ * The visit names no asset - it names a place - and at an area EVITA has not
+ * been to the register has nothing in it at all. That is the normal case, not
+ * an error: the engineer onboards what they find and inspects what they
+ * onboarded, so Onboard Asset is the first control on the screen and the empty
+ * list reads as a list waiting to be built.
  *
- * Nothing on this screen marks an asset done by hand. An asset is inspected
- * because an inspection exists against it, so walking away and coming back
- * leaves the list exactly where it was.
+ * Nothing here marks an asset done by hand. An asset is inspected because an
+ * inspection exists against it, and it is on the visit because the register
+ * puts it in that area - so walking away and coming back leaves the screen
+ * exactly where it was.
  */
 export function VisitPage() {
   const { id } = useParams()
@@ -50,6 +53,8 @@ export function VisitPage() {
   }
 
   const { visit, assets, progress } = found
+  /* The wizard opens on this visit's own plant and area, and comes back here */
+  const onboardHere = `/assets/onboarding?area=${encodeURIComponent(visit.area)}&visit=${visit.id}`
   const look = visitStatusLook[progress.status]
   const when = isToday(visit.date) ? "Today" : format(parseDay(visit.date), "EEE d MMM")
 
@@ -66,7 +71,13 @@ export function VisitPage() {
         breadcrumbs={[{ label: "Home", to: "/" }, { label: visit.id }]}
         actions={
           <>
-            <Button onClick={() => openPanel({ kind: "scan" })}>
+            {/* The asset may not be on the register yet: that is what a first visit is */}
+            <Button asChild>
+              <Link to={onboardHere}>
+                <Plus /> Onboard Asset
+              </Link>
+            </Button>
+            <Button variant="outline" onClick={() => openPanel({ kind: "scan" })}>
               <QrCode /> Scan Asset
             </Button>
             <Button variant="outline" onClick={() => navigate(-1)}>
@@ -88,16 +99,33 @@ export function VisitPage() {
           <span className="flex items-center gap-1.5 tabular-nums text-muted-foreground">
             <CalendarDays className="size-4" /> {when}, {slotLabel(visit.slot)}
           </span>
-          <span className="ml-auto text-sm font-semibold tabular-nums">
-            {progress.done} of {progress.total} inspected
+          <span className="ml-auto flex flex-wrap items-center gap-x-3 text-sm font-semibold tabular-nums">
+            <span>
+              {progress.onboarded} of {progress.expected} onboarded
+            </span>
+            <span className="text-muted-foreground">·</span>
+            <span>
+              {progress.done} of {progress.onboarded} inspected
+            </span>
           </span>
         </div>
         <div className="mt-2 h-2 overflow-hidden rounded-full bg-muted">
           <div
             className="h-full rounded-full bg-primary transition-[width] duration-300"
-            style={{ width: `${progress.total ? (progress.done / progress.total) * 100 : 0}%` }}
+            style={{ width: `${progress.onboarded ? (progress.done / progress.onboarded) * 100 : 0}%` }}
           />
         </div>
+
+        {/* What the enterprise wrote on the booking, where there is anything */}
+        {visit.note ? <p className="mt-2 text-sm text-muted-foreground">{visit.note}</p> : null}
+
+        {/* The count is the enterprise's estimate, so neither direction is a fault */}
+        {progress.onboarded > progress.expected ? (
+          <p className="mt-2 text-sm text-muted-foreground">
+            {progress.onboarded - progress.expected} more than this area was booked for. The count on the booking is an
+            estimate — register everything you find.
+          </p>
+        ) : null}
       </section>
 
       {assets.length ? (
@@ -155,16 +183,34 @@ export function VisitPage() {
               </li>
             )
           })}
+          {/* Another one found while walking the area */}
+          <li>
+            <Link
+              to={onboardHere}
+              className="flex h-full min-h-32 flex-col items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-primary/40 p-3 text-center text-primary transition-colors hover:bg-info-soft/50"
+            >
+              <Plus className="size-6" />
+              <span className="text-sm font-semibold">Onboard another asset</span>
+              <span className="text-xs text-muted-foreground">Found something not on the list</span>
+            </Link>
+          </li>
         </ul>
       ) : (
-        <div className="rounded-2xl bg-card py-12 text-center shadow-xs ring-1 ring-foreground/10">
-          <TriangleAlert className="mx-auto mb-2 size-6 text-muted-foreground" />
-          <p className="text-sm font-medium">No asset is registered in this area yet.</p>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Onboard what you find, then inspect it — the visit picks it up from the register.
+        <div className="rounded-2xl bg-card px-4 py-12 text-center shadow-xs ring-1 ring-foreground/10">
+          <span className="mx-auto mb-3 flex size-12 items-center justify-center rounded-2xl bg-info-soft text-primary">
+            <Plus className="size-6" />
+          </span>
+          <p className="text-base font-semibold text-brand-navy dark:text-foreground">
+            Nothing registered in {visit.area} yet
           </p>
-          <Button className="mt-3" asChild>
-            <Link to="/assets/onboarding">Onboard Asset</Link>
+          <p className="mx-auto mt-1 max-w-md text-sm text-muted-foreground">
+            {visit.expected} assets are expected here. Onboard each one as you come to it — it joins this list, and you
+            can inspect it straight away.
+          </p>
+          <Button size="lg" className="mt-4 h-14 px-6 text-base font-semibold" asChild>
+            <Link to={onboardHere}>
+              <Plus /> Onboard the first asset
+            </Link>
           </Button>
         </div>
       )}

@@ -13,9 +13,10 @@ import { isToday, parseDay } from "@/lib/work"
  * The visit the engineer is going to, on the home screen.
  *
  * A visit is what the enterprise actually books - this plant, this area, this
- * day - and it names no asset: the engineer arrives and works down whatever is
- * standing there. So the card says where, when, and how many assets are on the
- * list, and the one button takes them to that list.
+ * day - and it names no asset: at an area EVITA has not been to, nothing is on
+ * the register at all and the engineer onboards what they find. So the card
+ * says where, when, and how the two counts stand - what is registered against
+ * what the enterprise expected, and what has been inspected of it.
  *
  * Nothing is drawn when there is no visit open. The engineer can still inspect
  * any asset they walk up to; a visit is a booking, not a permission.
@@ -54,11 +55,22 @@ export function NextVisit() {
             {when}, {slotLabel(visit.slot)}
           </Line>
           <Line icon={HardDrive}>
-            {/* No asset is named on a visit: what is in the area is what is inspected */}
-            <span className="tabular-nums">
-              {progress.done} of {progress.total}
-            </span>{" "}
-            assets inspected
+            {/*
+              * No asset is named on a visit. At an area EVITA has not been to,
+              * nothing is registered yet and the engineer onboards what they find.
+              */}
+            {progress.onboarded ? (
+              <>
+                <span className="tabular-nums">
+                  {progress.done} of {progress.onboarded}
+                </span>{" "}
+                inspected · <span className="tabular-nums">{progress.expected}</span> expected here
+              </>
+            ) : (
+              <>
+                Nothing registered yet · <span className="tabular-nums">{progress.expected}</span> assets expected
+              </>
+            )}
           </Line>
         </dl>
 
@@ -66,7 +78,7 @@ export function NextVisit() {
         <div className="mt-3 h-2 overflow-hidden rounded-full bg-muted">
           <div
             className="h-full rounded-full bg-primary transition-[width] duration-300"
-            style={{ width: `${progress.total ? (progress.done / progress.total) * 100 : 0}%` }}
+            style={{ width: `${progress.onboarded ? (progress.done / progress.onboarded) * 100 : 0}%` }}
           />
         </div>
 
@@ -76,7 +88,7 @@ export function NextVisit() {
           onClick={() => navigate(`/visits/${visit.id}`)}
         >
           <Play className="fill-current" />
-          {progress.done ? "Continue Visit" : "Start Inspection"}
+          {progress.onboarded === 0 ? "Start Visit" : progress.done ? "Continue Visit" : "Start Inspection"}
         </Button>
       </div>
     </section>

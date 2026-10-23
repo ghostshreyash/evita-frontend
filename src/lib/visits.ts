@@ -1,7 +1,7 @@
 import { useMemo } from "react"
 
 import { useInspectionDetails } from "@/data/inspection-store"
-import { assetsOnVisit, scheduledVisits, visitProgress, type ScheduledVisit } from "@/data/visits"
+import { assetsInArea, scheduledVisits, visitProgress, type ScheduledVisit } from "@/data/visits"
 import { useAssetRows } from "@/data/asset-store"
 import { useCurrentElpremar } from "@/lib/me"
 import { useScope } from "@/lib/scope"
@@ -48,7 +48,15 @@ export function useInspectedAssets(): Set<string> {
   )
 }
 
-/** One visit, its assets as the register holds them now, and how far through it is */
+/**
+ * One visit, the assets the register holds for its area, and how far through it
+ * the engineer is.
+ *
+ * The assets are resolved on every read. Onboarding during the visit is the
+ * normal case - at an area EVITA has not been to, the list starts empty and the
+ * engineer builds it - so anything registered a minute ago is already part of
+ * the visit.
+ */
 export function useVisit(id?: string) {
   const visits = useMyVisits()
   const register = useAssetRows()
@@ -57,7 +65,8 @@ export function useVisit(id?: string) {
   return useMemo(() => {
     const visit = visits.find((v) => v.id === id)
     if (!visit) return undefined
-    return { visit, assets: assetsOnVisit(visit, register), progress: visitProgress(visit, inspected) }
+    const assets = assetsInArea(visit, register)
+    return { visit, assets, progress: visitProgress(visit, assets.map((a) => a.id), inspected) }
   }, [visits, id, register, inspected])
 }
 
@@ -70,12 +79,16 @@ export function useVisit(id?: string) {
  */
 export function useNextVisit() {
   const visits = useMyVisits()
+  const register = useAssetRows()
   const inspected = useInspectedAssets()
 
   return useMemo(() => {
     const open = visits
-      .map((visit) => ({ visit, progress: visitProgress(visit, inspected) }))
+      .map((visit) => {
+        const assets = assetsInArea(visit, register)
+        return { visit, progress: visitProgress(visit, assets.map((a) => a.id), inspected) }
+      })
       .filter((v) => v.progress.status !== "completed")
     return open.sort((a, b) => Number(a.progress.status !== "in_progress") - Number(b.progress.status !== "in_progress"))[0]
-  }, [visits, inspected])
+  }, [visits, register, inspected])
 }
