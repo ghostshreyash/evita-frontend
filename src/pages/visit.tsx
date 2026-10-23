@@ -197,6 +197,8 @@ export function VisitPage() {
                 toast.success(`${visit.id} completed`, {
                   description: `${visit.area} · ${progress.onboarded} asset${progress.onboarded === 1 ? "" : "s"} registered`,
                 })
+                /* The area is done, so the engineer goes back to what is next */
+                navigate("/")
               }}
             >
               <CheckCircle2 /> Complete Visit
