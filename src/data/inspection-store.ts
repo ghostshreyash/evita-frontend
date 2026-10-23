@@ -3,6 +3,8 @@ import { useSyncExternalStore } from "react"
 import { inspectionDetail, type InspectionDetail } from "@/data/inspection-detail"
 import { inspectionActivities, type TaskRow } from "@/data/occ-tables"
 import { loadSnapshot, saveSnapshot, stampNow } from "@/data/persist"
+/* Cycle with asset-store, deliberate and lazy-only - see the note there */
+import { setAssetHealth } from "@/data/asset-store"
 import { emptyCapture } from "@/lib/testing"
 
 /**
@@ -203,6 +205,26 @@ export function completeInspection(id: string, patch: Partial<InspectionDetail>)
   }
   rows = rows.map((r) => (r.id === id ? { ...r, status: "completed" } : r))
   emit()
+
+  /* The score the inspection arrived at is the asset's health from now on */
+  if (detail.assetTag && detail.result) setAssetHealth(detail.assetTag, detail.result.healthScore)
+}
+
+/**
+ * The most recent inspection taken on one asset, completed or not.
+ *
+ * Matched on `assetTag`, which is the asset's own id - a record raised at the
+ * asset carries it, and so does one raised when the asset was onboarded.
+ */
+export function latestInspectionFor(
+  all: Record<string, InspectionDetail>,
+  assetId: string
+): { id: string; detail: InspectionDetail } | undefined {
+  const mine = Object.entries(all).filter(([, d]) => d.assetTag === assetId)
+  if (!mine.length) return undefined
+  // Ids run upwards, so the last one raised is the highest
+  const [id, detail] = mine.sort(([a], [b]) => b.localeCompare(a, undefined, { numeric: true }))[0]
+  return { id, detail }
 }
 
 /** Back online: everything queued while offline is sent */

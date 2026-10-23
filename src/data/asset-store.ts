@@ -9,6 +9,13 @@ import {
 } from "@/data/asset-data"
 import { healthBandFor, type AssetCriticality } from "@/data/master-data"
 import { parametersFor, unitFor } from "@/data/asset-parameters"
+/*
+ * These two stores reference each other: registering an asset raises its
+ * inspection, and finishing an inspection scores the asset. The cycle is safe
+ * because neither call happens while the modules are evaluating - both are
+ * inside functions - and `npx esbuild … && node` on every data module is the
+ * check that keeps it that way. See the verifying section of CLAUDE.md.
+ */
 import { addInspectionForAsset } from "@/data/inspection-store"
 import type { AssetFormValues } from "@/pages/assets/schemas"
 import { useScope } from "@/lib/scope"
@@ -227,6 +234,19 @@ export function updateAsset(id: string, values: AssetFormValues): AssetRecord | 
   rows = rows.map((r) => (r.id === id ? record : r))
   emit()
   return record
+}
+
+/**
+ * The health an inspection left on an asset.
+ *
+ * The score belongs to the asset, not to the record that produced it: the
+ * register, the reports and every card that reads a band are all asking the
+ * asset, and until this was written they went on saying "not inspected yet"
+ * about a panel that had just been inspected.
+ */
+export function setAssetHealth(id: string, health: number) {
+  rows = rows.map((r) => (r.id === id ? { ...r, health } : r))
+  emit()
 }
 
 /** Counts for the tiles above the register, recomputed as assets are added */

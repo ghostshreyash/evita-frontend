@@ -82,11 +82,16 @@ export type Job = {
  * 01"), so the category is as close as this gets. Match on the asset id once
  * the API carries one.
  */
-export function inspectionFor(jobs: Job[], asset: { category: string; plant: string }) {
-  return jobs.find(
-    (j) =>
-      j.kind === "inspection" && actionFor(j) !== "view" && j.plant === asset.plant && categoryFor(j.asset) === asset.category
-  )
+export function inspectionFor(jobs: Job[], asset: { id?: string; category: string; plant: string }, tags?: Record<string, string>) {
+  const open = jobs.filter((j) => j.kind === "inspection" && actionFor(j) !== "view")
+  /*
+   * The asset's own record first. An inspection carries the asset it was taken
+   * against, so an exact match is available where it used to be guessed - the
+   * plant-and-category match below is the fallback for the seeded rows, which
+   * name an asset but carry no id.
+   */
+  const exact = asset.id && tags ? open.find((j) => tags[j.id] === asset.id) : undefined
+  return exact ?? open.find((j) => j.plant === asset.plant && categoryFor(j.asset) === asset.category)
 }
 
 /**
