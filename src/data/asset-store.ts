@@ -9,6 +9,7 @@ import {
 } from "@/data/asset-data"
 import { healthBandFor, type AssetCriticality } from "@/data/master-data"
 import { parametersFor, unitFor } from "@/data/asset-parameters"
+import { addInspectionForAsset } from "@/data/inspection-store"
 import type { AssetFormValues } from "@/pages/assets/schemas"
 import { useScope } from "@/lib/scope"
 
@@ -116,7 +117,12 @@ export function profileFrom(values: AssetFormValues, dates: { onboarded: string 
  * can never be handed the same one. Returns the finished record, which is what
  * the Asset ID & QR screen is built from.
  */
-export function onboardAsset(values: AssetFormValues, site: { city: string }): AssetRecord {
+export function onboardAsset(
+  values: AssetFormValues,
+  site: { city: string },
+  /** Who registered it, so the inspection it owes is raised in their name */
+  by: string
+): { record: AssetRecord; inspection: string } {
   const id = buildAssetId({
     enterprise: values.enterprise,
     city: site.city,
@@ -146,7 +152,18 @@ export function onboardAsset(values: AssetFormValues, site: { city: string }): A
   captures = { ...captures, [id]: capturesFrom(values) }
   rows = [record, ...rows]
   emit()
-  return record
+
+  /*
+   * A newly registered asset owes an inspection, so it gets one here and then.
+   *
+   * It is raised rather than started: the engineer has just finished typing a
+   * nameplate and may be moving to the next panel, so the inspection goes on
+   * the book as Open with Start against it. The id exists from this moment,
+   * which is what lets the asset be found on the Inspections page rather than
+   * only from the asset itself.
+   */
+  const inspection = addInspectionForAsset(record, by, { start: false })
+  return { record, inspection }
 }
 
 /** The picked files, keyed by upload, for the detail screen to show back */

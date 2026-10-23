@@ -3,6 +3,7 @@ import { useMemo } from "react"
 import { useInspectionDetails } from "@/data/inspection-store"
 import { assetsInArea, scheduledVisits, visitProgress, type ScheduledVisit } from "@/data/visits"
 import { useAssetRows } from "@/data/asset-store"
+import { useClosedVisits } from "@/data/visit-store"
 import { useCurrentElpremar } from "@/lib/me"
 import { useScope } from "@/lib/scope"
 import { parseDay } from "@/lib/work"
@@ -61,13 +62,18 @@ export function useVisit(id?: string) {
   const visits = useMyVisits()
   const register = useAssetRows()
   const inspected = useInspectedAssets()
+  const closed = useClosedVisits()
 
   return useMemo(() => {
     const visit = visits.find((v) => v.id === id)
     if (!visit) return undefined
     const assets = assetsInArea(visit, register)
-    return { visit, assets, progress: visitProgress(visit, assets.map((a) => a.id), inspected) }
-  }, [visits, id, register, inspected])
+    return {
+      visit,
+      assets,
+      progress: visitProgress(visit, assets.map((a) => a.id), inspected, !!closed[visit.id]),
+    }
+  }, [visits, id, register, inspected, closed])
 }
 
 /** One visit with how far through it the engineer is */
@@ -78,15 +84,16 @@ export function useOpenVisits(): OpenVisit[] {
   const visits = useMyVisits()
   const register = useAssetRows()
   const inspected = useInspectedAssets()
+  const closed = useClosedVisits()
 
   return useMemo(
     () =>
       visits
+        .filter((visit) => !closed[visit.id])
         .map((visit) => {
           const assets = assetsInArea(visit, register)
           return { visit, progress: visitProgress(visit, assets.map((a) => a.id), inspected) }
-        })
-        .filter((v) => v.progress.status !== "completed"),
-    [visits, register, inspected]
+        }),
+    [visits, register, inspected, closed]
   )
 }

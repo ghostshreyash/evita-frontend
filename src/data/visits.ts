@@ -132,14 +132,19 @@ export const assetsInArea = <T extends { plant: string; area: string; enterprise
  * on the register. Both are read off other records, so nothing has to be kept
  * in step and a re-inspection cannot double-count.
  *
- * A visit with nothing registered yet is Scheduled, however many are expected -
- * the engineer has not started. It is Completed once something is registered
- * and all of it is inspected.
+ * **Counting does not finish a visit.** The expected number is the enterprise's
+ * estimate and the engineer often finds fewer - a panel decommissioned, a room
+ * smaller than the handover said. Nothing here can tell "four of six done" from
+ * "there were only four", so the engineer closes the area out by hand and
+ * `closed` is what says so. `allDone` is only the arithmetic, and is what the
+ * screen uses to decide whether closing needs a word of warning.
  */
 export function visitProgress(
   visit: ScheduledVisit,
   assetIds: readonly string[],
-  inspectedAssetIds: ReadonlySet<string>
+  inspectedAssetIds: ReadonlySet<string>,
+  /** The engineer has closed the area out - see data/visit-store */
+  closed = false
 ) {
   const onboarded = assetIds.length
   const done = assetIds.filter((id) => inspectedAssetIds.has(id)).length
@@ -148,11 +153,14 @@ export function visitProgress(
     expected: visit.expected,
     done,
     total: onboarded,
-    status: (onboarded === 0 || done === 0
-      ? "scheduled"
-      : done < onboarded
-        ? "in_progress"
-        : "completed") as VisitStatus,
+    closed,
+    /** Every asset registered here has been inspected - not the same as finished */
+    allDone: onboarded > 0 && done === onboarded,
+    status: (closed
+      ? "completed"
+      : onboarded === 0 || done === 0
+        ? "scheduled"
+        : "in_progress") as VisitStatus,
   }
 }
 

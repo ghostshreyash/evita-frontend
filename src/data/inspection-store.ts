@@ -79,7 +79,16 @@ export function startInspection(id: string, by: string) {
  */
 export function addInspectionForAsset(
   asset: { id: string; name: string; category: string; plant: string; enterprise: string; area: string },
-  by: string
+  by: string,
+  /**
+   * Whether the engineer is standing at the asset now.
+   *
+   * True when they walked up to it and pressed Start. False when the asset has
+   * only just been registered: it owes an inspection, but nobody has begun one,
+   * so it goes on the book as Open with Start against it rather than pretending
+   * to be under way.
+   */
+  { start = true }: { start?: boolean } = {}
 ) {
   // INS-, not TSK-: an inspection is not a task, and the id is read on site
   const id = `INS-${9000 + rows.filter((r) => r.id.startsWith("INS-9")).length}`
@@ -95,7 +104,7 @@ export function addInspectionForAsset(
     due: today,
     slot: new Date().getHours(),
     priority: "Medium",
-    status: "in_progress",
+    status: start ? "in_progress" : "pending",
   }
   rows = [row, ...rows]
   details = {
@@ -107,7 +116,7 @@ export function addInspectionForAsset(
       assetTag: asset.id,
       assetCategory: asset.category,
       createdBy: `${by} (ELPREMAR)`,
-      execution: { performedBy: by, startedAt: stampNow(), remarks: "" },
+      execution: start ? { performedBy: by, startedAt: stampNow(), remarks: "" } : undefined,
       measurements: [],
       observations: [],
       evidence: [],

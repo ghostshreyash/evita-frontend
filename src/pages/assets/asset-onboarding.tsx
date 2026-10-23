@@ -142,9 +142,12 @@ export function AssetOnboardingPage() {
       navigate(`/assets/${record?.id ?? asset.id}`)
       return
     }
-    const record = onboardAsset(values, { city: site.plant.city })
+    const { record, inspection } = onboardAsset(values, { city: site.plant.city }, me.name)
     setPending(false)
-    toast.success(`${record.id} registered. It will reach the server at the next sync.`)
+    /* The asset owes an inspection, and it is already on the book - see onboardAsset */
+    toast.success(`${record.id} registered`, {
+      description: `${inspection} raised against it, ready to start.`,
+    })
     /* Back to the visit it was registered on, where it can now be inspected */
     if (fromVisit) {
       navigate(`/visits/${fromVisit}`)

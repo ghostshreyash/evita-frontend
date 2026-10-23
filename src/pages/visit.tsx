@@ -1,15 +1,28 @@
+import { useState } from "react"
 import { Link, useNavigate, useParams } from "react-router"
 import { format } from "date-fns"
-import { ArrowLeft, CalendarDays, CheckCircle2, Factory, MapPin, Plus, QrCode, TriangleAlert } from "lucide-react"
+import { ArrowLeft, CalendarDays, CheckCircle2, Factory, MapPin, Plus, QrCode, RotateCcw, TriangleAlert } from "lucide-react"
+import { toast } from "sonner"
 import { cn } from "cn"
 
 import { PageHeader } from "@/components/common/page-header"
 import { CategoryIcon } from "@/components/common/category-icon"
 import { StartInspection } from "@/components/assets/start-inspection"
 import { Badge } from "@/components/ui/badge"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
 import { Button } from "@/components/ui/button"
 import { slotLabel } from "@/data/occ-tables"
 import { visitStatusLook } from "@/data/visits"
+import { completeVisit, reopenVisit } from "@/data/visit-store"
 import { categoryLook } from "@/lib/category-icons"
 import { healthBandFor } from "@/data/master-data"
 import { healthStatus } from "@/lib/status"
@@ -36,6 +49,7 @@ export function VisitPage() {
   const navigate = useNavigate()
   const found = useVisit(id)
   const inspected = useInspectedAssets()
+  const [closing, setClosing] = useState(false)
 
   if (!found) {
     return (
@@ -71,6 +85,25 @@ export function VisitPage() {
         breadcrumbs={[{ label: "Home", to: "/" }, { label: visit.id }]}
         actions={
           <>
+            {/*
+              * Finishing is a statement, not a count: the number on the booking
+              * is the enterprise's estimate, and finding fewer is normal.
+              */}
+            {progress.closed ? (
+              <Button variant="outline" onClick={() => reopenVisit(visit.id)}>
+                <RotateCcw /> Reopen Visit
+              </Button>
+            ) : (
+              <Button
+                variant="outline"
+                className="border-healthy/40 text-healthy"
+                onClick={() => setClosing(true)}
+                disabled={progress.onboarded === 0}
+              >
+                <CheckCircle2 /> Complete Visit
+              </Button>
+            )}
+
             {/* The asset may not be on the register yet: that is what a first visit is */}
             <Button asChild>
               <Link to={onboardHere}>
@@ -117,7 +150,19 @@ export function VisitPage() {
         </div>
 
         {/* What the enterprise wrote on the booking, where there is anything */}
-        {visit.note ? <p className="mt-2 text-sm text-muted-foreground">{visit.note}</p> : null}
+        {visit.note && !progress.closed ? (
+          <p className="mt-2 text-sm text-muted-foreground">{visit.note}</p>
+        ) : null}
+
+        {progress.closed ? (
+          <p className="mt-2 flex items-start gap-2 rounded-xl bg-healthy-soft px-3 py-2 text-sm text-healthy-soft-foreground">
+            <CheckCircle2 className="mt-0.5 size-4 shrink-0" />
+            <span>
+              You closed this area out with {progress.onboarded} asset{progress.onboarded === 1 ? "" : "s"} registered.
+              Reopen it if you find more.
+            </span>
+          </p>
+        ) : null}
 
         {/* The count is the enterprise's estimate, so neither direction is a fault */}
         {progress.onboarded > progress.expected ? (
@@ -127,6 +172,38 @@ export function VisitPage() {
           </p>
         ) : null}
       </section>
+
+      <AlertDialog open={closing} onOpenChange={setClosing}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Complete this visit?</AlertDialogTitle>
+            <AlertDialogDescription>
+              {progress.onboarded} of the {visit.expected} assets this area was booked for are registered, and{" "}
+              {progress.done} of them inspected.
+              {progress.onboarded < visit.expected
+                ? " Fewer than booked is normal — the count on the booking is the enterprise's estimate. What you register is the correction to it."
+                : ""}
+              {!progress.allDone
+                ? " Anything not inspected stays on the asset, and the area can be reopened if you come back to it."
+                : ""}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Not yet</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                completeVisit(visit.id, progress.onboarded)
+                setClosing(false)
+                toast.success(`${visit.id} completed`, {
+                  description: `${visit.area} · ${progress.onboarded} asset${progress.onboarded === 1 ? "" : "s"} registered`,
+                })
+              }}
+            >
+              <CheckCircle2 /> Complete Visit
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       {assets.length ? (
         <ul className="grid gap-3 lg:grid-cols-2 xl:grid-cols-3">
