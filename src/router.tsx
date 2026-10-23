@@ -12,6 +12,7 @@ import { DashboardPage } from "@/pages/dashboard"
 import { AssetsPage } from "@/pages/assets/assets"
 import { AssetOnboardingPage } from "@/pages/assets/asset-onboarding"
 import { AssetDetailPage } from "@/pages/assets/asset-detail"
+import { VisitPage } from "@/pages/visit"
 import { ReportsPage } from "@/pages/reports"
 import { ReportedIssuesPage } from "@/pages/reported-issues"
 import { MyTasksPage } from "@/pages/my-tasks"
@@ -42,6 +43,8 @@ export const router = createBrowserRouter([
           { path: "assets", element: <AssetsPage /> },
           /* Onboarding sits above ":id" so the literal path is never read as an asset id */
           { path: "assets/onboarding", element: <AssetOnboardingPage /> },
+          /* A scheduled visit: the area, and the assets standing in it */
+          { path: "visits/:id", element: <VisitPage /> },
           { path: "assets/:id", element: <AssetDetailPage /> },
           /* The same wizard, filled in with what the asset holds */
           { path: "assets/:id/edit", element: <AssetOnboardingPage /> },

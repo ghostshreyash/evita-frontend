@@ -4,6 +4,7 @@ import { CalendarDays, ClipboardList } from "lucide-react"
 
 import { NextTask, QuickActions, UpcomingTasks } from "@/components/evita/home-hero"
 import { EnterpriseSwitch } from "@/components/evita/enterprise-switch"
+import { NextVisit } from "@/components/evita/next-visit"
 import { useCurrentElpremar } from "@/lib/me"
 import { isThisWeek, useMyJobs } from "@/lib/work"
 
@@ -48,6 +49,11 @@ export function DashboardPage() {
       </section>
 
       <QuickActions />
+
+      {/* Where the engineer is going, and the work booked against assets by name */}
+      <div className="grid gap-3 lg:grid-cols-2">
+        <NextVisit />
+      </div>
 
       {/* The one in hand, and the three after it */}
       <div className="grid gap-3 lg:grid-cols-2">
