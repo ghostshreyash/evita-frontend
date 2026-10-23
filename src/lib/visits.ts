@@ -70,25 +70,23 @@ export function useVisit(id?: string) {
   }, [visits, id, register, inspected])
 }
 
-/**
- * The visit to put in front of the engineer.
- *
- * Whatever is already part-walked comes first - they are standing in it - then
- * the soonest one still to start. A visit whose assets are all inspected is
- * behind them and is not offered.
- */
-export function useNextVisit() {
+/** One visit with how far through it the engineer is */
+export type OpenVisit = { visit: ScheduledVisit; progress: ReturnType<typeof visitProgress> }
+
+/** Every visit still to finish, soonest first - what the home card pages through */
+export function useOpenVisits(): OpenVisit[] {
   const visits = useMyVisits()
   const register = useAssetRows()
   const inspected = useInspectedAssets()
 
-  return useMemo(() => {
-    const open = visits
-      .map((visit) => {
-        const assets = assetsInArea(visit, register)
-        return { visit, progress: visitProgress(visit, assets.map((a) => a.id), inspected) }
-      })
-      .filter((v) => v.progress.status !== "completed")
-    return open.sort((a, b) => Number(a.progress.status !== "in_progress") - Number(b.progress.status !== "in_progress"))[0]
-  }, [visits, register, inspected])
+  return useMemo(
+    () =>
+      visits
+        .map((visit) => {
+          const assets = assetsInArea(visit, register)
+          return { visit, progress: visitProgress(visit, assets.map((a) => a.id), inspected) }
+        })
+        .filter((v) => v.progress.status !== "completed"),
+    [visits, register, inspected]
+  )
 }

@@ -113,8 +113,7 @@ export const parseDmy = (d: string) => {
  * electrical rooms a field engineer actually walks, not the plant's own
  * department tree - an asset lives in a room, and is owned by a department.
  */
-/** The parts of a plant an asset stands in; a visit covers one of them */
-export const areaPool = [
+const areaPool = [
   "Main Substation (11kV)",
   "LT Panel Room - Block A",
   "DG Set Area",

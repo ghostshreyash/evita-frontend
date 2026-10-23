@@ -22,7 +22,7 @@
  * The asset list is never sent with the visit and never cached: it is the
  * register's answer to "what stands here", and onboarding changes it.
  */
-import { areaPool, parseDmy } from "@/data/asset-data"
+import { parseDmy } from "@/data/asset-data"
 import { elpremarRecords } from "@/data/elpremar-data"
 import { postingsFor } from "@/data/postings"
 
@@ -61,47 +61,48 @@ function dayOffset(days: number) {
 /* ---------- The book ---------- */
 
 /*
- * Two or three visits per posting, deliberately mixed:
+ * A visit is booked into an area EVITA has not been to.
  *
- *  - areas the register already knows, where the engineer inspects what is
- *    there and onboards anything new they come across;
- *  - areas nothing has been onboarded in yet, which is the case the client
- *    described - the engineer arrives to an empty list and builds it.
+ * That is the whole case the client described: EMMS-E books the visit before
+ * anything is on the register, and the engineer onboards what they find. So
+ * these areas are deliberately outside `areaPool`, which is what the seeded
+ * register uses - no visit can arrive with its work already done for it.
  *
- * By position rather than by hash, so both cases are always on the book and
- * neither can be squeezed out by a divisor. Deterministic but for today's date.
+ * By position rather than by hash, and deterministic but for today's date.
  */
-/*
- * Areas deliberately outside `areaPool`, so nothing has ever been onboarded in
- * them: these are the first visits, where the engineer arrives to an empty list.
- */
-const newAreas = ["Effluent Treatment Plant", "Workshop Bay", "Boiler House"]
+const visitAreas = [
+  "Effluent Treatment Plant",
+  "Workshop Bay",
+  "Boiler House",
+  "Raw Material Handling",
+  "Cooling Tower Yard",
+  "Finished Goods Store",
+]
+
+const visitNotes = [
+  "First visit to this area - onboard the assets you find, then inspect them.",
+  "New area handed over to maintenance. Nothing is on the register yet.",
+  "Register everything in the room, including anything not on the handover list.",
+]
 
 export const scheduledVisits: ScheduledVisit[] = (() => {
   const me = elpremarRecords[0]
   const out: ScheduledVisit[] = []
-  const offsets = [0, 1, 3, 0, 2, 5, 1, 4, 7]
+  const offsets = [0, 1, 3, 0, 2, 5]
 
   postingsFor(me.name).forEach((posting, p) => {
-    /* Two in areas the register knows, and one in an area it does not */
-    const known = [areaPool[p % areaPool.length], areaPool[(p + 3) % areaPool.length]]
-    const fresh = newAreas[p % newAreas.length]
-
-    for (const [i, area] of [...known, fresh].entries()) {
+    for (let i = 0; i < 2; i++) {
       const n = out.length
       out.push({
         id: `VIS-${7000 + n}`,
         enterprise: posting.enterprise,
         plant: posting.plant,
-        area,
+        area: visitAreas[(p * 2 + i) % visitAreas.length],
         elpremar: me.name,
         date: dayOffset(offsets[n % offsets.length]),
         slot: 9 + ((i * 3) % 8),
-        expected: [6, 8, 5, 11, 7][n % 5],
-        note:
-          area === fresh
-            ? "First visit to this area - onboard the assets you find, then inspect them."
-            : undefined,
+        expected: [6, 8, 5, 11, 7, 9][n % 6],
+        note: visitNotes[n % visitNotes.length],
       })
     }
   })
