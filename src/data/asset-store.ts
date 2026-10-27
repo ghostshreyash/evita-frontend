@@ -55,8 +55,6 @@ export function useAssetRows() {
   return useMemo(() => all.filter((a) => a.enterprise === enterprise), [all, enterprise])
 }
 
-/** Every posting's assets, for the places that must not be scoped - an id lookup */
-export const useAllAssetRows = () => useSyncExternalStore(subscribe, () => rows)
 
 export const findAsset = (id?: string) => (id ? rows.find((r) => r.id === id) : undefined)
 

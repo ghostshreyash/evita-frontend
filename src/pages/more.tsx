@@ -19,6 +19,7 @@ import { DetailList, DetailPanel } from "@/components/common/detail-list"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
 import { useOnline } from "@/hooks/use-media"
+import { useScope } from "@/lib/scope"
 import { useAuth } from "@/lib/auth/context"
 import { useCurrentElpremar } from "@/lib/me"
 import { useNotifications } from "@/lib/notifications"
@@ -34,6 +35,7 @@ import { openPanel } from "@/lib/ui-store"
  */
 export function MorePage() {
   const me = useCurrentElpremar()
+  const { postings, enterprise, plant } = useScope()
   const { user, signOut } = useAuth()
   const online = useOnline()
   const { unread } = useNotifications()
@@ -81,8 +83,16 @@ export function MorePage() {
         <DetailPanel icon={Factory} title="Plant Information">
           <DetailList
             rows={[
-              { label: "Enterprise", value: me.enterprise, always: true },
-              { label: "Plant", value: me.plant, always: true },
+              /* The posting being worked in; the others are listed under it */
+              { label: "Enterprise", value: enterprise, always: true },
+              { label: "Plant", value: plant, always: true },
+              {
+                label: "Other Postings",
+                value: postings
+                  .filter((p) => p.enterprise !== enterprise)
+                  .map((p) => p.enterprise)
+                  .join(", "),
+              },
               { label: "Department", value: me.department, always: true },
               { label: "Location", value: `${me.city}, ${me.country}`, always: true },
             ]}

@@ -12,6 +12,7 @@ import { siteFor } from "@/data/asset-data"
 import { onboardAsset, updateAsset, useAssetRows, valuesFrom } from "@/data/asset-store"
 import type { AssetRecord } from "@/data/asset-data"
 import { useCurrentElpremar } from "@/lib/me"
+import { useScope } from "@/lib/scope"
 import { assetSchema, missingUploads, stepFields, type AssetFormValues } from "@/pages/assets/schemas"
 import { missingParameters } from "@/data/asset-parameters"
 import { StepDetails } from "@/pages/assets/steps/step-details"
@@ -43,7 +44,16 @@ const steps = [
 export function AssetOnboardingPage() {
   const navigate = useNavigate()
   const me = useCurrentElpremar()
-  const site = useMemo(() => siteFor(me.id), [me])
+  /*
+   * The site the asset is being registered at.
+   *
+   * The posting the engineer has *chosen*, not the one their own record names:
+   * an ELPREMAR carries work for several enterprises, and an asset onboarded
+   * while working for one of them belongs to that one. Reading it off `me` put
+   * every asset at their home plant, whichever customer they were standing in.
+   */
+  const { enterprise, plant } = useScope()
+  const site = useMemo(() => siteFor(me.id, { enterprise, plant }), [me, enterprise, plant])
 
   /*
    * Opened from a scheduled visit, the wizard already knows where the engineer
