@@ -19,7 +19,8 @@ import { loadSnapshot, saveSnapshot } from "@/data/persist"
  * construction rather than by each caller remembering to log.
  */
 // EVITA keeps tickets raised from the tablet across a refresh (see data/persist.ts)
-const saved = loadSnapshot<{ rows: TicketRow[]; details: Record<string, TicketDetail> }>("tickets")
+// v2: a ticket is Completed, not Closed - an older snapshot would bring the retired status back
+const saved = loadSnapshot<{ rows: TicketRow[]; details: Record<string, TicketDetail> }>("tickets.v2")
 /*
  * The field's own reported issues lead the desk's, so Reported Issues has a
  * history on a device that has never raised one. They carry their own detail -
@@ -33,7 +34,7 @@ let details: Record<string, TicketDetail> =
 
 const listeners = new Set<() => void>()
 const emit = () => {
-  saveSnapshot("tickets", { rows, details })
+  saveSnapshot("tickets.v2", { rows, details })
   listeners.forEach((listener) => listener())
 }
 

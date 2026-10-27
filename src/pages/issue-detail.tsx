@@ -134,25 +134,6 @@ export function IssueDetailPage() {
             </DetailPanel>
           ) : null}
 
-          {/* ---------- The full trail ---------- */}
-          {detail.history.length ? (
-            <DetailPanel icon={History} title={`History (${detail.history.length})`}>
-              <ol className="space-y-3">
-                {detail.history.map((event, i) => (
-                  <li key={`${event.at}-${i}`} className="flex gap-2.5 text-sm">
-                    <span aria-hidden className="mt-1.5 size-2 shrink-0 rounded-full bg-primary/60" />
-                    <span className="min-w-0 flex-1">
-                      <span className="font-semibold">{event.action}</span>
-                      <span className="block text-xs text-muted-foreground">
-                        {event.by} · <span className="tabular-nums">{event.at}</span>
-                      </span>
-                      {event.note ? <span className="mt-0.5 block text-muted-foreground">{event.note}</span> : null}
-                    </span>
-                  </li>
-                ))}
-              </ol>
-            </DetailPanel>
-          ) : null}
         </div>
 
         {/* ---------- The ticket itself ---------- */}
@@ -187,6 +168,28 @@ export function IssueDetailPage() {
           </p>
         </DetailPanel>
       </div>
+
+      {/* ---------- The full trail, across the page ---------- */}
+      {detail.history.length ? (
+        <div className="mt-3">
+          <DetailPanel icon={History} title={`History (${detail.history.length})`}>
+            <ol className="space-y-3">
+              {detail.history.map((event, i) => (
+                <li key={`${event.at}-${i}`} className="flex gap-2.5 text-sm">
+                  <span aria-hidden className="mt-1.5 size-2 shrink-0 rounded-full bg-primary/60" />
+                  <span className="min-w-0 flex-1">
+                    <span className="font-semibold">{event.action}</span>
+                    <span className="block text-xs text-muted-foreground">
+                      {event.by} · <span className="tabular-nums">{event.at}</span>
+                    </span>
+                    {event.note ? <span className="mt-0.5 block text-muted-foreground">{event.note}</span> : null}
+                  </span>
+                </li>
+              ))}
+            </ol>
+          </DetailPanel>
+        </div>
+      ) : null}
     </div>
   )
 }

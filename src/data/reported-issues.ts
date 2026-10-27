@@ -121,11 +121,12 @@ const fieldIssues: IssueTemplate[] = [
 ]
 
 /**
- * Two settled and two still running for every person, taken by position rather
- * than by hash: both states have to be populated on every account, or the
- * screen's Pending or Completed tab opens empty.
+ * One of each state for every person, taken by position rather than by hash:
+ * all three have to be populated on every account, or a tab on the screen
+ * opens empty. Four per person, so Completed - the one with the fullest
+ * record - appears twice.
  */
-const lifecycle: WorkStatus[] = ["closed", "in_progress", "closed", "open"]
+const lifecycle: WorkStatus[] = ["completed", "in_progress", "completed", "open"]
 
 /** The hour of the day each of the four was raised at */
 const hours = [9, 11, 14, 16]
@@ -151,7 +152,7 @@ for (const [p, person] of elpremarRecords.entries()) {
     const hour = hours[k]
 
     const raisedAt = at(raisedOn, hour)
-    const settled = status === "closed"
+    const settled = status === "completed"
     const started = settled || status === "in_progress"
 
     rows.push({
@@ -174,10 +175,11 @@ for (const [p, person] of elpremarRecords.entries()) {
     const history: TicketDetail["history"] = [
       { at: raisedAt, by: person.name, action: "Ticket Raised", note: `${template.category} · via EVITA` },
     ]
-    if (started) history.push({ at: at(movedOn, hour + 1), by: desk, action: "Status changed to In Progress" })
+    if (started)
+      history.push({ at: at(movedOn, hour + 1), by: desk, action: "Picked Up By The Desk", note: `Assigned to ${desk}` })
     if (settled) {
       history.push({ at: at(settledOn, hour + 1), by: desk, action: "Ticket Resolved", note: template.resolution })
-      history.push({ at: at(settledOn, hour + 1), by: desk, action: "Ticket Closed", note: "Resolved and closed out" })
+      history.push({ at: at(settledOn, hour + 1), by: desk, action: "Ticket Completed", note: "Confirmed with the reporter" })
     }
 
     detailsById[id] = {
