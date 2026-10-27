@@ -95,8 +95,8 @@ export function ticketDetail(row: TicketRow): TicketDetail {
 
   const raisedAt = at(row.raised, 9 + Math.floor(random() * 4), Math.floor(random() * 6) * 10)
   const owner = pick(deskOwners)
-  const working = row.status === "in_progress" || row.status === "closed"
-  const settled = row.status === "closed"
+  const working = row.status === "in_progress" || row.status === "completed"
+  const settled = row.status === "completed"
 
   /* --- the audit trail: raised, started, resolved, closed --- */
   const history: TicketEvent[] = [
@@ -114,7 +114,7 @@ export function ticketDetail(row: TicketRow): TicketDetail {
     resolution = { by: owner, at: resolvedAt, summary: row.resolution ?? pick(resolutions) }
     history.push({ at: resolvedAt, by: owner, action: "Ticket Resolved", note: resolution.summary })
 
-    if (row.status === "closed") {
+    if (row.status === "completed") {
       history.push({ at: plusHours(resolvedAt, 2), by: owner, action: "Ticket Closed", note: "Confirmed with the reporter" })
     }
   }

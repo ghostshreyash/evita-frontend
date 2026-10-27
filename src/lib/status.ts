@@ -119,13 +119,15 @@ export const inspectionStatus: Partial<Record<WorkStatus, (typeof workStatus)[Wo
 export const inspectionStatuses: WorkStatus[] = ["pending", "in_progress", "completed"]
 
 /**
- * A support ticket runs Open → In Progress → Closed. Reopened is carried so a
- * ticket that comes back renders correctly; nothing sets it yet.
+ * A support ticket runs **Open → In Progress → Completed**, and that is the
+ * whole list: it is what the Status filter offers, what a badge can read, and
+ * what both EVITA and EMMS-E say about the same ticket.
+ *
+ * Settled work is Completed rather than Closed. The desk's own word was Closed,
+ * which from the field read as "shut, nothing more from you" when what it
+ * actually means is the thing reported has been dealt with.
  */
-export const ticketStatuses: WorkStatus[] = ["open", "in_progress", "closed", "reopened"]
-
-/** What the Status filter offers — the three states a ticket can be in */
-export const ticketFilterStatuses: WorkStatus[] = ["open", "in_progress", "closed"]
+export const ticketStatuses: WorkStatus[] = ["open", "in_progress", "completed"]
 
 /** Categorical series colours, in order, for charts with arbitrary groups */
 export const chartSeries = [

@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react"
-import { CalendarClock, ChevronDown, Clock, Factory, History, Paperclip, Search, TriangleAlert, X } from "lucide-react"
+import { Link } from "react-router"
+import { CalendarClock, Clock, Factory, History, Paperclip, Search, TriangleAlert, X } from "lucide-react"
 import { cn } from "cn"
 
 import { ChipTabs, type ChipTab } from "@/components/common/chip-tabs"
@@ -7,7 +8,6 @@ import { TablePager } from "@/components/common/data-table"
 import { PageHeader } from "@/components/common/page-header"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible"
 import { Input } from "@/components/ui/input"
 import { priorityTone } from "@/data/occ-tables"
 import { control, PAGE_SIZES } from "@/lib/data-table"
@@ -154,9 +154,10 @@ export function ReportedIssuesPage() {
  * One reported issue.
  *
  * The answer sits directly under the report when there is one, because the two
- * are read together - what was wrong, and what was done about it. The trail is
- * folded away: it matters when something is disputed and is noise the rest of
- * the time.
+ * are read together - what was wrong, and what was done about it. Everything
+ * else - the attachments, the trail, the ticket's own fields - is on the record
+ * behind it: it matters when something is disputed and is noise the rest of the
+ * time.
  */
 function IssueCard({ issue }: { issue: ReportedIssue }) {
   const { row, state, detail } = issue
@@ -220,37 +221,13 @@ function IssueCard({ issue }: { issue: ReportedIssue }) {
           </p>
         )}
 
-        {/* ---------- The trail, when it is asked for ---------- */}
-        {detail?.history.length ? (
-          <Collapsible className="mt-2">
-            <CollapsibleTrigger asChild>
-              <Button variant="ghost" size="xs" className="group/trail w-full justify-start px-1 text-muted-foreground">
-                <History />
-                History ({detail.history.length})
-                <ChevronDown className="ml-auto transition-transform group-data-[state=open]/trail:rotate-180" />
-              </Button>
-            </CollapsibleTrigger>
-            <CollapsibleContent>
-              <ol className="mt-1 space-y-2 border-t pt-2">
-                {detail.history.map((event, i) => (
-                  <li key={`${event.at}-${i}`} className="flex gap-2 text-xs">
-                    <span aria-hidden className="mt-1 size-1.5 shrink-0 rounded-full bg-foreground/25" />
-                    <span className="min-w-0 flex-1">
-                      <span className="font-semibold">{event.action}</span>
-                      <span className="text-muted-foreground">
-                        {" · "}
-                        {event.by}
-                        {" · "}
-                        <span className="tabular-nums">{event.at}</span>
-                      </span>
-                      {event.note ? <span className="block text-muted-foreground">{event.note}</span> : null}
-                    </span>
-                  </li>
-                ))}
-              </ol>
-            </CollapsibleContent>
-          </Collapsible>
-        ) : null}
+        {/* The record itself: the trail, the attachments and the ticket */}
+        <Button variant="outline" size="sm" className="mt-2.5 h-10 bg-card" asChild>
+          <Link to={`/issues/${row.id}`}>
+            <History /> View the full record
+          </Link>
+        </Button>
+
       </div>
     </li>
   )
