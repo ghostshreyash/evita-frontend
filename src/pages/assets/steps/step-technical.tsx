@@ -111,6 +111,9 @@ export function StepTechnical({
 
 /* ---------- Pieces ---------- */
 
+/** A part-typed number: digits, at most one decimal point, and nothing else */
+const numeric = /^\d*\.?\d*$/
+
 /**
  * One parameter from the sheet.
  *
@@ -118,6 +121,12 @@ export function StepTechnical({
  * than to invented options — see `missingOptionLists` in data/asset-parameters.
  * Units are always picked, never typed: the sheet writes several of them as
  * alternatives, so the engineer says which one the nameplate uses.
+ *
+ * A parameter the sheet types as a Number takes digits only. `inputMode` alone
+ * asks a tablet for the numeric keypad and asks a desktop browser for nothing,
+ * so a rated current was being saved as "AAAA"; the keystroke is refused
+ * instead. The sheet's Text parameters are left alone - several of them hold a
+ * ratio rather than a quantity, "33/0.415" for a transformer's HV / LV voltage.
  *
  * These are not react-hook-form fields: the answers live in one `parameters`
  * map, so the form's shape does not have to change with the asset type.
@@ -167,7 +176,10 @@ function ParamField({
           id={spec.key}
           value={value}
           inputMode={spec.kind === "number" ? "decimal" : undefined}
-          onChange={(e) => onChange(spec.key, e.target.value)}
+          onChange={(e) => {
+            const next = e.target.value
+            if (spec.kind !== "number" || numeric.test(next)) onChange(spec.key, next)
+          }}
           className="min-w-0 flex-1"
         />
         {spec.units.length ? (

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react"
-import { useNavigate, useParams } from "react-router"
+import { useNavigate, useParams, useSearchParams } from "react-router"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { ArrowLeft, ArrowRight, Check, Loader2 } from "lucide-react"
@@ -9,36 +9,18 @@ import { PageHeader } from "@/components/common/page-header"
 import { StepperBar } from "@/components/common/wizard"
 import { Button } from "@/components/ui/button"
 import { onboardAsset, updateAsset, useAssetProfile, useAssets, valuesFrom } from "@/data/asset-store"
-import type { AssetRecord } from "@/data/asset-data"
+import { siteFor, type AssetRecord } from "@/data/asset-data"
+import { useCurrentElpremar } from "@/lib/me"
+import { useScope } from "@/lib/scope"
 import { assetSchema, missingUploads, stepFields, type AssetFormValues } from "@/pages/assets/schemas"
 import { keyForLabel, missingParameters, useCategoryParameters } from "@/lib/api/use-category-parameters"
-import { DEFAULT_PLANT, useEnterprises } from "@/lib/api/use-site"
 import { ApiError } from "@/lib/api/client"
-import { AssetsLoading, AssetsUnreachable } from "@/components/assets/asset-states"
+import { AssetsLoading } from "@/components/assets/asset-states"
 import { StepDetails } from "@/pages/assets/steps/step-details"
 import { StepTechnical } from "@/pages/assets/steps/step-technical"
 import { StepUploads } from "@/pages/assets/steps/step-uploads"
 import { StepReview } from "@/pages/assets/steps/step-review"
 import { AssetIdScreen } from "@/pages/assets/asset-id"
-
-/** The form before anything is read into it */
-const blankValues = (): AssetFormValues => ({
-  enterprise: "",
-  plant: "",
-  department: "",
-  subDepartment: "",
-  area: "",
-  category: "",
-  tag: "",
-  description: "",
-  /* Filled in per asset type on step 2, from the server's copy of the sheet */
-  parameters: {},
-  environment: "",
-  latitude: "",
-  longitude: "",
-  images: [],
-  documents: [],
-})
 
 const steps = [
   { title: "Asset Details" },
@@ -62,8 +44,27 @@ const steps = [
  */
 export function AssetOnboardingPage() {
   const navigate = useNavigate()
-  /* Where the asset stands, picked a level at a time on step 1 */
-  const { enterprises, status: siteStatus, error: siteError } = useEnterprises()
+  const me = useCurrentElpremar()
+  /*
+   * The site the asset is being registered at.
+   *
+   * The posting the engineer has *chosen*, not the one their own record names:
+   * an ELPREMAR carries work for several enterprises, and an asset onboarded
+   * while working for one of them belongs to that one. It is not picked here -
+   * the enterprise is chosen once on the home screen and everything follows it,
+   * so step 1 shows the posting rather than asking for it again.
+   */
+  const { enterprise, plant } = useScope()
+  const site = useMemo(() => siteFor(me.id, { enterprise, plant }), [me, enterprise, plant])
+
+  /*
+   * Opened from a scheduled visit, the wizard already knows where the engineer
+   * is standing: the area comes from the visit, and finishing goes back to it
+   * so the asset just registered can be inspected without hunting for it.
+   */
+  const [params] = useSearchParams()
+  const fromVisit = params.get("visit")
+  const atArea = params.get("area") ?? ""
 
   /* Correcting an asset rather than registering one, if the route names one */
   const { id: editing } = useParams()
@@ -90,7 +91,25 @@ export function AssetOnboardingPage() {
   const form = useForm<AssetFormValues>({
     resolver: zodResolver(assetSchema),
     mode: "onTouched",
-    defaultValues: blankValues(),
+    defaultValues: {
+      // The posting the engineer is working in, shown rather than asked for
+      enterprise: site.enterprise,
+      plant: site.plant.name,
+      department: site.department,
+      subDepartment: "",
+      area: atArea,
+      category: "",
+      tag: "",
+      description: "",
+      /* Filled in per asset type on step 2, from the server's copy of the sheet */
+      parameters: {},
+      environment: "",
+      // Pre-filled from the plant's own registered location, and editable on site
+      latitude: site.plant.latitude,
+      longitude: site.plant.longitude,
+      images: [],
+      documents: [],
+    },
   })
 
   /*
@@ -100,33 +119,6 @@ export function AssetOnboardingPage() {
    */
   const category = form.watch("category")
   const { specs, status: specsStatus } = useCategoryParameters(category)
-
-  /*
-   * A posting configured for this build is chosen for the engineer, so the
-   * common case is one tap rather than four. Everything below it is still
-   * theirs to pick, and an unconfigured build simply starts on an empty form.
-   */
-  useEffect(() => {
-    if (editing || enterprises.length === 0 || !DEFAULT_PLANT) return
-
-    for (const enterprise of enterprises) {
-      const plant = enterprise.plants.find(
-        (p) => p.code === DEFAULT_PLANT || p.name === DEFAULT_PLANT || p.id === DEFAULT_PLANT,
-      )
-      if (!plant) continue
-      form.reset({
-        ...blankValues(),
-        enterprise: enterprise.name,
-        plant: plant.name,
-        // Pre-filled from the plant's own registered location, and editable on site
-        latitude: plant.latitude === null ? "" : String(plant.latitude),
-        longitude: plant.longitude === null ? "" : String(plant.longitude),
-      })
-      return
-    }
-    // `form` is stable; resetting on its identity would wipe what was typed
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [enterprises, editing])
 
   /*
    * Reading an asset back in to correct it, in two passes: its category first,
@@ -188,10 +180,18 @@ export function AssetOnboardingPage() {
         navigate(`/assets/${record.id}`)
         return
       }
-      const record = await onboardAsset(values)
+      const { record, inspection } = await onboardAsset(values, me.name)
+      /* The asset owes an inspection, and it is already on the book - see onboardAsset */
+      toast.success(`${record.id} registered`, {
+        description: `${inspection} raised against it, ready to start.`,
+      })
+      /* Back to the visit it was registered on, where it can now be inspected */
+      if (fromVisit) {
+        navigate(`/visits/${fromVisit}`)
+        return
+      }
       setCreated(record)
       window.scrollTo({ top: 0, behavior: "smooth" })
-      toast.success(`${record.id} registered.`)
     } catch (cause) {
       /*
        * The server validates the whole submission again - a tag already in use
@@ -222,26 +222,6 @@ export function AssetOnboardingPage() {
     )
   }
 
-  /*
-   * Nothing can be filled in until the enterprise list is known: it is the top
-   * of the cascade every other choice on step 1 hangs off.
-   */
-  if (siteStatus !== "ready") {
-    return (
-      <div>
-        <PageHeader
-          title={asset ? `Correct ${asset.id}` : "Asset Onboarding"}
-          breadcrumbs={[{ label: "Assets", to: "/assets" }, { label: "Asset Onboarding" }]}
-        />
-        {siteStatus === "error" ? (
-          <AssetsUnreachable message={siteError} backTo="/assets" />
-        ) : (
-          <AssetsLoading label="Reading the enterprise list…" />
-        )}
-      </div>
-    )
-  }
-
   return (
     <div>
       <PageHeader
@@ -260,7 +240,7 @@ export function AssetOnboardingPage() {
 
       <StepperBar steps={steps} current={current} furthest={asset ? steps.length - 1 : furthest} onSelect={goTo} />
 
-      {current === 0 ? <StepDetails form={form} enterprises={enterprises} /> : null}
+      {current === 0 ? <StepDetails form={form} site={site} /> : null}
       {current === 1 ? (
         specsStatus === "ready" ? <StepTechnical form={form} specs={specs} /> : <AssetsLoading label="Reading what this asset type is asked for…" />
       ) : null}

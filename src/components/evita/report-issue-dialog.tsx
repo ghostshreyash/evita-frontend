@@ -16,6 +16,7 @@ import { ticketCategories, type TicketCategory } from "@/data/occ-tables"
 import { raiseTicket } from "@/data/ticket-store"
 import { required } from "@/lib/validation"
 import { useCurrentElpremar } from "@/lib/me"
+import { useScope } from "@/lib/scope"
 import type { Panel } from "@/lib/ui-store"
 
 const schema = z.object({
@@ -43,6 +44,8 @@ export function ReportIssueDialog({
   onOpenChange: (o: boolean) => void
 }) {
   const me = useCurrentElpremar()
+  /* Where the engineer is working, not where their record says they are posted */
+  const { enterprise, plant } = useScope()
   const [photos, setPhotos] = useState<EvidenceItem[]>([])
 
   const form = useForm<Values>({
@@ -51,14 +54,14 @@ export function ReportIssueDialog({
   })
 
   if (!context) return null
-  const where = [context.asset, context.plant ?? me.plant].filter(Boolean).join(" · ")
+  const where = [context.asset, context.plant ?? plant].filter(Boolean).join(" · ")
 
   async function onSubmit(values: Values) {
     if (!context) return
     const id = raiseTicket(
       {
-        enterprise: context.enterprise ?? me.enterprise,
-        plant: context.plant ?? me.plant,
+        enterprise: context.enterprise ?? enterprise,
+        plant: context.plant ?? plant,
         country: me.country,
         subject: values.subject,
         description: values.description,

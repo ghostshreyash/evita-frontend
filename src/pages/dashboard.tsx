@@ -1,8 +1,9 @@
 import { useMemo } from "react"
 import { format } from "date-fns"
-import { CalendarDays, ClipboardList, MapPin } from "lucide-react"
+import { CalendarDays, ClipboardList } from "lucide-react"
 
 import { NextTask, QuickActions, UpcomingTasks } from "@/components/evita/home-hero"
+import { EnterpriseSwitch } from "@/components/evita/enterprise-switch"
 import { useCurrentElpremar } from "@/lib/me"
 import { isThisWeek, useMyJobs } from "@/lib/work"
 
@@ -34,9 +35,8 @@ export function DashboardPage() {
           </p>
 
           <div className="mt-3 flex flex-wrap gap-2 text-sm">
-            <span className="flex items-center gap-1.5 rounded-full bg-white/10 px-3.5 py-1.5 ring-1 ring-white/25">
-              <MapPin className="size-4" /> {me.plant}, {me.enterprise}
-            </span>
+            {/* Which customer's site this is, and the way to the engineer's others */}
+            <EnterpriseSwitch className="bg-white/10 ring-white/25 hover:bg-white/20" />
             <span className="flex items-center gap-1.5 rounded-full bg-white/10 px-3.5 py-1.5 tabular-nums ring-1 ring-white/25">
               <CalendarDays className="size-4" /> {format(new Date(), "EEE d MMM")}
             </span>
@@ -49,7 +49,7 @@ export function DashboardPage() {
 
       <QuickActions />
 
-      {/* The one in hand, and the three after it */}
+      {/* The one in hand - a visit or a job - and the three after it */}
       <div className="grid gap-3 lg:grid-cols-2">
         <NextTask />
         <UpcomingTasks />

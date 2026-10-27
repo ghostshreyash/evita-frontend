@@ -11,8 +11,7 @@ import { Field, FieldDescription, FieldLabel } from "@/components/ui/field"
 import { Input } from "@/components/ui/input"
 import { SelectField, TextareaField, TextField } from "@/components/form/fields"
 import { assetCategories } from "@/data/master-data"
-import type { EnterpriseSummary } from "@/lib/api/assets"
-import { usePlantDepartments } from "@/lib/api/use-site"
+import type { siteFor } from "@/data/asset-data"
 import type { AssetFormValues } from "@/pages/assets/schemas"
 
 
@@ -29,37 +28,18 @@ import type { AssetFormValues } from "@/pages/assets/schemas"
  */
 export function StepDetails({
   form,
-  enterprises,
+  site,
 }: {
   form: UseFormReturn<AssetFormValues>
-  /** Every enterprise, each carrying its own plants */
-  enterprises: EnterpriseSummary[]
+  site: ReturnType<typeof siteFor>
 }) {
   const { control, setValue } = form
+  const departments = site.plant.departments.map((d) => d.name)
   const category = form.watch("category")
-  const enterprise = form.watch("enterprise")
-  const plant = form.watch("plant")
   const department = form.watch("department")
 
-  /*
-   * Each level narrows the one below it. An enterprise brings its plants with
-   * it, so that list needs no request; the departments belong to a plant and
-   * are read once one is chosen.
-   */
-  const chosenEnterprise = enterprises.find((e) => e.name === enterprise)
-  const plants = chosenEnterprise?.plants ?? []
-  const chosenPlant = plants.find((p) => p.name === plant)
-
-  const { departments: departmentTree, status: departmentStatus } = usePlantDepartments(chosenPlant?.id)
-  const departments = departmentTree.map((d) => d.name)
-
   const subDepartments =
-    departmentTree.find((d) => d.name === department)?.subDepartments.map((sd) => sd.name) ?? []
-
-  /* Changing a level clears everything chosen below it, which no longer belongs */
-  const clearBelow = (...names: ("plant" | "department" | "subDepartment")[]) => {
-    for (const name of names) setValue(name, "", { shouldDirty: true })
-  }
+    site.plant.departments.find((d) => d.name === department)?.subDepartments.map((sd) => sd.name) ?? []
 
   /*
    * Other on the dropdown asks for the category by name rather than leaving the
@@ -78,53 +58,18 @@ export function StepDetails({
     <div className="grid gap-3 xl:grid-cols-[minmax(0,1fr)_26rem]">
       <StepCard title="Step 1 of 4: Asset Details" description="Where the asset sits, and what it is.">
         <div className="grid gap-x-3 gap-y-2 sm:grid-cols-2">
-          {/* Enterprise, then its plants, then that plant's departments, then
-              that department's sub-departments - each one narrows the next */}
-          <SelectField
-            control={control}
-            name="enterprise"
-            label="Enterprise"
-            required
-            options={enterprises.map((e) => e.name)}
-            placeholder={enterprises.length ? "Select an enterprise" : "No enterprises registered"}
-            disabled={enterprises.length === 0}
-            // The plant belonged to the old enterprise, and everything under it
-            onValueChange={() => clearBelow("plant", "department", "subDepartment")}
-          />
-          <SelectField
-            control={control}
-            name="plant"
-            label="Plant"
-            required
-            options={plants.map((p) => p.name)}
-            disabled={!enterprise || plants.length === 0}
-            placeholder={
-              !enterprise
-                ? "Choose an enterprise first"
-                : plants.length
-                  ? "Select a plant"
-                  : "No plants at this enterprise"
-            }
-            onValueChange={() => clearBelow("department", "subDepartment")}
-          />
+          {/* Posting, not a choice: EVITA registers assets at the engineer's own site */}
+          <TextField control={control} name="enterprise" label="Enterprise" required readOnly />
+          <TextField control={control} name="plant" label="Plant" required readOnly />
 
           <SelectField
             control={control}
             name="department"
             label="Department"
             options={departments}
-            disabled={!plant || departments.length === 0}
-            placeholder={
-              !plant
-                ? "Choose a plant first"
-                : departmentStatus === "loading"
-                  ? "Reading the plant's departments…"
-                  : departments.length
-                    ? "Select (optional)"
-                    : "No departments at this plant"
-            }
+            placeholder="Select (optional)"
             // The sub-department belonged to the old department; it cannot survive the change
-            onValueChange={() => clearBelow("subDepartment")}
+            onValueChange={() => setValue("subDepartment", "", { shouldDirty: true })}
           />
           <SelectField
             control={control}

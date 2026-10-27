@@ -7,6 +7,7 @@ import { useMaintenanceDetails, useMaintenanceRows, useStartedMaintenance } from
 import type { Priority } from "@/data/occ-tables"
 import { categoryFor } from "@/lib/asset-category"
 import { useCurrentElpremar } from "@/lib/me"
+import { useScope } from "@/lib/scope"
 import type { WorkStatus } from "@/lib/status"
 
 /**
@@ -81,11 +82,16 @@ export type Job = {
  * 01"), so the category is as close as this gets. Match on the asset id once
  * the API carries one.
  */
-export function inspectionFor(jobs: Job[], asset: { category: string; plant: string }) {
-  return jobs.find(
-    (j) =>
-      j.kind === "inspection" && actionFor(j) !== "view" && j.plant === asset.plant && categoryFor(j.asset) === asset.category
-  )
+export function inspectionFor(jobs: Job[], asset: { id?: string; category: string; plant: string }, tags?: Record<string, string>) {
+  const open = jobs.filter((j) => j.kind === "inspection" && actionFor(j) !== "view")
+  /*
+   * The asset's own record first. An inspection carries the asset it was taken
+   * against, so an exact match is available where it used to be guessed - the
+   * plant-and-category match below is the fallback for the seeded rows, which
+   * name an asset but carry no id.
+   */
+  const exact = asset.id && tags ? open.find((j) => tags[j.id] === asset.id) : undefined
+  return exact ?? open.find((j) => j.plant === asset.plant && categoryFor(j.asset) === asset.category)
 }
 
 /**
@@ -153,6 +159,8 @@ export const when = (job: Pick<Job, "date" | "slot">) => parseDay(job.date).getT
 /** Every job booked to the signed-in ELPREMAR, from both books, soonest first */
 export function useMyJobs(): Job[] {
   const me = useCurrentElpremar()
+  /* One enterprise at a time: whichever the engineer has chosen - see lib/scope */
+  const { enterprise } = useScope()
   const inspections = useInspectionRows()
   const inspectionDetails = useInspectionDetails()
   const maintenance = useMaintenanceRows()
@@ -162,7 +170,7 @@ export function useMyJobs(): Job[] {
   return useMemo(() => {
     const jobs: Job[] = [
       ...inspections
-        .filter((t) => t.elpremar === me.name && t.country === me.country)
+        .filter((t) => t.elpremar === me.name && t.enterprise === enterprise)
         .map((t) => ({
           id: t.id,
           kind: "inspection" as const,
@@ -179,7 +187,7 @@ export function useMyJobs(): Job[] {
           area: inspectionDetails[t.id]?.area ?? "",
         })),
       ...maintenance
-        .filter((m) => m.elpremar === me.name && m.country === me.country)
+        .filter((m) => m.elpremar === me.name && m.enterprise === enterprise)
         .map((m) => ({
           id: m.id,
           kind: "maintenance" as const,
@@ -198,7 +206,7 @@ export function useMyJobs(): Job[] {
         })),
     ]
     return jobs.sort((a, b) => when(a) - when(b))
-  }, [me, inspections, inspectionDetails, maintenance, maintenanceDetails, started])
+  }, [me, enterprise, inspections, inspectionDetails, maintenance, maintenanceDetails, started])
 }
 
 /** The day at a glance, as counted on the dashboard tiles */

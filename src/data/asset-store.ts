@@ -1,4 +1,4 @@
-import { useEffect, useSyncExternalStore } from "react"
+import { useEffect, useMemo, useSyncExternalStore } from "react"
 
 import type { AssetProfile, AssetRecord } from "@/data/asset-data"
 import {
@@ -10,7 +10,16 @@ import {
   updateAssetApi,
   type ServerAsset,
 } from "@/lib/api/assets"
+/*
+ * These two stores reference each other: registering an asset raises its
+ * inspection, and finishing an inspection scores the asset. The cycle is safe
+ * because neither call happens while the modules are evaluating - both are
+ * inside functions - and `npx esbuild ... && node` on every data module is the
+ * check that keeps it that way. See the verifying section of CLAUDE.md.
+ */
+import { addInspectionForAsset } from "@/data/inspection-store"
 import type { AssetFormValues } from "@/pages/assets/schemas"
+import { useScope } from "@/lib/scope"
 
 /**
  * One copy of the asset register, shared by the list, the onboarding wizard and
@@ -99,9 +108,19 @@ export function useAssets() {
   return state
 }
 
-/** The rows alone - the shape every screen read before the API existed */
+/**
+ * The register for the enterprise the engineer is working in.
+ *
+ * The server sends every posting's assets so an onboarding can join any of
+ * them; the screens only ever see one enterprise at a time - see lib/scope.
+ *
+ * TODO(api): send the chosen enterprise on the call so the server scopes the
+ * register, rather than the tablet filtering what it was given.
+ */
 export function useAssetRows() {
-  return useAssets().rows
+  const { rows: all } = useAssets()
+  const { enterprise } = useScope()
+  return useMemo(() => all.filter((a) => a.enterprise === enterprise), [all, enterprise])
 }
 
 export const findAsset = (id?: string) => (id ? rows.find((r) => r.id === id) : undefined)
@@ -154,12 +173,27 @@ export function useAssetProfile(id?: string) {
  * unique across every tablet working the site, which only the server can
  * guarantee. The finished record is what the Asset ID & QR screen is built from.
  */
-export async function onboardAsset(values: AssetFormValues): Promise<AssetRecord> {
+export async function onboardAsset(
+  values: AssetFormValues,
+  /** Who registered it, so the inspection it owes is raised in their name */
+  by: string
+): Promise<{ record: AssetRecord; inspection: string }> {
   const asset = await createAssetApi(values)
   const record = remember(asset)
   captures = { ...captures, [record.id]: capturesFrom(values) }
   emit()
-  return record
+
+  /*
+   * A newly registered asset owes an inspection, so it gets one here and then.
+   *
+   * It is raised rather than started: the engineer has just finished typing a
+   * nameplate and may be moving to the next panel, so the inspection goes on
+   * the book as Open with Start against it. The id exists from this moment,
+   * which is what lets the asset be found on the Inspections page rather than
+   * only from the asset itself.
+   */
+  const inspection = addInspectionForAsset(record, by, { start: false })
+  return { record, inspection }
 }
 
 /** The picked files, keyed by upload, for the detail screen to show back at once */
@@ -198,6 +232,19 @@ export function valuesFrom(profile: AssetProfile, keyFor: (label: string) => str
  * quoted by every inspection taken against the asset - so it is issued once and
  * then belongs to the asset, whatever is corrected about it afterwards.
  */
+/**
+ * The health an inspection left on an asset.
+ *
+ * The score belongs to the asset, not to the record that produced it: the
+ * register, the reports and every card that reads a band are all asking the
+ * asset. Local to the cache until the inspection is filed with the server,
+ * which sends the asset back carrying its own score.
+ */
+export function setAssetHealth(id: string, health: number) {
+  rows = rows.map((r) => (r.id === id ? { ...r, health } : r))
+  emit()
+}
+
 export async function updateAsset(id: string, values: AssetFormValues): Promise<AssetRecord> {
   const asset = await updateAssetApi(id, values, profiles[id])
   const record = remember(asset)
