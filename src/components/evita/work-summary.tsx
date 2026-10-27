@@ -68,7 +68,7 @@ export function InspectionRecord({ detail, activity }: { detail: InspectionDetai
   const register = useAssetRows()
   /* What the asset was registered with, so a reading can be read against it */
   const asset = register.find((a) => a.id === detail.assetTag)
-  const rated = asset ? profileOf(asset).parameters : []
+  const rated = (asset && profileOf(asset)?.parameters) || []
 
   const images = detail.evidence.filter((e) => e.kind !== "document")
   const { execution, result } = detail

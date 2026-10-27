@@ -31,6 +31,11 @@ export function AssetIdScreen({
   /** Finish, and open the asset that was just created */
   onDone: () => void
 }) {
+  /*
+   * Held as soon as the asset is registered - the server returns the whole
+   * record and the store keeps it - but read through, because this screen is
+   * also reachable for an asset whose detail has not been fetched.
+   */
   const profile = profileOf(asset)
 
   return (
@@ -48,7 +53,7 @@ export function AssetIdScreen({
             <CircleCheckBig className="mt-0.5 size-5 shrink-0 text-healthy" />
             <span>
               <strong className="block font-semibold">Asset onboarded successfully</strong>
-              The record is held on this tablet and reaches the server at the next sync.
+              The record is on the register and its Asset ID has been issued.
             </span>
           </p>
         }
@@ -65,16 +70,16 @@ export function AssetIdScreen({
             rows={[
               { label: "Asset Category", value: asset.category, always: true },
               { label: "Asset Name", value: asset.tag, always: true },
-              { label: "Asset Description", value: profile.details.description },
+              { label: "Asset Description", value: profile?.details.description },
               { label: "Enterprise", value: asset.enterprise, always: true },
               { label: "Plant", value: asset.plant, always: true },
               { label: "Location / Area", value: asset.area, always: true },
               { label: "Department", value: asset.department },
-              { label: "Sub-Department", value: profile.details.subDepartment },
+              { label: "Sub-Department", value: profile?.details.subDepartment },
               { label: "Asset Criticality", value: asset.criticality, always: true },
               /* The specification depends on the asset type, so it is read off
                  the profile rather than named here */
-              ...profile.parameters.map((p) => ({
+              ...(profile?.parameters ?? []).map((p) => ({
                 label: p.label,
                 value: [p.value, p.unit].filter(Boolean).join(" "),
               })),

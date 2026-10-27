@@ -8,7 +8,7 @@ import { SelectField } from "@/components/form/fields"
 import { Field, FieldLabel } from "@/components/ui/field"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { parametersFor, unitFor, unitKeyOf, type ParamSpec } from "@/data/asset-parameters"
+import { unitFor, unitKeyOf, type ServerParamSpec } from "@/lib/api/use-category-parameters"
 import { cleaningIntervalMonths, environmentNote, installEnvironments } from "@/data/maintenance-schedule"
 import type { AssetFormValues } from "@/pages/assets/schemas"
 
@@ -20,7 +20,8 @@ import type { AssetFormValues } from "@/pages/assets/schemas"
  * configuration; a battery bank for its cell count and Ah rating; a solar
  * inverter for its DC input power. The parameters, their units, their option
  * lists and which of them are mandatory all come from the client's onboarding
- * sheet — see data/asset-parameters.ts.
+ * sheet, which the server holds and validates against — so they are read from
+ * it rather than carried here, where the two could drift apart.
  *
  * Asset criticality lives here now, as the client asked at review. It is the one
  * parameter every asset type carries, so it arrives with the rest of them.
@@ -30,9 +31,15 @@ import type { AssetFormValues } from "@/pages/assets/schemas"
  * commissioning date are not asked for by the onboarding sheet, and the asset's
  * own coordinates moved to step 1 with the rest of its location.
  */
-export function StepTechnical({ form }: { form: UseFormReturn<AssetFormValues> }) {
+export function StepTechnical({
+  form,
+  specs,
+}: {
+  form: UseFormReturn<AssetFormValues>
+  /** What this asset type is asked for, as the server's copy of the sheet gives it */
+  specs: ServerParamSpec[]
+}) {
   const values = form.watch()
-  const specs = parametersFor(values.category)
   const answers = values.parameters ?? {}
   // Criticality is held back so the installation environment can stand in front of it
   const criticality = specs.find((p) => p.key === "criticality")
@@ -129,7 +136,7 @@ function ParamField({
   answers,
   onChange,
 }: {
-  spec: ParamSpec
+  spec: ServerParamSpec
   answers: Record<string, string>
   onChange: (key: string, value: string) => void
 }) {
@@ -175,8 +182,8 @@ function ParamField({
           }}
           className="min-w-0 flex-1"
         />
-        {spec.units ? (
-          <Select value={unitFor(spec, answers)} onValueChange={(v) => onChange(unitKeyOf(spec), v)}>
+        {spec.units.length ? (
+          <Select value={unitFor(spec, answers)} onValueChange={(v) => onChange(unitKeyOf(spec.key), v)}>
             <SelectTrigger aria-label={`${spec.label} unit`} className="w-auto shrink-0 gap-1 bg-muted">
               <SelectValue />
             </SelectTrigger>

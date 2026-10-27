@@ -15,7 +15,8 @@ import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { parseDmy, type AssetRecord } from "@/data/asset-data"
-import { useAssetRows } from "@/data/asset-store"
+import { useAssets } from "@/data/asset-store"
+import { AssetsLoading, AssetsUnreachable } from "@/components/assets/asset-states"
 import { assetCategories, assetCriticality, healthBandFor } from "@/data/master-data"
 import { control, nextSort, PAGE_SIZES, sortRows, td, th, type Accessors, type Sort } from "@/lib/data-table"
 import { criticalityTone } from "@/data/occ-tables"
@@ -60,7 +61,7 @@ const bands = [
  */
 export function AssetsPage() {
   const [params, setParams] = useSearchParams()
-  const register = useAssetRows()
+  const { rows: register, status, error } = useAssets()
 
   // The dashboard's category tiles deep-link here, so that filter starts from the URL
   const [category, setCategory] = useState(params.get("category") ?? ANY)
@@ -140,19 +141,37 @@ export function AssetsPage() {
     setParams({}, { replace: true })
   }
 
+  const header = (
+    <PageHeader
+      title="Assets"
+      breadcrumbs={[{ label: "Assets" }]}
+      actions={
+        <Button asChild>
+          <Link to="/assets/onboarding">
+            <Plus /> Onboard Asset
+          </Link>
+        </Button>
+      }
+    />
+  )
+
+  /*
+   * The register is read once and then held, so this only shows on the first
+   * visit. An asset registered on this tablet goes straight into what is held,
+   * and the list does not go back to the server for it.
+   */
+  if (status !== "ready" && register.length === 0) {
+    return (
+      <div>
+        {header}
+        {status === "error" ? <AssetsUnreachable message={error} /> : <AssetsLoading />}
+      </div>
+    )
+  }
+
   return (
     <div>
-      <PageHeader
-        title="Assets"
-        breadcrumbs={[{ label: "Assets" }]}
-        actions={
-          <Button asChild>
-            <Link to="/assets/onboarding">
-              <Plus /> Onboard Asset
-            </Link>
-          </Button>
-        }
-      />
+      {header}
 
       {/* ---------- Search, the rest of the filters behind a toggle, and the view ---------- */}
       <div className="mb-3 flex flex-wrap items-center gap-2">
