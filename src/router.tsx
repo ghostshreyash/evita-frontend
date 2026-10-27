@@ -15,6 +15,7 @@ import { AssetDetailPage } from "@/pages/assets/asset-detail"
 import { VisitPage } from "@/pages/visit"
 import { ReportsPage } from "@/pages/reports"
 import { ReportedIssuesPage } from "@/pages/reported-issues"
+import { IssueDetailPage } from "@/pages/issue-detail"
 import { MyTasksPage } from "@/pages/my-tasks"
 import { MorePage } from "@/pages/more"
 import { TaskPage } from "@/pages/task"
@@ -51,6 +52,7 @@ export const router = createBrowserRouter([
           { path: "reports", element: <ReportsPage /> },
           /* What this engineer has reported, and what came back - see lib/issues */
           { path: "issues", element: <ReportedIssuesPage /> },
+          { path: "issues/:id", element: <IssueDetailPage /> },
           { path: "my-tasks", element: <MyTasksPage /> },
           { path: "my-tasks/:id", element: <TaskPage /> },
           { path: "inspections", element: <MyTasksPage only="inspection" /> },
