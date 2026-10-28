@@ -3,6 +3,7 @@ import { useEffect, useMemo, useSyncExternalStore } from "react"
 import type { AssetProfile, AssetRecord } from "@/data/asset-data"
 import {
   createAsset as createAssetApi,
+  deactivateAsset as deactivateAssetApi,
   fetchAsset,
   fetchAssets,
   toProfile,
@@ -251,4 +252,26 @@ export async function updateAsset(id: string, values: AssetFormValues): Promise<
   captures = { ...captures, [id]: capturesFrom(values) }
   emit()
   return record
+}
+
+/**
+ * Take an asset off the active register.
+ *
+ * Deactivation, not deletion: the client settled that nothing is ever hard-
+ * deleted, so the server keeps the row with its history and marks it inactive.
+ * What comes back is what it retired, which is what the confirmation names.
+ *
+ * The row and its profile are dropped from the cache here rather than by
+ * re-reading the register: the asset now answers 404, so a refetch would be a
+ * round trip to be told what this call already said.
+ */
+export async function deactivateAsset(id: string): Promise<{ digitalAssetId: string; tag: string }> {
+  const retired = await deactivateAssetApi(id)
+  rows = rows.filter((r) => r.id !== id)
+  const { [id]: _profile, ...keptProfiles } = profiles
+  profiles = keptProfiles
+  const { [id]: _capture, ...keptCaptures } = captures
+  captures = keptCaptures
+  emit()
+  return retired
 }

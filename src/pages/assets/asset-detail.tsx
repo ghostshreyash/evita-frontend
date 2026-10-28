@@ -1,5 +1,7 @@
+import { useState } from "react"
 import { Link, useNavigate, useParams } from "react-router"
-import { ArrowLeft, CalendarDays, Pencil, Building2, CircleDashed, ClipboardCheck, FileText, Images, QrCode, Settings, TriangleAlert } from "lucide-react"
+import { ArrowLeft, Archive, CalendarDays, Loader2, Pencil, Building2, CircleDashed, ClipboardCheck, FileText, Images, QrCode, Settings, TriangleAlert } from "lucide-react"
+import { toast } from "sonner"
 import { cn } from "cn"
 
 import { PageHeader } from "@/components/common/page-header"
@@ -9,10 +11,21 @@ import { assetDetailRows, assetTechnicalRows } from "@/components/assets/asset-s
 import { AssetQrPanel, QrLabelPreview } from "@/components/assets/asset-qr"
 import { AssetsLoading, AssetsUnreachable } from "@/components/assets/asset-states"
 import { StartInspection } from "@/components/assets/start-inspection"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
 import { Button } from "@/components/ui/button"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import type { AssetProfile, AssetRecord } from "@/data/asset-data"
-import { capturesOf, findAsset, useAssetProfile, useAssets } from "@/data/asset-store"
+import { capturesOf, deactivateAsset, findAsset, useAssetProfile, useAssets } from "@/data/asset-store"
+import { ApiError } from "@/lib/api/client"
 import { healthBandFor } from "@/data/master-data"
 import { healthStatus } from "@/lib/status"
 import { td, th } from "@/lib/data-table"
@@ -60,6 +73,27 @@ function AssetDetail({
   onBack: () => void
 }) {
   const captures = capturesOf(asset.id)
+  const navigate = useNavigate()
+  /* Deactivation is confirmed, never a single tap: it takes the asset off the
+     register, and a tablet is tapped by a gloved hand in a plant room */
+  const [confirming, setConfirming] = useState(false)
+  const [retiring, setRetiring] = useState(false)
+
+  const retire = async () => {
+    setRetiring(true)
+    try {
+      const gone = await deactivateAsset(asset.id)
+      setConfirming(false)
+      toast.success(`${gone.digitalAssetId} deactivated`, {
+        description: "It is off the register. Its history is retained and its Asset ID is never reissued.",
+      })
+      navigate("/assets")
+    } catch (cause) {
+      /* Already deactivated answers 404, which is not a fault worth a stack trace */
+      toast.error(cause instanceof ApiError ? cause.readable : "Could not reach the server.")
+      setRetiring(false)
+    }
+  }
   // No inspection has happened yet on an asset still waiting to sync, so there
   // is no score to show - better an absent panel than an invented number
   const band = asset.health === null ? null : healthBandFor(asset.health)
@@ -92,12 +126,57 @@ function AssetDetail({
                 <Pencil /> Edit
               </Link>
             </Button>
+            {/* Deactivate, never delete - the client settled that nothing is
+                hard-deleted and the history is kept */}
+            <Button variant="outline" onClick={() => setConfirming(true)}>
+              <Archive /> Deactivate
+            </Button>
             <Button variant="outline" onClick={onBack}>
               <ArrowLeft /> Back to Assets
             </Button>
           </>
         }
       />
+      {/* What deactivation actually does, said plainly before it is done */}
+      <AlertDialog open={confirming} onOpenChange={(open) => !retiring && setConfirming(open)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Deactivate {asset.id}?</AlertDialogTitle>
+            <AlertDialogDescription>
+              {asset.name} leaves the register and stops appearing in the asset list, on reports and
+              against new work. Nothing is deleted: the record and everything inspected against it
+              are retained.
+              <br />
+              <br />
+              Its name <span className="font-medium text-foreground">{asset.tag}</span> becomes free
+              for a replacement panel, but the Asset ID{" "}
+              <span className="font-medium text-foreground">{asset.id}</span> is retired for good
+              and is never issued to another asset.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={retiring}>Keep it</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={(e) => {
+                /* The dialog closes itself on action; this one waits for the server */
+                e.preventDefault()
+                void retire()
+              }}
+              disabled={retiring}
+            >
+              {retiring ? (
+                <>
+                  <Loader2 className="animate-spin" /> Deactivating…
+                </>
+              ) : (
+                <>
+                  <Archive /> Deactivate
+                </>
+              )}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       {/*
         * Three columns, each one a thing the engineer came for: what the asset
