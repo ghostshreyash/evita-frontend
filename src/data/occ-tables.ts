@@ -8,6 +8,7 @@ import { addDays, format } from "date-fns"
 import type { HealthStatus, WorkStatus } from "@/lib/status"
 import { activeElpremarNames, dialCodeFor, elpremarNames, postalCodeForCity, type AssetCriticality, type EnterpriseScale } from "@/data/master-data"
 import { activityTypes, priorities, assetCategories } from "@/data/mock"
+import { seededEnterprises, seededEnterpriseNamed } from "@/data/organisations"
 
 export type Priority = (typeof priorities)[number]
 
@@ -91,15 +92,15 @@ export type MaintenanceRow = {
 type UnlinkedMaintenance = Omit<MaintenanceRow, "inspectionId">
 
 export const maintenanceProgress: MaintenanceRow[] = [
-  { id: "MT-2291", asset: "LT Panel - Block A", plant: "Mumbai Unit 2", enterprise: "Tata Steel Limited", country: "India", type: "Preventive", elpremar: "Suresh Kumar", scheduled: day(-2), slot: 9, inspectionId: "INS-8841", status: "completed" },
-  { id: "MT-2290", asset: "Transformer - T1", plant: "Jamnagar Substation", enterprise: "Reliance Industries", country: "India", type: "Condition-Based", elpremar: "Amit Sharma", scheduled: day(0), slot: 10, inspectionId: "INS-8840", status: "open" },
-  { id: "MT-2289", asset: "MCC - Unit 2", plant: "Dolvi Substation", enterprise: "JSW Group", country: "India", type: "Preventive", elpremar: "Ramesh Patil", scheduled: day(0), slot: 9, inspectionId: "INS-8839", status: "in_progress" },
-  { id: "MT-2288", asset: "PCC - Main", plant: "Mundra Warehouse", enterprise: "Adani Group", country: "India", type: "Fire Preventive", elpremar: "Anil Singh", scheduled: day(2), slot: 11, inspectionId: "INS-8838", status: "open" },
+  { id: "MT-2291", asset: "LT Panel - Block A", plant: "Jamshedpur Works", enterprise: "Tata Steel Limited", country: "India", type: "Preventive", elpremar: "Suresh Kumar", scheduled: day(-2), slot: 9, inspectionId: "INS-8841", status: "completed" },
+  { id: "MT-2290", asset: "Transformer - T1", plant: "Jamnagar Refinery", enterprise: "Reliance Industries Limited", country: "India", type: "Condition-Based", elpremar: "Amit Sharma", scheduled: day(0), slot: 10, inspectionId: "INS-8840", status: "open" },
+  { id: "MT-2289", asset: "MCC - Unit 2", plant: "Kalinganagar Works", enterprise: "Tata Steel Limited", country: "India", type: "Preventive", elpremar: "Ramesh Patil", scheduled: day(0), slot: 9, inspectionId: "INS-8839", status: "in_progress" },
+  { id: "MT-2288", asset: "PCC - Main", plant: "Awarpur Cement Works", enterprise: "UltraTech Cement Limited", country: "India", type: "Fire Preventive", elpremar: "Anil Singh", scheduled: day(2), slot: 11, inspectionId: "INS-8838", status: "open" },
   // Deliberately shares Suresh Kumar's 10:00 slot with INS-8837, so the dialog has a clash to show
-  { id: "MT-2287", asset: "HT Panel - Incomer 1", plant: "Hyderabad Main Plant", enterprise: "NTPC", country: "India", type: "Preventive", elpremar: "Suresh Kumar", scheduled: day(3), slot: 10, inspectionId: "INS-8837", status: "assigned" },
-  { id: "MT-2286", asset: "APFC Panel - 1", plant: "Dubai Main Plant", enterprise: "Emirates Steel", country: "United Arab Emirates", type: "Preventive", elpremar: "Khalid Rahman", scheduled: day(1), slot: 11, inspectionId: "INS-8836", status: "open" },
-  { id: "MT-2285", asset: "UPS - 03", plant: "Frankfurt Utility Block", enterprise: "Thyssenkrupp AG", country: "Germany", type: "Fire Preventive", elpremar: "Lukas Weber", scheduled: day(4), slot: 10, inspectionId: "INS-8835", status: "assigned" },
-  { id: "MT-2284", asset: "Switchboard - SB2", plant: "Houston Main Plant", enterprise: "LyondellBasell", country: "United States", type: "Condition-Based", elpremar: "Maria Lopez", scheduled: day(1), slot: 15, inspectionId: "INS-8834", status: "open" },
+  { id: "MT-2287", asset: "HT Panel - Incomer 1", plant: "Hazira Complex", enterprise: "Reliance Industries Limited", country: "India", type: "Preventive", elpremar: "Suresh Kumar", scheduled: day(3), slot: 10, inspectionId: "INS-8837", status: "assigned" },
+  { id: "MT-2286", asset: "APFC Panel - 1", plant: "Hazira Complex", enterprise: "Reliance Industries Limited", country: "India", type: "Preventive", elpremar: "Khalid Rahman", scheduled: day(1), slot: 11, inspectionId: "INS-8836", status: "open" },
+  { id: "MT-2285", asset: "UPS - 03", plant: "Jamnagar Refinery", enterprise: "Reliance Industries Limited", country: "India", type: "Fire Preventive", elpremar: "Lukas Weber", scheduled: day(4), slot: 10, inspectionId: "INS-8835", status: "assigned" },
+  { id: "MT-2284", asset: "Switchboard - SB2", plant: "Reddipalayam Plant", enterprise: "UltraTech Cement Limited", country: "India", type: "Condition-Based", elpremar: "Maria Lopez", scheduled: day(1), slot: 15, inspectionId: "INS-8834", status: "open" },
 ]
 
 /**
@@ -174,14 +175,14 @@ export type TaskRow = {
 }
 
 export const taskQueue: TaskRow[] = [
-  { id: "INS-8841", elpremar: "Suresh Kumar", enterprise: "Tata Steel Limited", plant: "Mumbai Unit 2", asset: "LT Panel - Block A", country: "India", activity: "Thermal Scan", due: day(0), slot: 11, priority: "High", status: "in_progress" },
-  { id: "INS-8840", elpremar: "Amit Sharma", enterprise: "Reliance Industries", plant: "Jamnagar Substation", asset: "Transformer - T1", country: "India", activity: "Partial Discharge Testing", due: day(2), slot: 11, priority: "Critical", status: "pending" },
-  { id: "INS-8839", elpremar: "Ramesh Patil", enterprise: "JSW Group", plant: "Dolvi Substation", asset: "MCC - Unit 2", country: "India", activity: "Visual Inspection", due: day(3), slot: 11, priority: "Medium", status: "pending" },
-  { id: "INS-8838", elpremar: "Anil Singh", enterprise: "Adani Group", plant: "Mundra Warehouse", asset: "PCC - Main", country: "India", activity: "Preventive Assessment", due: day(-3), slot: 10, priority: "Low", status: "completed" },
-  { id: "INS-8837", elpremar: "Suresh Kumar", enterprise: "NTPC", plant: "Hyderabad Main Plant", asset: "HT Panel - Incomer 1", country: "India", activity: "Insulation Resistance Testing", due: day(3), slot: 10, priority: "Medium", status: "pending" },
-  { id: "INS-8836", elpremar: "Khalid Rahman", enterprise: "Emirates Steel", plant: "Dubai Main Plant", asset: "APFC Panel - 1", country: "United Arab Emirates", activity: "Preventive Assessment", due: day(2), slot: 9, priority: "High", status: "pending" },
-  { id: "INS-8835", elpremar: "Lukas Weber", enterprise: "Thyssenkrupp AG", plant: "Frankfurt Utility Block", asset: "Fire Alarm Panel - FA1", country: "Germany", activity: "Fire Prevention System Check", due: day(4), slot: 14, priority: "Medium", status: "pending" },
-  { id: "INS-8834", elpremar: "Maria Lopez", enterprise: "LyondellBasell", plant: "Houston Main Plant", asset: "Switchboard - SB2", country: "United States", activity: "Thermal Scan", due: day(5), slot: 9, priority: "Low", status: "pending" },
+  { id: "INS-8841", elpremar: "Suresh Kumar", enterprise: "Tata Steel Limited", plant: "Jamshedpur Works", asset: "LT Panel - Block A", country: "India", activity: "Thermal Scan", due: day(0), slot: 11, priority: "High", status: "in_progress" },
+  { id: "INS-8840", elpremar: "Amit Sharma", enterprise: "Reliance Industries Limited", plant: "Jamnagar Refinery", asset: "Transformer - T1", country: "India", activity: "Partial Discharge Testing", due: day(2), slot: 11, priority: "Critical", status: "pending" },
+  { id: "INS-8839", elpremar: "Ramesh Patil", enterprise: "Tata Steel Limited", plant: "Kalinganagar Works", asset: "MCC - Unit 2", country: "India", activity: "Visual Inspection", due: day(3), slot: 11, priority: "Medium", status: "pending" },
+  { id: "INS-8838", elpremar: "Anil Singh", enterprise: "UltraTech Cement Limited", plant: "Awarpur Cement Works", asset: "PCC - Main", country: "India", activity: "Preventive Assessment", due: day(-3), slot: 10, priority: "Low", status: "completed" },
+  { id: "INS-8837", elpremar: "Suresh Kumar", enterprise: "Reliance Industries Limited", plant: "Hazira Complex", asset: "HT Panel - Incomer 1", country: "India", activity: "Insulation Resistance Testing", due: day(3), slot: 10, priority: "Medium", status: "pending" },
+  { id: "INS-8836", elpremar: "Khalid Rahman", enterprise: "Reliance Industries Limited", plant: "Hazira Complex", asset: "APFC Panel - 1", country: "India", activity: "Preventive Assessment", due: day(2), slot: 9, priority: "High", status: "pending" },
+  { id: "INS-8835", elpremar: "Lukas Weber", enterprise: "Reliance Industries Limited", plant: "Jamnagar Refinery", asset: "Fire Alarm Panel - FA1", country: "India", activity: "Fire Prevention System Check", due: day(4), slot: 14, priority: "Medium", status: "pending" },
+  { id: "INS-8834", elpremar: "Maria Lopez", enterprise: "UltraTech Cement Limited", plant: "Reddipalayam Plant", asset: "Switchboard - SB2", country: "India", activity: "Thermal Scan", due: day(5), slot: 9, priority: "Low", status: "pending" },
 ]
 
 /**
@@ -333,14 +334,14 @@ const requesters = [
  * appear here by position, so no state on the filter selects nothing.
  */
 export const supportTickets: TicketRow[] = [
-  { id: "TK-4592", enterprise: "Tata Steel Limited", plant: "Jamshedpur Main Plant", country: "India", subject: "EVITA sync failing on tablet", category: "System", raised: day(-1), raisedBy: "Rajesh Iyer", source: "EVITA", lastUpdated: stamp(-1, 10), priority: "High", status: "open" },
-  { id: "TK-4591", enterprise: "JSW Group", plant: "Dolvi Substation", country: "India", subject: "Request ELPREMAR assignment", category: "Assignment", raised: day(-1), raisedBy: "Meena Krishnan", source: "OCC Console", lastUpdated: stamp(-1, 12), priority: "Medium", status: "open" },
-  { id: "TK-4590", enterprise: "Reliance Industries", plant: "Jamnagar Substation", country: "India", subject: "PD meter not pairing over Bluetooth", category: "Testing & Measurement", raised: day(-2), raisedBy: "Arun Prakash", source: "Testing & Measurements", lastUpdated: stamp(0, 9), elpremar: "Amit Sharma", scheduled: day(1), slot: 11, priority: "Critical", status: "in_progress", assetId: "AST-JMN-0142", inspectionId: "INS-8840" },
-  { id: "TK-4589", enterprise: "Adani Group", plant: "Mundra Warehouse", country: "India", subject: "Health report PDF not downloading", category: "Report", raised: day(-2), raisedBy: "Sneha Gupta", source: "Reports", lastUpdated: stamp(-1, 15), elpremar: "Anil Singh", scheduled: day(-2), slot: 10, priority: "Low", status: "completed", reportId: "RPT-MUN-2291", resolution: "Export service restarted; the report now downloads as PDF." },
-  { id: "TK-4588", enterprise: "NTPC", plant: "Kolkata Unit 2", country: "India", subject: "Add new sub-division to hierarchy", category: "System", raised: day(-3), raisedBy: "Imran Qureshi", source: "OCC Console", lastUpdated: stamp(-2, 11), elpremar: "Priya Nair", scheduled: day(-3), slot: 14, priority: "Medium", status: "completed", resolution: "Sub-division added under Electrical and access granted." },
-  { id: "TK-4587", enterprise: "Emirates Steel", plant: "Dubai Main Plant", country: "United Arab Emirates", subject: "EMMSE dashboard loading slowly", category: "Dashboard", raised: day(-3), raisedBy: "Fatima Al Nuaimi", source: "EMMSE", lastUpdated: stamp(-2, 16), elpremar: "Khalid Rahman", scheduled: day(-2), slot: 9, priority: "Medium", status: "completed", resolution: "Widget query tuned; dashboard now loads within 2s." },
-  { id: "TK-4586", enterprise: "Tata Steel Europe", plant: "IJmuiden Unit 2", country: "Netherlands", subject: "Asset QR code not scanning", category: "Asset", raised: day(-4), raisedBy: "Hans Richter", source: "Asset", lastUpdated: stamp(-4, 13), priority: "High", status: "open", assetId: "AST-IJM-0077" },
-  { id: "TK-4585", enterprise: "BHP Group", plant: "Sydney Utility Block", country: "Australia", subject: "User access request for plant head", category: "Access", raised: day(-4), raisedBy: "Grace Tan", source: "OCC Console", lastUpdated: stamp(-3, 10), elpremar: "Lukas Weber", scheduled: day(-4), slot: 15, priority: "Low", status: "completed", resolution: "Plant Head role granted and confirmed with the requester." },
+  { id: "TK-4592", enterprise: "Tata Steel Limited", plant: "Jamshedpur Works", country: "India", subject: "EVITA sync failing on tablet", category: "System", raised: day(-1), raisedBy: "Rajesh Iyer", source: "EVITA", lastUpdated: stamp(-1, 10), priority: "High", status: "open" },
+  { id: "TK-4591", enterprise: "Tata Steel Limited", plant: "Kalinganagar Works", country: "India", subject: "Request ELPREMAR assignment", category: "Assignment", raised: day(-1), raisedBy: "Meena Krishnan", source: "OCC Console", lastUpdated: stamp(-1, 12), priority: "Medium", status: "open" },
+  { id: "TK-4590", enterprise: "Reliance Industries Limited", plant: "Jamnagar Refinery", country: "India", subject: "PD meter not pairing over Bluetooth", category: "Testing & Measurement", raised: day(-2), raisedBy: "Arun Prakash", source: "Testing & Measurements", lastUpdated: stamp(0, 9), elpremar: "Amit Sharma", scheduled: day(1), slot: 11, priority: "Critical", status: "in_progress", assetId: "AST-JMN-0142", inspectionId: "INS-8840" },
+  { id: "TK-4589", enterprise: "UltraTech Cement Limited", plant: "Awarpur Cement Works", country: "India", subject: "Health report PDF not downloading", category: "Report", raised: day(-2), raisedBy: "Sneha Gupta", source: "Reports", lastUpdated: stamp(-1, 15), elpremar: "Anil Singh", scheduled: day(-2), slot: 10, priority: "Low", status: "completed", reportId: "RPT-MUN-2291", resolution: "Export service restarted; the report now downloads as PDF." },
+  { id: "TK-4588", enterprise: "UltraTech Cement Limited", plant: "Awarpur Cement Works", country: "India", subject: "Add new sub-division to hierarchy", category: "System", raised: day(-3), raisedBy: "Imran Qureshi", source: "OCC Console", lastUpdated: stamp(-2, 11), elpremar: "Priya Nair", scheduled: day(-3), slot: 14, priority: "Medium", status: "completed", resolution: "Sub-division added under Electrical and access granted." },
+  { id: "TK-4587", enterprise: "Reliance Industries Limited", plant: "Hazira Complex", country: "India", subject: "EMMSE dashboard loading slowly", category: "Dashboard", raised: day(-3), raisedBy: "Fatima Al Nuaimi", source: "EMMSE", lastUpdated: stamp(-2, 16), elpremar: "Khalid Rahman", scheduled: day(-2), slot: 9, priority: "Medium", status: "completed", resolution: "Widget query tuned; dashboard now loads within 2s." },
+  { id: "TK-4586", enterprise: "Tata Steel Limited", plant: "Kalinganagar Works", country: "India", subject: "Asset QR code not scanning", category: "Asset", raised: day(-4), raisedBy: "Hans Richter", source: "Asset", lastUpdated: stamp(-4, 13), priority: "High", status: "open", assetId: "AST-IJM-0077" },
+  { id: "TK-4585", enterprise: "UltraTech Cement Limited", plant: "Reddipalayam Plant", country: "India", subject: "User access request for plant head", category: "Access", raised: day(-4), raisedBy: "Grace Tan", source: "OCC Console", lastUpdated: stamp(-3, 10), elpremar: "Lukas Weber", scheduled: day(-4), slot: 15, priority: "Low", status: "completed", resolution: "Plant Head role granted and confirmed with the requester." },
 ]
 
 /**
@@ -461,28 +462,32 @@ export type EnterpriseRecord = {
   accountStatus: "active" | "inactive"
 }
 
-export const enterpriseRecords: EnterpriseRecord[] = [
-  { id: "TSL-ENT-001", name: "Tata Steel Limited", scale: "Large", sectorType: "Industry", sector: "Large Cap", country: "India", city: "Mumbai", plants: 12, assets: 6842, elpremars: 48, onboarded: "12-01-2024", status: "healthy", accountStatus: "active" },
-  { id: "RIL-ENT-002", name: "Reliance Industries", scale: "Large", sectorType: "Industry", sector: "Large Cap", country: "India", city: "Jamnagar", plants: 9, assets: 5921, elpremars: 41, onboarded: "03-03-2024", status: "attention", accountStatus: "active" },
-  { id: "JSW-ENT-003", name: "JSW Group", scale: "Large", sectorType: "Industry", sector: "Large Cap", country: "India", city: "Dolvi", plants: 11, assets: 4876, elpremars: 36, onboarded: "22-04-2024", status: "healthy", accountStatus: "active" },
-  { id: "ADN-ENT-004", name: "Adani Group", scale: "Large", sectorType: "Industry", sector: "Large Cap", country: "India", city: "Mundra", plants: 8, assets: 3994, elpremars: 29, onboarded: "17-06-2024", status: "critical", accountStatus: "active" },
-  { id: "NTP-ENT-005", name: "NTPC", scale: "Large", sectorType: "Industry", sector: "Government / PSU", country: "India", city: "Hyderabad", plants: 14, assets: 3118, elpremars: 33, onboarded: "09-08-2024", status: "healthy", accountStatus: "active" },
-  { id: "ABC-ENT-006", name: "ABC Industries Ltd.", scale: "Small", sectorType: "Industry", sector: "MSME", country: "India", city: "Hosur", plants: 3, assets: 962, elpremars: 8, onboarded: "27-05-2025", status: "onboarding", accountStatus: "active" },
-  { id: "EMR-ENT-007", name: "Emirates Steel", scale: "Small", sectorType: "Industry", sector: "Mid Cap", country: "United Arab Emirates", city: "Dubai", plants: 4, assets: 1488, elpremars: 12, onboarded: "14-11-2024", status: "attention", accountStatus: "active" },
-  { id: "SBC-ENT-008", name: "SABIC", scale: "Mid", sectorType: "Industry", sector: "Large Cap", country: "Saudi Arabia", city: "Riyadh", plants: 6, assets: 2104, elpremars: 18, onboarded: "02-12-2024", status: "healthy", accountStatus: "inactive" },
-  { id: "THY-ENT-009", name: "Thyssenkrupp AG", scale: "Mid", sectorType: "Industry", sector: "Large Cap", country: "Germany", city: "Frankfurt", plants: 5, assets: 1776, elpremars: 15, onboarded: "19-01-2025", status: "healthy", accountStatus: "active" },
-  { id: "SGX-ENT-010", name: "Singapore Grid Co.", scale: "Small", sectorType: "Retail", sector: "Commercial Offices", country: "Singapore", city: "Singapore", plants: 2, assets: 806, elpremars: 7, onboarded: "05-02-2025", status: "healthy", accountStatus: "active" },
-  { id: "HIN-ENT-011", name: "Hindalco Industries", scale: "Mid", sectorType: "Industry", sector: "Large Cap", country: "India", city: "Renukoot", plants: 7, assets: 2914, elpremars: 24, onboarded: "11-09-2024", status: "attention", accountStatus: "active" },
-  { id: "VED-ENT-012", name: "Vedanta Limited", scale: "Large", sectorType: "Industry", sector: "Large Cap", country: "India", city: "Jharsuguda", plants: 10, assets: 3640, elpremars: 31, onboarded: "28-10-2024", status: "healthy", accountStatus: "active" },
-  { id: "BPC-ENT-013", name: "Bharat Petroleum", scale: "Mid", sectorType: "Industry", sector: "Government / PSU", country: "India", city: "Kochi", plants: 6, assets: 2488, elpremars: 21, onboarded: "16-12-2024", status: "critical", accountStatus: "active" },
-  { id: "UTC-ENT-014", name: "UltraTech Cement", scale: "Mid", sectorType: "Industry", sector: "Mid Cap", country: "India", city: "Ahmedabad", plants: 9, assets: 2176, elpremars: 19, onboarded: "22-01-2025", status: "healthy", accountStatus: "active" },
-  { id: "DRL-ENT-015", name: "Dr. Reddy's Labs", scale: "Small", sectorType: "Industry", sector: "Mid Cap", country: "India", city: "Hyderabad", plants: 4, assets: 1352, elpremars: 14, onboarded: "07-03-2025", status: "attention", accountStatus: "active" },
-  { id: "TAT-ENT-016", name: "Tata Steel Europe", scale: "Mid", sectorType: "Industry", sector: "Large Cap", country: "Netherlands", city: "IJmuiden", plants: 5, assets: 2042, elpremars: 17, onboarded: "19-09-2024", status: "attention", accountStatus: "active" },
-  { id: "LYB-ENT-017", name: "LyondellBasell", scale: "Mid", sectorType: "Industry", sector: "Large Cap", country: "United States", city: "Houston", plants: 7, assets: 2760, elpremars: 23, onboarded: "04-11-2024", status: "healthy", accountStatus: "active" },
-  { id: "VAL-ENT-018", name: "Vale S.A.", scale: "Mid", sectorType: "Industry", sector: "Large Cap", country: "Brazil", city: "São Paulo", plants: 6, assets: 1988, elpremars: 16, onboarded: "13-02-2025", status: "critical", accountStatus: "inactive" },
-  { id: "ESK-ENT-019", name: "Eskom Holdings", scale: "Mid", sectorType: "Industry", sector: "Government / PSU", country: "South Africa", city: "Johannesburg", plants: 8, assets: 2314, elpremars: 20, onboarded: "26-03-2025", status: "healthy", accountStatus: "active" },
-  { id: "BHP-ENT-020", name: "BHP Group", scale: "Small", sectorType: "Industry", sector: "Large Cap", country: "Australia", city: "Sydney", plants: 3, assets: 1104, elpremars: 11, onboarded: "09-06-2025", status: "onboarding", accountStatus: "active" },
-]
+/**
+ * The enterprises EVITA works for.
+ *
+ * The three the backend is seeded with, and no others. This list used to carry
+ * OCC's twenty - a worldwide register with generated plants - and the tablet
+ * then offered postings at enterprises the API had never heard of, so every
+ * asset onboarded against one came back `404 Enterprise "..." not found`.
+ *
+ * Derived from data/organisations rather than typed again here, so the names
+ * cannot drift from the seed. The counts beside them are presentational.
+ */
+export const enterpriseRecords: EnterpriseRecord[] = seededEnterprises.map((e, i) => ({
+  id: e.id,
+  name: e.name,
+  scale: "Large",
+  sectorType: "Industry",
+  sector: "Large Cap",
+  country: e.country,
+  city: e.city,
+  plants: e.plants.length,
+  assets: [6842, 5921, 2176][i] ?? 1000,
+  elpremars: [48, 41, 19][i] ?? 10,
+  onboarded: ["12-01-2024", "03-03-2024", "22-01-2025"][i] ?? "01-01-2025",
+  status: (["healthy", "attention", "healthy"] as const)[i] ?? "healthy",
+  accountStatus: "active",
+}))
 
 export const enterpriseRegisterKpis = {
   total: enterpriseRecords.length,
@@ -666,36 +671,10 @@ const coordsFor: Record<string, [string, string]> = {
   Frankfurt: ["50.1109", "8.6821"], Singapore: ["1.3521", "103.8198"], IJmuiden: ["52.4607", "4.6103"],
   Houston: ["29.7604", "-95.3698"], Johannesburg: ["-26.2041", "28.0473"], Sydney: ["-33.8688", "151.2093"],
 }
-/** Cities a plant can sit in, per country. The HQ city is always used first. */
-const plantCitiesByCountry: Record<string, string[]> = {
-  India: ["Mumbai", "Jamshedpur", "Pune", "Chennai", "Hyderabad", "Kolkata", "Ahmedabad", "Nagpur", "Vijayanagar", "Vadodara"],
-  "United Arab Emirates": ["Dubai", "Abu Dhabi", "Sharjah", "Ras Al Khaimah"],
-  "Saudi Arabia": ["Riyadh", "Jubail", "Yanbu", "Dammam"],
-  Singapore: ["Singapore", "Jurong", "Tuas"],
-  Germany: ["Frankfurt", "Duisburg", "Hamburg", "Dortmund"],
-  Netherlands: ["IJmuiden", "Rotterdam", "Amsterdam"],
-  "United States": ["Houston", "Dallas", "Pittsburgh", "Cleveland"],
-  Brazil: ["Sao Paulo", "Rio de Janeiro", "Belo Horizonte"],
-  "South Africa": ["Johannesburg", "Durban", "Cape Town", "Pretoria"],
-  Australia: ["Sydney", "Melbourne", "Perth", "Brisbane"],
-}
 
-/** Cities for one enterprise: its HQ first, then the rest of that country's pool */
-const plantCitiesFor = (e: EnterpriseRecord) => {
-  const pool = plantCitiesByCountry[e.country] ?? [e.city]
-  return [e.city, ...pool.filter((c) => c !== e.city)]
-}
 
 const industryPlantTypes = ["Integrated Steel Plant", "Refinery", "Power Plant", "Cement Plant", "Manufacturing Unit"]
 const retailPlantTypes = ["Commercial Complex", "Shopping Centre", "Data Centre", "Facility Block"]
-const deptPool = ["Electrical", "Maintenance", "Operations", "Engineering", "Utilities", "Instrumentation & Control", "Safety"]
-const subDeptPool = [
-  { name: "HT Maintenance", code: "HT", function: "Maintenance", description: "High tension equipment maintenance" },
-  { name: "LT Maintenance", code: "LT", function: "Maintenance", description: "Low tension equipment maintenance" },
-  { name: "Panels & Switchgear", code: "PS", function: "Operations", description: "Panels, switchgear and control" },
-  { name: "Transformers", code: "TF", function: "Maintenance", description: "Transformer maintenance" },
-  { name: "Protection & Relay", code: "PR", function: "Testing", description: "Relay testing and calibration" },
-]
 const capacityValues = ["5", "12", "8", "3.5", "20", "450"]
 const capacityUnitPool = ["MTPA", "MW", "MVA", "MTPA", "MW", "kVA"]
 const timeZonesByCountry: Record<string, string> = {
@@ -720,21 +699,31 @@ export function profileFor(e: EnterpriseRecord): EnterpriseProfile {
   const short = e.id.slice(0, 3)
   const mail = (name: string) => name.toLowerCase().replace(/ /g, ".") + "@" + slug + ".com"
 
-  const cities = plantCitiesFor(e)
-  const plants: PlantProfile[] = Array.from({ length: Math.min(e.plants, 12) }, (_, i) => {
+  /*
+   * The plants and their department trees come from the seeded organisations,
+   * not from a hash of the enterprise id. The asset API resolves a plant, a
+   * department and a sub-department by name, so a generated "Mumbai Unit 2"
+   * was a name the server refused - see data/organisations.
+   *
+   * Everything round them is still generated: a head, a telephone number and a
+   * commissioning date are shown on screen and never sent anywhere, so there
+   * is nothing for them to disagree with.
+   */
+  const seeded = seededEnterpriseNamed(e.name)?.plants ?? []
+  const plants: PlantProfile[] = seeded.map((registered, i) => {
     const s = seed + i * 101
-    const city = cities[i % cities.length]
+    const city = registered.city
     const head = pick(elpremarPool, s, 4)
     const commissioned = new Date(2016 + (s % 9), s % 12, 1 + (s % 27))
 
-    const departments: DepartmentProfile[] = Array.from({ length: 2 + (s % 3) }, (_, j) => {
+    const departments: DepartmentProfile[] = registered.departments.map((owned, j) => {
       const ds = s + j * 37
-      const dName = deptPool[(ds + j) % deptPool.length]
+      const dName = owned.name
       const dHead = pick(elpremarPool, ds, 6)
       return {
         id: short + "-P" + (i + 1) + "-D" + (j + 1),
         name: dName,
-        code: "DEP-" + dName.slice(0, 2).toUpperCase() + "-" + (i + 1) + (j + 1),
+        code: owned.code,
         type: dName,
         parent: j === 0 ? "" : "Engineering",
         salutation: ds % 4 === 0 ? "Ms." : "Mr.",
@@ -743,9 +732,11 @@ export function profileFor(e: EnterpriseRecord): EnterpriseProfile {
         phoneCode: dialCodeFor(e.country),
         phone: String(8000000000 + (ds % 899999999)).slice(0, 10),
         description: dName + " systems and reliability activities for the " + city + " plant.",
-        subDepartments: subDeptPool.slice(0, 2 + (ds % 3)).map((sd) => ({
-          ...sd,
-          code: "SUB-" + short + "-" + sd.code + (i + 1) + (j + 1),
+        subDepartments: owned.subDepartments.map((sd) => ({
+          name: sd.name,
+          code: sd.code,
+          function: dName,
+          description: sd.name + " under " + dName,
         })),
       }
     })
@@ -753,13 +744,13 @@ export function profileFor(e: EnterpriseRecord): EnterpriseProfile {
     return {
       id: short + "-P" + (i + 1),
       city,
-      state: stateFor[city] ?? e.country,
+      state: registered.state,
       pin: postalCodeForCity(city) ?? String(110000 + (s % 789999)),
       latitude: (coordsFor[city] ?? ["0.0000", "0.0000"])[0],
       longitude: (coordsFor[city] ?? ["0.0000", "0.0000"])[1],
-      name: city + " " + pick(plantSuffixes, s, 2),
+      name: registered.name,
       type: pick(plantTypePool, s, 3),
-      code: short + "-" + city.slice(0, 3).toUpperCase() + "-" + String(i + 1).padStart(3, "0"),
+      code: registered.code,
       salutation: s % 5 === 0 ? "Dr." : s % 3 === 0 ? "Ms." : "Mr.",
       head,
       email: mail(head),

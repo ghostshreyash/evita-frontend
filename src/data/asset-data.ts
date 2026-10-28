@@ -153,7 +153,16 @@ export function siteFor(
   const enterprise = enterpriseRecords.find((e) => e.name === at.enterprise) ?? enterpriseRecords[0]
   const plants = profileFor(enterprise).plants
   const plant = plants.find((p) => p.name === at.plant) ?? plants[0]
-  return { enterprise: enterprise.name, plant, department: person.department || plant.departments[0].name }
+  /*
+   * The engineer's own department, but only where this plant has one of that
+   * name. Departments are the plant's own - "LT Maintenance" exists at
+   * Jamshedpur Works and nowhere else - so carrying their home posting across
+   * to another customer's site named a department that does not exist there,
+   * and the server refuses it.
+   */
+  const department =
+    plant.departments.find((d) => d.name === person.department)?.name ?? plant.departments[0].name
+  return { enterprise: enterprise.name, plant, department }
 }
 
 /* ---------- Profile ---------- */
