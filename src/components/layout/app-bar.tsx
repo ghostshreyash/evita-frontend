@@ -118,7 +118,7 @@ export function AppBar({ onMenu }: { onMenu: () => void }) {
         className="size-11 shrink-0 rounded-full text-foreground/70 hover:bg-muted max-sm:hidden"
         onClick={() => {
           // TODO: warn before signing out while records are still waiting to sync
-          signOut()
+          void signOut()
           navigate("/login?reason=signed-out", { replace: true })
         }}
       >

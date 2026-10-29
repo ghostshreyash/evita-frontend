@@ -116,7 +116,7 @@ export function MorePage() {
         className="mt-3 h-14 w-full justify-center border-critical/30 text-base text-critical"
         onClick={() => {
           // TODO: warn before signing out while records are still waiting to sync
-          signOut()
+          void signOut()
           navigate("/login?reason=signed-out", { replace: true })
         }}
       >

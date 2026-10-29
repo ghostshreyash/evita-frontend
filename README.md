@@ -2,7 +2,7 @@
 
 **EVITA**: the Tier I field app ELPREMAR engineers use on site for asset inspection, testing and measurements, and maintenance. It is one of the three OLIVINE frontends (EVITA, EMMS-E, OCC), all served by the same backend API.
 
-Built with React 19, Vite, TypeScript, Tailwind CSS v4 and shadcn/ui, on the same stack and colour tokens as [occ-frontend](https://github.com/ghostshreyash/occ-frontend). It runs on mock data until the API is connected; places to connect it are marked `TODO`.
+Built with React 19, Vite, TypeScript, Tailwind CSS v4 and shadcn/ui, on the same stack and colour tokens as [occ-frontend](https://github.com/ghostshreyash/occ-frontend). Sign-in is wired to Cognito and the EVITA API; everything else runs on mock data until the API is connected, and places to connect it are marked `TODO`.
 
 ## Getting started
 
@@ -84,9 +84,59 @@ These files are copied as-is and should be kept in step with occ-frontend until 
 - `src/data/master-data.ts`: shared vocabularies
 - `src/data/mock.ts`, `src/data/occ-tables.ts`, `src/data/elpremar-data.ts`: mock data, so EVITA shows the same tasks OCC assigned
 
-## Authentication
+## Authentication: only the credentials OCC created
 
-Everything under the app shell is behind `RequireAuth`. The OTP is **not** implemented in this repository: codes are issued and verified by AWS (Cognito, SNS, SES). Each placeholder in `src/lib/auth/auth-service.ts` is marked `TODO(aws)`. Sessions live in `sessionStorage`, or in `localStorage` when "Remember me" is ticked.
+**EVITA cannot create a login, and there is no sign-up screen.** An ELPREMAR's
+account is made by the control centre: OCC's onboarding writes the Cognito user
+(role code `ELPREMAR`) and the register's own record together. Signing in, and
+resetting a forgotten password, is all this app can do with the pool.
+
+Two things have to agree before a session exists:
+
+1. **Cognito** — the same user pool OCC provisions into. The password is step
+   one and does not create a session; the pool has e-mail OTP as its MFA factor,
+   so `confirmSignIn` with the code is step two. Cognito owns the code, the
+   attempt limit, the expiry and the lockout.
+2. **The EVITA API** — `POST /api/v1/auth/session` confirms the control centre
+   onboarded this person, and answers with their employee id, designation and
+   postings. A 403 means no ELPREMAR record, no ELPREMAR role, or a deactivated
+   one, and the Cognito tokens are cleared rather than left live.
+
+The second is the part that matters, and it is why the call is **not**
+best-effort the way the OCC console's `/auth/me` is. The Cognito role attribute
+is set at creation and would be just as true of an account that reached the pool
+some other way; only the database says who was onboarded. The backend enforces
+the same rule on every call — see `evita-backend`'s `requireElpremar`.
+
+| File | What it does |
+|---|---|
+| `src/lib/auth/cognito.ts` | Amplify configuration. Imported first from `main.tsx`, before any auth call |
+| `src/lib/auth/auth-service.ts` | The pool's challenges: sign-in, the code, the forced password change, reset |
+| `src/lib/auth/app-user.ts` | Cognito's attributes with the ELPREMAR record laid over them, and the gate |
+| `src/lib/api/client.ts` | Bearer token per request, one refresh-and-retry on 401, requests cancelled on sign-out |
+| `src/lib/auth/auth-context.tsx` | The session, re-checked on every boot |
+
+Three things worth knowing:
+
+- **The first sign-in always goes through `/login/new-password`.** OCC creates
+  the account with a temporary password Cognito e-mails over, which leaves it in
+  `FORCE_CHANGE_PASSWORD` — the password is accepted but no session is issued
+  until it is replaced.
+- **Sign-in is e-mail and password.** The work e-mail is the Cognito username
+  OCC gave the account; there is no `firstname.lastname` username.
+- **Boot distinguishes refused from unreachable.** An account OCC deactivated is
+  signed out at the next launch; an API that cannot be reached leaves the stored
+  session alone, because logging an engineer out in a plant basement over a
+  dropped request would be a fault rather than a safeguard. Every API call is
+  enforced server-side either way.
+
+Sessions live in `sessionStorage`, or in `localStorage` when "Remember me" is
+ticked — and Amplify's tokens follow the same choice, so a shared tablet does
+not leave a live session behind when the tab closes.
+
+Set `VITE_COGNITO_USER_POOL_ID` and `VITE_COGNITO_CLIENT_ID` to the same pool
+`occ-backend` uses; see `.env.example`. Unset, the app still boots and sign-in
+reports that it is not configured.
 
 ## Theming
 
@@ -95,6 +145,13 @@ All colours are CSS variables in `src/index.css`, exposed as Tailwind classes. U
 ## Before production
 
 - Replace the Pexels photograph behind the sign-in (`photoUrl` in `src/config/brand.ts`) with OLIVINE's own licensed image on its own CDN.
-- Connect `src/lib/auth/auth-service.ts` to AWS Cognito. Until then every credential is accepted.
+- Server-side session revocation. Signing out revokes the refresh token with
+  Cognito, so no new access token can be minted, but one already issued stays
+  valid until it expires. OCC's `tokens_revoked_at` column is the fix and is not
+  yet in every database the API runs against.
+- Confirm whether the pool has `phone_number` as an alias attribute. Password
+  reset defaults to the e-mail address, which is always the Cognito username;
+  the "Registered mobile" option on that screen only resolves if the alias is
+  enabled.
 - Add the service worker and offline outbox (`vite-plugin-pwa`, Dexie) before field use, as set out in the tech-stack document.
 - Warn before Logout while records are still waiting to sync (`TODO` in `src/components/layout/topbar.tsx`).

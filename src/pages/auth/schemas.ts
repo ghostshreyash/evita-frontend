@@ -2,9 +2,13 @@ import { z } from "zod"
 
 import { password, phone, required } from "@/lib/validation"
 
-/** EVITA sign in: the identifier is a username (firstname.lastname), not an e-mail. */
+/**
+ * EVITA sign in. The identifier is the engineer's work e-mail address: that is
+ * the username OCC gives the Cognito account when it onboards them, and there
+ * is no other way for an account to exist.
+ */
 export const portalLoginSchema = z.object({
-  identifier: required("This field"),
+  identifier: z.email("Enter the work e-mail address on your EVITA-AI account"),
   password: z.string().min(1, "Password is required"),
   remember: z.boolean(),
 })

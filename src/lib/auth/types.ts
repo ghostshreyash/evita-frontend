@@ -1,9 +1,9 @@
 /**
  * Authentication types for EVITA.
  *
- * These describe the data the screens render; the codes themselves are issued,
- * delivered and verified by AWS (Cognito + SNS/SES). Nothing here generates or
- * checks an OTP — see `auth-service.ts` for the integration points.
+ * These describe the data the screens render. The codes themselves are issued,
+ * delivered and verified by Cognito; nothing here generates or checks an OTP —
+ * see `auth-service.ts`, which answers the pool's challenges.
  */
 
 /** Where a one-time code is delivered. SMS is primary; e-mail is the fallback. */
@@ -13,10 +13,14 @@ export type OtpChannel = "sms" | "email" | "voice"
 export type OtpPurpose = "login" | "password-reset" | "contact-verification"
 
 export type AuthUser = {
+  /** The ELPREMAR employee id, e.g. "ELP-2009" — what the register knows them by */
   id: string
   name: string
   initials: string
+  /** Acting system role. Always ELPREMAR: nobody else gets past the API's guard. */
   role: string
+  /** Every system role code the API returned, for display where more than one matters */
+  roles?: string[]
   email: string
   mobile: string
 }
