@@ -18,9 +18,8 @@ import { RESET_STEPS, identifySchema, type IdentifyValues } from "./schemas"
  * Step 1 of password reset: find the account by registered e-mail or mobile.
  *
  * E-mail is the default because it is the Cognito username OCC gave the
- * account, so it always resolves. The mobile number only does where the pool
- * has `phone_number` as an alias attribute — worth confirming against the pool
- * before the field is offered as the first choice.
+ * account. The mobile number resolves too — the pool's username attributes are
+ * `email` and `phone_number` — so either option reaches the right account.
  */
 export function ForgotPasswordPage() {
   const navigate = useNavigate()

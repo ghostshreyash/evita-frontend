@@ -149,9 +149,9 @@ All colours are CSS variables in `src/index.css`, exposed as Tailwind classes. U
   Cognito, so no new access token can be minted, but one already issued stays
   valid until it expires. OCC's `tokens_revoked_at` column is the fix and is not
   yet in every database the API runs against.
-- Confirm whether the pool has `phone_number` as an alias attribute. Password
-  reset defaults to the e-mail address, which is always the Cognito username;
-  the "Registered mobile" option on that screen only resolves if the alias is
-  enabled.
+- Sign-in by mobile number. The pool's `UsernameAttributes` are `email` **and**
+  `phone_number`, so either resolves - password reset by mobile works, and the
+  login form could accept a number too. It currently requires an e-mail, which
+  is what OCC onboards with.
 - Add the service worker and offline outbox (`vite-plugin-pwa`, Dexie) before field use, as set out in the tech-stack document.
 - Warn before Logout while records are still waiting to sync (`TODO` in `src/components/layout/topbar.tsx`).
