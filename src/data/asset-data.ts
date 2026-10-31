@@ -75,9 +75,14 @@ export type AssetProfile = {
    * parameters this kind of asset carries.
    */
   parameters: { label: string; value: string; unit?: string }[]
-  /** Named by the engineer who captured them - there is no fixed set */
-  documents: { id: string; name: string; file: string; uploaded: string }[]
-  images: { id: string; name: string }[]
+  /**
+   * Named by the engineer who captured them - there is no fixed set.
+   *
+   * `url` is set for an upload the server holds; it is absent on a seeded asset,
+   * and on one captured in this session, whose file is still in the browser.
+   */
+  documents: { id: string; name: string; file: string; uploaded: string; url?: string }[]
+  images: { id: string; name: string; url?: string }[]
 }
 
 /* ---------- Seeded helpers ---------- */
@@ -148,7 +153,16 @@ export function siteFor(
   const enterprise = enterpriseRecords.find((e) => e.name === at.enterprise) ?? enterpriseRecords[0]
   const plants = profileFor(enterprise).plants
   const plant = plants.find((p) => p.name === at.plant) ?? plants[0]
-  return { enterprise: enterprise.name, plant, department: person.department || plant.departments[0].name }
+  /*
+   * The engineer's own department, but only where this plant has one of that
+   * name. Departments are the plant's own - "LT Maintenance" exists at
+   * Jamshedpur Works and nowhere else - so carrying their home posting across
+   * to another customer's site named a department that does not exist there,
+   * and the server refuses it.
+   */
+  const department =
+    plant.departments.find((d) => d.name === person.department)?.name ?? plant.departments[0].name
+  return { enterprise: enterprise.name, plant, department }
 }
 
 /* ---------- Profile ---------- */
@@ -230,34 +244,6 @@ function seededParameters(a: AssetRecord, s: number) {
 
 /* ---------- Asset ID ---------- */
 
-/**
- * The unique platform id for an asset: enterprise, plant, category and a running
- * number within that group — TSL-MUM-TRF-001. Built here rather than typed, so
- * two assets can never be handed the same one.
- *
- * It deliberately carries no voltage segment. The mockup's id does, but the
- * ratings are optional and entered on step 2, while the id is shown filled in on
- * step 1 — an id that changed once a voltage was typed would not be a prefilled
- * id. Every id now has the same shape whether or not the nameplate was readable.
- */
-export function buildAssetId(parts: {
-  enterprise: string
-  city: string
-  category: string
-  /** Assets already registered, so the running number continues from them */
-  existing?: readonly AssetRecord[]
-}) {
-  const enterprise = enterpriseRecords.find((e) => e.name === parts.enterprise)
-  const prefix = [
-    enterprise?.id.slice(0, 3) ?? parts.enterprise.slice(0, 3).toUpperCase(),
-    cityCode(parts.city),
-    assetCategoryCode(parts.category),
-  ].join("-")
-  const taken = (parts.existing ?? assetRegister).filter((a) => a.id.startsWith(prefix + "-"))
-  const highest = taken.reduce((n, a) => Math.max(n, Number(a.id.slice(prefix.length + 1)) || 0), 0)
-  return `${prefix}-${String(highest + 1).padStart(3, "0")}`
-}
-
 /* ---------- Register ---------- */
 
 /*
@@ -278,7 +264,8 @@ function buildRegister(elpremarId: string, posting?: { enterprise: string; plant
   const { enterprise, plant, department } = siteFor(elpremarId, posting)
   const departments = plant.departments
   const counters = new Map<string, number>()
-  // Same segment buildAssetId uses, so an asset onboarded now joins the same series
+  // The same segments the server builds a Digital Asset ID from, so a seeded
+  // asset and a registered one read alike
   const house = enterpriseRecords.find((e) => e.name === enterprise)?.id.slice(0, 3) ?? enterprise.slice(0, 3).toUpperCase()
 
   return Array.from({ length: REGISTER_SIZE }, (_, i) => {

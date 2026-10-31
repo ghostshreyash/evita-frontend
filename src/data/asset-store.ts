@@ -1,19 +1,20 @@
-import { useMemo, useSyncExternalStore } from "react"
+import { useEffect, useMemo, useSyncExternalStore } from "react"
 
+import type { AssetProfile, AssetRecord } from "@/data/asset-data"
 import {
-  assetProfileFor,
-  assetRegister,
-  buildAssetId,
-  type AssetProfile,
-  type AssetRecord,
-} from "@/data/asset-data"
-import { healthBandFor, type AssetCriticality } from "@/data/master-data"
-import { parametersFor, unitFor } from "@/data/asset-parameters"
+  createAsset as createAssetApi,
+  fetchAsset,
+  fetchAssets,
+  toProfile,
+  toRecord,
+  updateAssetApi,
+  type ServerAsset,
+} from "@/lib/api/assets"
 /*
  * These two stores reference each other: registering an asset raises its
  * inspection, and finishing an inspection scores the asset. The cycle is safe
  * because neither call happens while the modules are evaluating - both are
- * inside functions - and `npx esbuild … && node` on every data module is the
+ * inside functions - and `npx esbuild ... && node` on every data module is the
  * check that keeps it that way. See the verifying section of CLAUDE.md.
  */
 import { addInspectionForAsset } from "@/data/inspection-store"
@@ -22,140 +23,164 @@ import { useScope } from "@/lib/scope"
 
 /**
  * One copy of the asset register, shared by the list, the onboarding wizard and
- * the detail screen so an asset registered on this tablet shows up everywhere at
- * once. Stands in for the query cache until these rows come from the API.
+ * the detail screen so an asset registered on this tablet shows up everywhere
+ * at once.
  *
- * An asset onboarded here keeps the profile the engineer actually typed, rather
- * than the seeded one the register generates — `profiles` holds those, and the
- * photographs they uploaded sit beside them in `captures` for the session.
+ * The rows come from the EVITA backend. This is the cache in front of it: the
+ * register is fetched once and then kept in step as assets are registered and
+ * corrected, so a screen reads it synchronously the way it always has and only
+ * the screens that need to show progress ask for `status`.
+ *
+ * Profiles are kept beside the rows rather than inside them. The list only
+ * needs the row; the detail screen needs everything onboarding captured, and
+ * fetching that per asset keeps the list response small.
  */
 
-let rows: AssetRecord[] = assetRegister
-/** Profiles for assets onboarded in this session, keyed by asset id */
+type Status = "idle" | "loading" | "ready" | "error"
+
+let rows: AssetRecord[] = []
+let status: Status = "idle"
+let error: string | undefined
+/** Full profiles, by Digital Asset ID, for assets whose detail has been read */
 let profiles: Record<string, AssetProfile> = {}
-/** The files picked during onboarding, so the detail screen can show them back */
+/** The files picked during onboarding, so the detail screen can show them back
+ *  without waiting for the round trip to the server they were just sent to */
 let captures: Record<string, { images: Record<string, File | undefined>; documents: Record<string, File | undefined> }> = {}
 
+/** A new object each time, so `useSyncExternalStore` sees the change */
+type Snapshot = { rows: AssetRecord[]; status: Status; error?: string }
+let snapshot: Snapshot = { rows, status, error }
+
 const listeners = new Set<() => void>()
-const emit = () => listeners.forEach((listener) => listener())
+const emit = () => {
+  snapshot = { rows, status, error }
+  listeners.forEach((listener) => listener())
+}
 const subscribe = (listener: () => void) => {
   listeners.add(listener)
   return () => void listeners.delete(listener)
 }
 
+const getSnapshot = () => snapshot
+
+/** Remember one asset's full record, from whichever call returned it */
+const remember = (asset: ServerAsset) => {
+  const record = toRecord(asset)
+  profiles = { ...profiles, [record.id]: toProfile(asset) }
+  rows = [record, ...rows.filter((r) => r.id !== record.id)]
+  return record
+}
+
 /**
-  * The register for the enterprise the engineer is working in.
-  *
-  * `rows` holds every posting's assets so an onboarding can join any of them;
-  * the screens only ever see one enterprise at a time - see lib/scope.
-  */
+ * Load the register, once.
+ *
+ * Guarded rather than reference-counted: every screen that shows assets calls
+ * `useAssets()`, and the first one through does the fetch.
+ */
+export async function loadAssets(force = false) {
+  if (!force && (status === "loading" || status === "ready")) return
+  status = "loading"
+  error = undefined
+  emit()
+
+  try {
+    const { rows: loaded } = await fetchAssets()
+    rows = loaded
+    status = "ready"
+  } catch (cause) {
+    error = cause instanceof Error ? cause.message : "Could not load the asset register"
+    status = "error"
+  }
+  emit()
+}
+
+/**
+ * The register, with how it is getting on.
+ *
+ * Screens that render a list use this; the ones that only read a row already
+ * loaded can keep using `useAssetRows`.
+ */
+export function useAssets() {
+  const state = useSyncExternalStore(subscribe, getSnapshot)
+  useEffect(() => {
+    void loadAssets()
+  }, [])
+  return state
+}
+
+/**
+ * The register for the enterprise the engineer is working in.
+ *
+ * The server sends every posting's assets so an onboarding can join any of
+ * them; the screens only ever see one enterprise at a time - see lib/scope.
+ *
+ * TODO(api): send the chosen enterprise on the call so the server scopes the
+ * register, rather than the tablet filtering what it was given.
+ */
 export function useAssetRows() {
-  const all = useSyncExternalStore(subscribe, () => rows)
+  const { rows: all } = useAssets()
   const { enterprise } = useScope()
   return useMemo(() => all.filter((a) => a.enterprise === enterprise), [all, enterprise])
 }
 
-
 export const findAsset = (id?: string) => (id ? rows.find((r) => r.id === id) : undefined)
 
 /**
- * The profile behind one asset: what was typed if it was onboarded here, and the
- * seeded reconstruction otherwise. Both shapes are identical, so the detail
- * screen never needs to know which it got.
+ * The profile behind one asset: everything onboarding captured.
+ *
+ * Undefined until the asset's detail has been read, which `useAssetProfile`
+ * does. The list never needs it.
  */
-export const profileOf = (asset: AssetRecord) => profiles[asset.id] ?? assetProfileFor(asset)
+export const profileOf = (asset: AssetRecord): AssetProfile | undefined => profiles[asset.id]
 
-/** The photographs and documents uploaded for one asset, if it was onboarded here */
+/** The photographs and documents uploaded for one asset in this session */
 export const capturesOf = (id: string) => captures[id]
 
-/** `dd-MM-yyyy` for today — the stamp an onboarding records */
-function today() {
-  const d = new Date()
-  const p = (n: number) => String(n).padStart(2, "0")
-  return `${p(d.getDate())}-${p(d.getMonth() + 1)}-${d.getFullYear()}`
-}
-
 /**
- * Everything the wizard collected, in the shape the detail screens read.
+ * One asset in full, fetched on demand.
  *
- * Built before the asset exists so the review step can render exactly what the
- * detail screen will, and reused by `onboardAsset` so the two can never drift.
- *
- * The specification is resolved against the asset type's own parameter list, so
- * only the parameters that type actually asks for are stored, each with the
- * label and unit the sheet gives it.
+ * The register row arrives with the list, but the specification, the
+ * photographs and the documents do not - so the detail screen asks for them.
  */
-export function profileFrom(values: AssetFormValues, dates: { onboarded: string }): AssetProfile {
-  const answers = values.parameters ?? {}
-  return {
-    details: {
-      enterprise: values.enterprise,
-      plant: values.plant,
-      area: values.area,
-      department: values.department ?? "",
-      subDepartment: values.subDepartment ?? "",
-      category: values.category,
-      tag: values.tag,
-      description: values.description ?? "",
-      latitude: values.latitude ?? "",
-      longitude: values.longitude ?? "",
-      environment: values.environment,
-    },
-    parameters: parametersFor(values.category)
-      .filter((spec) => answers[spec.key]?.trim())
-      .map((spec) => ({ label: spec.label, value: answers[spec.key].trim(), unit: unitFor(spec, answers) })),
-    documents: (values.documents ?? []).map((d) => ({
-      id: d.id,
-      name: d.name,
-      file: d.file?.name ?? d.name,
-      uploaded: dates.onboarded,
-    })),
-    images: (values.images ?? []).map((i) => ({ id: i.id, name: i.name })),
-  }
+export function useAssetProfile(id?: string) {
+  const state = useAssets()
+  const profile = id ? profiles[id] : undefined
+
+  useEffect(() => {
+    if (!id || profiles[id]) return
+    let cancelled = false
+    void fetchAsset(id)
+      .then((asset) => {
+        if (cancelled) return
+        remember(asset)
+        emit()
+      })
+      .catch(() => {
+        // The row may simply not exist; the screen already handles that
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [id])
+
+  return { profile, status: state.status, error: state.error }
 }
 
 /**
  * Register a new asset from what the wizard collected.
  *
- * The Asset ID is built here rather than typed — enterprise, plant, voltage
- * class and category, with a running number inside that group — so two assets
- * can never be handed the same one. Returns the finished record, which is what
- * the Asset ID & QR screen is built from.
+ * The Digital Asset ID is issued by the server, not built here - it has to be
+ * unique across every tablet working the site, which only the server can
+ * guarantee. The finished record is what the Asset ID & QR screen is built from.
  */
-export function onboardAsset(
+export async function onboardAsset(
   values: AssetFormValues,
-  site: { city: string },
   /** Who registered it, so the inspection it owes is raised in their name */
   by: string
-): { record: AssetRecord; inspection: string } {
-  const id = buildAssetId({
-    enterprise: values.enterprise,
-    city: site.city,
-    category: values.category,
-    existing: rows,
-  })
-  const onboarded = today()
-
-  const record: AssetRecord = {
-    id,
-    tag: values.tag,
-    name: values.description?.trim() || values.tag,
-    category: values.category,
-    area: values.area,
-    plant: values.plant,
-    enterprise: values.enterprise,
-    department: values.department ?? "",
-    // Criticality is the one parameter every asset type carries
-    criticality: (values.parameters?.criticality ?? "Medium") as AssetCriticality,
-    onboarded,
-    // Never inspected, so there is no score to show yet - not a placeholder one
-    health: null,
-  }
-
-  profiles = { ...profiles, [id]: profileFrom(values, { onboarded }) }
-
-  captures = { ...captures, [id]: capturesFrom(values) }
-  rows = [record, ...rows]
+): Promise<{ record: AssetRecord; inspection: string }> {
+  const asset = await createAssetApi(values)
+  const record = remember(asset)
+  captures = { ...captures, [record.id]: capturesFrom(values) }
   emit()
 
   /*
@@ -171,7 +196,7 @@ export function onboardAsset(
   return { record, inspection }
 }
 
-/** The picked files, keyed by upload, for the detail screen to show back */
+/** The picked files, keyed by upload, for the detail screen to show back at once */
 const capturesFrom = (values: AssetFormValues) => ({
   images: Object.fromEntries((values.images ?? []).map((i) => [i.id, i.file])),
   documents: Object.fromEntries((values.documents ?? []).map((d) => [d.id, d.file])),
@@ -181,78 +206,49 @@ const capturesFrom = (values: AssetFormValues) => ({
  * What the wizard would have collected for an asset already on the register,
  * so it can be reopened and corrected.
  *
- * The specification is stored by label rather than by key - that is the shape
- * the detail screens read - so it is resolved back against the type's own
- * parameter list here. A parameter the type no longer asks for simply drops.
+ * The specification is stored by label - that is the shape the detail screens
+ * read - so it is resolved back against the type's parameter list by the caller,
+ * which is the only place that knows what the type asks for.
  */
-export function valuesFrom(asset: AssetRecord): AssetFormValues {
-  const profile = profileOf(asset)
-  const held = captures[asset.id]
+export function valuesFrom(profile: AssetProfile, keyFor: (label: string) => string | undefined): AssetFormValues {
   const parameters: Record<string, string> = {}
-  for (const spec of parametersFor(profile.details.category)) {
-    const answer = profile.parameters.find((p) => p.label === spec.label)
-    if (answer) parameters[spec.key] = answer.value
+  for (const answer of profile.parameters) {
+    const key = keyFor(answer.label)
+    if (key) parameters[key] = answer.value
   }
   return {
     ...profile.details,
     parameters,
-    images: profile.images.map((i) => ({ id: i.id, name: i.name, file: held?.images[i.id] })),
-    documents: profile.documents.map((d) => ({ id: d.id, name: d.name, file: held?.documents[d.id] })),
+    images: profile.images.map((i) => ({ id: i.id, name: i.name })),
+    documents: profile.documents.map((d) => ({ id: d.id, name: d.name })),
   }
 }
 
 /**
  * Correct an asset already on the register.
  *
- * The Asset ID is not reissued. It encodes the enterprise, the site and the
- * type, but it is also printed on the label stuck to the panel door and quoted
- * by every inspection taken against the asset - so it is issued once and then
- * belongs to the asset, whatever is corrected about it afterwards. The
- * onboarding date stays for the same reason: it records when the asset joined
- * the register, not when its record was last touched.
+ * The Digital Asset ID is not reissued. It encodes the enterprise, the site and
+ * the type, but it is also printed on the label stuck to the panel door and
+ * quoted by every inspection taken against the asset - so it is issued once and
+ * then belongs to the asset, whatever is corrected about it afterwards.
  */
-export function updateAsset(id: string, values: AssetFormValues): AssetRecord | undefined {
-  const existing = rows.find((r) => r.id === id)
-  if (!existing) return undefined
-
-  const record: AssetRecord = {
-    ...existing,
-    tag: values.tag,
-    name: values.description?.trim() || values.tag,
-    category: values.category,
-    area: values.area,
-    plant: values.plant,
-    enterprise: values.enterprise,
-    department: values.department ?? "",
-    criticality: (values.parameters?.criticality ?? existing.criticality) as AssetCriticality,
-  }
-
-  profiles = { ...profiles, [id]: profileFrom(values, { onboarded: existing.onboarded }) }
-  captures = { ...captures, [id]: capturesFrom(values) }
-  rows = rows.map((r) => (r.id === id ? record : r))
-  emit()
-  return record
-}
-
 /**
  * The health an inspection left on an asset.
  *
  * The score belongs to the asset, not to the record that produced it: the
  * register, the reports and every card that reads a band are all asking the
- * asset, and until this was written they went on saying "not inspected yet"
- * about a panel that had just been inspected.
+ * asset. Local to the cache until the inspection is filed with the server,
+ * which sends the asset back carrying its own score.
  */
 export function setAssetHealth(id: string, health: number) {
   rows = rows.map((r) => (r.id === id ? { ...r, health } : r))
   emit()
 }
 
-/** Counts for the tiles above the register, recomputed as assets are added */
-export const kpisFor = (list: readonly AssetRecord[]) => ({
-  total: list.length,
-  // Only scored assets land in a band; the unscored ones are the pending-sync tally
-  healthy: list.filter((a) => a.health !== null && healthBandFor(a.health).tone === "healthy").length,
-  attention: list.filter((a) => a.health !== null && healthBandFor(a.health).tone === "attention").length,
-  critical: list.filter((a) => a.health !== null && healthBandFor(a.health).tone === "critical").length,
-  categories: new Set(list.map((a) => a.category)).size,
-})
+export async function updateAsset(id: string, values: AssetFormValues): Promise<AssetRecord> {
+  const asset = await updateAssetApi(id, values, profiles[id])
+  const record = remember(asset)
+  captures = { ...captures, [id]: capturesFrom(values) }
+  emit()
+  return record
+}

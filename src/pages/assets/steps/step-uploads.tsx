@@ -10,7 +10,7 @@ import { DetailList, DetailPanel } from "@/components/common/detail-list"
 import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
-import { parametersFor, unitFor } from "@/data/asset-parameters"
+import { unitFor, type ServerParamSpec } from "@/lib/api/use-category-parameters"
 import { suggestedDocumentNames, suggestedImageNames } from "@/data/master-data"
 import { urlFor } from "@/lib/object-url"
 import { type AssetFormValues, type AssetUpload } from "@/pages/assets/schemas"
@@ -39,7 +39,14 @@ type Pending = { kind: "image" | "document"; files: File[] }
  * A photograph comes from the tablet's camera or from a file already on it, so
  * tapping to add one asks which - see `AddSlot`.
  */
-export function StepUploads({ form }: { form: UseFormReturn<AssetFormValues> }) {
+export function StepUploads({
+  form,
+  specs,
+}: {
+  form: UseFormReturn<AssetFormValues>
+  /** What step 2 asked for, so the label preview can list the ratings */
+  specs: ServerParamSpec[]
+}) {
   const values = form.watch()
   const images = values.images ?? []
   const documents = values.documents ?? []
@@ -160,7 +167,7 @@ export function StepUploads({ form }: { form: UseFormReturn<AssetFormValues> }) 
               { label: "Enterprise", value: values.enterprise },
               /* Which ratings an asset carries depends on its type, so the
                  preview lists whatever step 2 asked for */
-              ...parametersFor(values.category).map((spec) => ({
+              ...specs.map((spec) => ({
                 label: spec.label,
                 value: values.parameters?.[spec.key]
                   ? [values.parameters[spec.key], unitFor(spec, values.parameters)].filter(Boolean).join(" ")

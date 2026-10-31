@@ -1,4 +1,3 @@
-import { useMemo } from "react"
 import { Link, useNavigate, useParams } from "react-router"
 import { ArrowLeft, CalendarDays, Pencil, Building2, CircleDashed, ClipboardCheck, FileText, Images, QrCode, Settings, TriangleAlert } from "lucide-react"
 import { cn } from "cn"
@@ -8,11 +7,12 @@ import { AssetPhoto } from "@/components/common/asset-photo"
 import { DetailList, DetailPanel } from "@/components/common/detail-list"
 import { assetDetailRows, assetTechnicalRows } from "@/components/assets/asset-sections"
 import { AssetQrPanel, QrLabelPreview } from "@/components/assets/asset-qr"
+import { AssetsLoading, AssetsUnreachable } from "@/components/assets/asset-states"
 import { StartInspection } from "@/components/assets/start-inspection"
 import { Button } from "@/components/ui/button"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import type { AssetRecord } from "@/data/asset-data"
-import { capturesOf, findAsset, profileOf, useAssetRows } from "@/data/asset-store"
+import type { AssetProfile, AssetRecord } from "@/data/asset-data"
+import { capturesOf, findAsset, useAssetProfile, useAssets } from "@/data/asset-store"
 import { healthBandFor } from "@/data/master-data"
 import { healthStatus } from "@/lib/status"
 import { td, th } from "@/lib/data-table"
@@ -34,16 +34,31 @@ export function AssetDetailPage() {
   const { id } = useParams()
   const navigate = useNavigate()
   // Subscribing keeps this screen live for an asset registered in this session
-  useAssetRows()
+  const register = useAssets()
+  /* The row arrives with the register; everything onboarding captured is read
+     on demand, which is what fills the panels below */
+  const { profile } = useAssetProfile(id)
   const asset = findAsset(id)
 
-  if (!asset) return <NotFound id={id} />
+  if (!asset || !profile) {
+    if (register.status === "error") return <Shell id={id}><AssetsUnreachable message={register.error} backTo="/assets" /></Shell>
+    // Still arriving: the register, or this asset's own detail behind it
+    if (register.status !== "ready" || asset) return <Shell id={id}><AssetsLoading /></Shell>
+    return <NotFound id={id} />
+  }
 
-  return <AssetDetail asset={asset} onBack={() => navigate("/assets")} />
+  return <AssetDetail asset={asset} profile={profile} onBack={() => navigate("/assets")} />
 }
 
-function AssetDetail({ asset, onBack }: { asset: AssetRecord; onBack: () => void }) {
-  const profile = useMemo(() => profileOf(asset), [asset])
+function AssetDetail({
+  asset,
+  profile,
+  onBack,
+}: {
+  asset: AssetRecord
+  profile: AssetProfile
+  onBack: () => void
+}) {
   const captures = capturesOf(asset.id)
   // No inspection has happened yet on an asset still waiting to sync, so there
   // is no score to show - better an absent panel than an invented number
@@ -140,7 +155,12 @@ function AssetDetail({ asset, onBack }: { asset: AssetRecord; onBack: () => void
               {profile.images.map((image) => (
                 <figure key={image.id}>
                   <div className="h-36 overflow-hidden rounded-lg ring-1 ring-foreground/10">
-                    <AssetPhoto file={captures?.images[image.id]} label={image.name} caption={image.name} />
+                    <AssetPhoto
+                      file={captures?.images[image.id]}
+                      src={image.url}
+                      label={image.name}
+                      caption={image.name}
+                    />
                   </div>
                   <figcaption className="mt-1 line-clamp-2 text-center text-xs leading-tight">{image.name}</figcaption>
                 </figure>
@@ -184,6 +204,16 @@ function AssetDetail({ asset, onBack }: { asset: AssetRecord; onBack: () => void
           )}
         </DetailPanel>
       </div>
+    </div>
+  )
+}
+
+/** The page frame the loading and unreachable states sit in */
+function Shell({ id, children }: { id?: string; children: React.ReactNode }) {
+  return (
+    <div>
+      <PageHeader title="Asset" breadcrumbs={[{ label: "Assets", to: "/assets" }, { label: id ?? "Unknown" }]} />
+      {children}
     </div>
   )
 }

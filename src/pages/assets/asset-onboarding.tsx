@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 import { useNavigate, useParams, useSearchParams } from "react-router"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
@@ -8,13 +8,14 @@ import { toast } from "sonner"
 import { PageHeader } from "@/components/common/page-header"
 import { StepperBar } from "@/components/common/wizard"
 import { Button } from "@/components/ui/button"
-import { siteFor } from "@/data/asset-data"
-import { onboardAsset, updateAsset, useAssetRows, valuesFrom } from "@/data/asset-store"
-import type { AssetRecord } from "@/data/asset-data"
+import { onboardAsset, updateAsset, useAssetProfile, useAssets, valuesFrom } from "@/data/asset-store"
+import { siteFor, type AssetRecord } from "@/data/asset-data"
 import { useCurrentElpremar } from "@/lib/me"
 import { useScope } from "@/lib/scope"
 import { assetSchema, missingUploads, stepFields, type AssetFormValues } from "@/pages/assets/schemas"
-import { missingParameters } from "@/data/asset-parameters"
+import { keyForLabel, missingParameters, useCategoryParameters } from "@/lib/api/use-category-parameters"
+import { ApiError } from "@/lib/api/client"
+import { AssetsLoading } from "@/components/assets/asset-states"
 import { StepDetails } from "@/pages/assets/steps/step-details"
 import { StepTechnical } from "@/pages/assets/steps/step-technical"
 import { StepUploads } from "@/pages/assets/steps/step-uploads"
@@ -49,8 +50,9 @@ export function AssetOnboardingPage() {
    *
    * The posting the engineer has *chosen*, not the one their own record names:
    * an ELPREMAR carries work for several enterprises, and an asset onboarded
-   * while working for one of them belongs to that one. Reading it off `me` put
-   * every asset at their home plant, whichever customer they were standing in.
+   * while working for one of them belongs to that one. It is not picked here -
+   * the enterprise is chosen once on the home screen and everything follows it,
+   * so step 1 shows the posting rather than asking for it again.
    */
   const { enterprise, plant } = useScope()
   const site = useMemo(() => siteFor(me.id, { enterprise, plant }), [me, enterprise, plant])
@@ -66,9 +68,12 @@ export function AssetOnboardingPage() {
 
   /* Correcting an asset rather than registering one, if the route names one */
   const { id: editing } = useParams()
-  const register = useAssetRows()
-  const asset = useMemo(() => (editing ? register.find((a) => a.id === editing) : undefined), [register, editing])
-  const held = useMemo(() => (asset ? valuesFrom(asset) : undefined), [asset])
+  const register = useAssets()
+  const asset = useMemo(
+    () => (editing ? register.rows.find((a) => a.id === editing) : undefined),
+    [register.rows, editing],
+  )
+  const { profile: heldProfile } = useAssetProfile(editing)
 
   const [current, setCurrent] = useState(0)
   /*
@@ -86,8 +91,8 @@ export function AssetOnboardingPage() {
   const form = useForm<AssetFormValues>({
     resolver: zodResolver(assetSchema),
     mode: "onTouched",
-    defaultValues: held ?? {
-      // The engineer's own posting, which is the only site EVITA registers assets at
+    defaultValues: {
+      // The posting the engineer is working in, shown rather than asked for
       enterprise: site.enterprise,
       plant: site.plant.name,
       department: site.department,
@@ -96,18 +101,41 @@ export function AssetOnboardingPage() {
       category: "",
       tag: "",
       description: "",
-      /* Filled in per asset type on step 2 - see data/asset-parameters.ts */
+      /* Filled in per asset type on step 2, from the server's copy of the sheet */
       parameters: {},
       environment: "",
-
       // Pre-filled from the plant's own registered location, and editable on site
       latitude: site.plant.latitude,
       longitude: site.plant.longitude,
-
       images: [],
       documents: [],
     },
   })
+
+  /*
+   * What this asset type is asked for. Read from the server, which holds the
+   * client's onboarding sheet and validates the answers against it - so the
+   * form can never offer a parameter the submission would be refused for.
+   */
+  const category = form.watch("category")
+  const { specs, status: specsStatus } = useCategoryParameters(category)
+
+  /*
+   * Reading an asset back in to correct it, in two passes: its category first,
+   * so the type's parameters are fetched, then the answers once those have
+   * arrived - they are stored by label and only the specification says which
+   * key each one belongs to.
+   */
+  useEffect(() => {
+    if (!heldProfile) return
+    if (form.getValues("category") !== heldProfile.details.category) {
+      form.setValue("category", heldProfile.details.category)
+      return
+    }
+    if (specsStatus !== "ready") return
+    form.reset(valuesFrom(heldProfile, (label) => keyForLabel(specs, label)))
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [heldProfile, specs, specsStatus])
 
   const goTo = (step: number) => {
     setCurrent(step)
@@ -123,7 +151,7 @@ export function AssetOnboardingPage() {
     }
     if (current === 1) {
       const values = form.getValues()
-      const owed = missingParameters(values.category, values.parameters ?? {})
+      const owed = missingParameters(specs, values.parameters ?? {})
       if (owed.length) {
         toast.error(`Still needed: ${owed.map((p) => p.label).join(", ")}.`)
         return
@@ -143,28 +171,39 @@ export function AssetOnboardingPage() {
     goTo(current + 1)
   }
 
-  const submit = form.handleSubmit((values) => {
+  const submit = form.handleSubmit(async (values) => {
     setPending(true)
-    if (asset) {
-      const record = updateAsset(asset.id, values)
+    try {
+      if (asset) {
+        const record = await updateAsset(asset.id, values)
+        toast.success(`${record.id} corrected.`)
+        navigate(`/assets/${record.id}`)
+        return
+      }
+      const { record, inspection } = await onboardAsset(values, me.name)
+      /* The asset owes an inspection, and it is already on the book - see onboardAsset */
+      toast.success(`${record.id} registered`, {
+        description: `${inspection} raised against it, ready to start.`,
+      })
+      /* Back to the visit it was registered on, where it can now be inspected */
+      if (fromVisit) {
+        navigate(`/visits/${fromVisit}`)
+        return
+      }
+      setCreated(record)
+      window.scrollTo({ top: 0, behavior: "smooth" })
+    } catch (cause) {
+      /*
+       * The server validates the whole submission again - a tag already in use
+       * at this plant, a rating the asset type will not accept - and says which
+       * fields it refused. Nothing was saved, so the wizard stays where it is
+       * with everything the engineer typed still in it.
+       */
+      const message = cause instanceof ApiError ? cause.readable : "Could not reach the server."
+      toast.error(message)
+    } finally {
       setPending(false)
-      toast.success(`${asset.id} corrected. It will reach the server at the next sync.`)
-      navigate(`/assets/${record?.id ?? asset.id}`)
-      return
     }
-    const { record, inspection } = onboardAsset(values, { city: site.plant.city }, me.name)
-    setPending(false)
-    /* The asset owes an inspection, and it is already on the book - see onboardAsset */
-    toast.success(`${record.id} registered`, {
-      description: `${inspection} raised against it, ready to start.`,
-    })
-    /* Back to the visit it was registered on, where it can now be inspected */
-    if (fromVisit) {
-      navigate(`/visits/${fromVisit}`)
-      return
-    }
-    setCreated(record)
-    window.scrollTo({ top: 0, behavior: "smooth" })
   })
 
   // Once the asset exists, the wizard is finished and its result takes the page
@@ -202,9 +241,11 @@ export function AssetOnboardingPage() {
       <StepperBar steps={steps} current={current} furthest={asset ? steps.length - 1 : furthest} onSelect={goTo} />
 
       {current === 0 ? <StepDetails form={form} site={site} /> : null}
-      {current === 1 ? <StepTechnical form={form} /> : null}
-      {current === 2 ? <StepUploads form={form} /> : null}
-      {current === 3 ? <StepReview form={form} onEdit={goTo} /> : null}
+      {current === 1 ? (
+        specsStatus === "ready" ? <StepTechnical form={form} specs={specs} /> : <AssetsLoading label="Reading what this asset type is asked for…" />
+      ) : null}
+      {current === 2 ? <StepUploads form={form} specs={specs} /> : null}
+      {current === 3 ? <StepReview form={form} specs={specs} onEdit={goTo} /> : null}
 
       {/* ---------- Footer, shared by every step ---------- */}
       <div className="mt-4 flex flex-wrap items-center justify-end gap-2">

@@ -61,7 +61,7 @@ export function InspectionReports({ job, detail }: { job: Job; detail: Inspectio
    */
   const rated = useMemo(() => {
     const asset = register.find((a) => a.plant === job.plant && a.category === category)
-    return asset ? profileOf(asset).parameters : []
+    return (asset && profileOf(asset)?.parameters) || []
   }, [register, job.plant, category])
 
   const reports = useMemo(() => {

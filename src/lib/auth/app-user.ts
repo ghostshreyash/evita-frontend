@@ -126,7 +126,7 @@ function merge(cognito: Awaited<ReturnType<typeof cognitoProfile>>, record: Elpr
 export async function openSession(): Promise<AuthUser> {
   const [cognito, record] = await Promise.all([
     cognitoProfile(),
-    fetchElpremar("/api/v1/auth/session", "POST"),
+    fetchElpremar("/auth/session", "POST"),
   ])
   return merge(cognito, record)
 }
@@ -139,7 +139,7 @@ export async function openSession(): Promise<AuthUser> {
  * next launch instead of carrying on with a profile that was true yesterday.
  */
 export async function resolveAppUser(): Promise<AuthUser> {
-  const [cognito, record] = await Promise.all([cognitoProfile(), fetchElpremar("/api/v1/auth/me", "GET")])
+  const [cognito, record] = await Promise.all([cognitoProfile(), fetchElpremar("/auth/me", "GET")])
   return merge(cognito, record)
 }
 

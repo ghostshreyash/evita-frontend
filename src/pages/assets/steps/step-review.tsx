@@ -8,7 +8,8 @@ import { assetDetailRows, assetTechnicalRows } from "@/components/assets/asset-s
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { profileFrom } from "@/data/asset-store"
+import { profileFrom, today } from "@/lib/asset-profile"
+import type { ServerParamSpec } from "@/lib/api/use-category-parameters"
 import { td, th } from "@/lib/data-table"
 import type { AssetFormValues } from "@/pages/assets/schemas"
 
@@ -16,14 +17,18 @@ import type { AssetFormValues } from "@/pages/assets/schemas"
  * Step 4 of 4: everything the engineer entered, grouped the way the detail
  * screen will show it, with each block linking back to the step that filled it.
  *
- * The panels are built from the same `profileFrom` the asset is registered with,
- * so what is reviewed here is literally what gets stored.
+ * The panels are built from the same shape the detail screen reads, resolved
+ * against the asset type's own parameters, so what is reviewed here is what
+ * gets stored.
  */
 export function StepReview({
   form,
+  specs,
   onEdit,
 }: {
   form: UseFormReturn<AssetFormValues>
+  /** What this asset type was asked for, as the server's copy of the sheet gives it */
+  specs: ServerParamSpec[]
   /** Jump back to a step to change an answer */
   onEdit: (step: number) => void
 }) {
@@ -32,7 +37,7 @@ export function StepReview({
   const documents = values.documents ?? []
 
   // form.watch() hands back a fresh object each render, so there is nothing to memoise
-  const profile = profileFrom(values, { onboarded: "" })
+  const profile = profileFrom(values, specs, today())
 
   return (
     <div>

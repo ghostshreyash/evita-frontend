@@ -117,7 +117,9 @@ function postingFor(e: EnterpriseRecord, s: number) {
   const plants = profileFor(e).plants
   const plant = plants[s % plants.length]
   const department = plant.departments[s % plant.departments.length]
-  const subDepartment = department.subDepartments[s % department.subDepartments.length]
+  /* Not every department has sub-departments - Instrumentation & Control has none */
+  const subs = department.subDepartments
+  const subDepartment = subs.length ? subs[s % subs.length] : undefined
   return { plant, department, subDepartment }
 }
 
@@ -266,7 +268,7 @@ export function elpremarProfileFor(e: ElpremarRecord): ElpremarProfile {
       city: e.city,
       country: e.country,
       department: e.department,
-      subDepartment: assigned ? assigned.subDepartment.name : "",
+      subDepartment: assigned?.subDepartment?.name ?? "",
       // The real reporting line: the head of the department they sit in
       supervisor: assigned ? `${assigned.department.salutation} ${assigned.department.head}` : "",
       effectiveFrom: dateOffset(-(30 + (s % 400))),
