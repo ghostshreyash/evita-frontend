@@ -48,8 +48,8 @@ export const brand = {
   login: {
     heading: "Welcome Back",
     description: "Login to access your assigned activities",
-    identifierLabel: "Username",
-    identifierPlaceholder: "Enter your username",
+    identifierLabel: "Work e-mail",
+    identifierPlaceholder: "name@company.com",
     submitLabel: "Login",
     notice: {
       title: "This device is for authorized ELPREMAR personnel only.",

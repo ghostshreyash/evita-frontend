@@ -1,7 +1,7 @@
 import { useState } from "react"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
-import { Link, useNavigate } from "react-router"
+import { Link, useLocation, useNavigate } from "react-router"
 import { ArrowLeft, KeyRound, Mail, Smartphone, TriangleAlert } from "lucide-react"
 import { cn } from "cn"
 
@@ -14,15 +14,25 @@ import { requestPasswordReset } from "@/lib/auth/auth-service"
 import { AuthError } from "@/lib/auth/types"
 import { RESET_STEPS, identifySchema, type IdentifyValues } from "./schemas"
 
-/** Step 1 of password reset: find the account by registered mobile or e-mail. */
+/**
+ * Step 1 of password reset: find the account by registered e-mail or mobile.
+ *
+ * E-mail is the default because it is the Cognito username OCC gave the
+ * account. The mobile number resolves too — the pool's username attributes are
+ * `email` and `phone_number` — so either option reaches the right account.
+ */
 export function ForgotPasswordPage() {
   const navigate = useNavigate()
+  const location = useLocation()
   const { setChallenge } = useAuth()
   const [error, setError] = useState<string | null>(null)
 
+  // Carried from the login screen when Cognito says the password must be reset
+  const identifier = (location.state as { identifier?: string } | null)?.identifier ?? ""
+
   const form = useForm<IdentifyValues>({
     resolver: zodResolver(identifySchema),
-    defaultValues: { method: "mobile", identifier: "" },
+    defaultValues: { method: "email", identifier },
   })
   const method = form.watch("method")
 

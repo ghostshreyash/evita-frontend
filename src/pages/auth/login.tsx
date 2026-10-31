@@ -2,7 +2,7 @@ import { useState } from "react"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { Link, useNavigate, useSearchParams } from "react-router"
-import { ArrowRight, Info, Lock, ShieldAlert, TriangleAlert, UserRound } from "lucide-react"
+import { ArrowRight, Info, Lock, Mail, ShieldAlert, TriangleAlert } from "lucide-react"
 
 import { Checkbox } from "@/components/ui/checkbox"
 import { Label } from "@/components/ui/label"
@@ -23,7 +23,7 @@ const reasons: Record<string, string> = {
   reset: "Password updated. Sign in with your new password.",
 }
 
-/** Where "Remember me" keeps the last username, so a personal tablet opens with it filled in */
+/** Where "Remember me" keeps the last e-mail, so a personal tablet opens with it filled in */
 const LAST_USERNAME = "evita.last-username"
 
 function rememberedUsername() {
@@ -35,8 +35,11 @@ function rememberedUsername() {
 }
 
 /**
- * Sign in — step 1 of 2. The ELPREMAR signs in with their username; the
- * one-time code that follows is the same flow the OCC console uses.
+ * Sign in — step 1 of 2.
+ *
+ * The ELPREMAR signs in with the work e-mail OCC onboarded them with; the
+ * one-time code that follows is the same Cognito flow the OCC console uses.
+ * There is no way to create an account from here — only the control centre can.
  */
 export function LoginPage() {
   const navigate = useNavigate()
@@ -70,6 +73,23 @@ export function LoginPage() {
       }
       navigate("/login/verify", { state: { remember: values.remember } })
     } catch (e) {
+      /*
+       * Two of Cognito's answers are a next screen rather than a message, and
+       * the first is on the path of every engineer's very first sign-in: OCC
+       * creates the account on a temporary password. Showing either as an error
+       * would leave them stuck on this screen.
+       */
+      const code = e instanceof AuthError ? e.code : ""
+
+      if (code === "NewPasswordRequired") {
+        navigate("/login/new-password", { state: { remember: values.remember, next } })
+        return
+      }
+      if (code === "PasswordResetRequired") {
+        navigate("/forgot-password", { state: { identifier: values.identifier } })
+        return
+      }
+
       setError(e instanceof AuthError ? e.message : "Sign in failed. Please try again.")
     }
   }
@@ -92,12 +112,13 @@ export function LoginPage() {
               name="identifier"
               label={login.identifierLabel}
               required
+              type="email"
               autoComplete="username"
               autoCapitalize="none"
               autoCorrect="off"
               spellCheck={false}
               placeholder={login.identifierPlaceholder}
-              startIcon={<UserRound />}
+              startIcon={<Mail />}
               clearable
               inputClassName="h-12 text-base"
             />
