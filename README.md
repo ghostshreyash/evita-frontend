@@ -2,7 +2,43 @@
 
 **EVITA**: the Tier I field app ELPREMAR engineers use on site for asset inspection, testing and measurements, and maintenance. It is one of the three OLIVINE frontends (EVITA, EMMS-E, OCC), all served by the same backend API.
 
-Built with React 19, Vite, TypeScript, Tailwind CSS v4 and shadcn/ui, on the same stack and colour tokens as [occ-frontend](https://github.com/ghostshreyash/occ-frontend). Sign-in is wired to Cognito and the EVITA API; everything else runs on mock data until the API is connected, and places to connect it are marked `TODO`.
+Built with React 19, Vite, TypeScript, Tailwind CSS v4 and shadcn/ui, on the same stack and colour tokens as [occ-frontend](https://github.com/ghostshreyash/occ-frontend).
+
+> ## You are on the `demo` branch
+>
+> **This branch has no backend.** It is `main` with the network seam replaced by
+> mock data, so the whole app can be shown on a laptop with nothing else
+> running: `npm ci && npm run dev` and that is all. No Postgres, no
+> `evita-backend`, no Cognito pool, no `.env`.
+>
+> `main` is the branch to work on. **Nothing here is ever merged towards it** -
+> changes go the other way, `main` into `demo`.
+>
+> What differs from `main`, and nothing else does:
+>
+> | File | On `main` | Here |
+> |---|---|---|
+> | `src/lib/api/assets.ts` | Calls the EVITA API | **Is** the server: answers out of `src/data`, issues Digital Asset IDs, holds what the wizard registers for the life of the tab |
+> | `src/lib/api/client.ts` | `fetch` with a bearer token | `ApiError` and the sign-out block only |
+> | `src/lib/auth/auth-service.ts` | Cognito via `aws-amplify/auth` | The same two-step flow, mocked: any password, any six-digit code |
+> | `src/lib/auth/app-user.ts` | Cognito attributes + `GET /auth/me` | The ELPREMAR roster in `src/data/elpremar-data.ts` |
+> | `src/lib/auth/cognito.ts` | Amplify configuration | Deleted - no pool to configure |
+> | `src/lib/auth/auth-context.tsx` | Also manages Amplify's token storage | Stores the session only |
+> | `src/data/asset-data.ts` | - | `buildAssetId` restored, for the mock server to issue with |
+> | `vite.config.ts` | Proxies `/api` to the backend | No proxy; there is nothing to forward |
+> | `package.json` | Depends on `aws-amplify` | Does not |
+>
+> **Signing in:** any password, and any six-digit code. The e-mail decides whose
+> day you see - `firstname.lastname` or the full address works, e.g.
+> `suresh.kumar` or `amit.sharma`. An address that matches nobody signs in as
+> the first engineer on the roster.
+>
+> Everything in the app is mock data, as it is on `main` outside the asset
+> register and sign-in: it is deterministic and seeded, so a reload never moves
+> a value, but an asset onboarded or an inspection filed lives only until the
+> tab is closed.
+
+Outside this branch, sign-in is wired to Cognito and the EVITA API; everything else runs on mock data until the API is connected, and places to connect it are marked `TODO`.
 
 ## Getting started
 

@@ -2,8 +2,6 @@ import { StrictMode } from "react"
 import { createRoot } from "react-dom/client"
 import { RouterProvider } from "react-router"
 import "./index.css"
-// Must run before the first aws-amplify/auth call, so it is imported first
-import "@/lib/auth/cognito"
 import { router } from "./router"
 import { TooltipProvider } from "@/components/ui/tooltip"
 import { Toaster } from "@/components/ui/sonner"

@@ -1,10 +1,9 @@
 import { useCallback, useEffect, useMemo, useState } from "react"
 
-import { endSignOut, setSessionExpiredHandler } from "@/lib/api/client"
+import { endSignOut } from "@/lib/api/client"
 
 import { AuthContext, type AuthContextValue } from "./context"
 import { currentUser, signOutCognito } from "./auth-service"
-import { setTokenStorage } from "./cognito"
 import type { AuthSession, AuthUser, OtpChallenge, ResetContext } from "./types"
 
 const STORAGE_KEY = "evita.session"
@@ -46,27 +45,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [resetContext, setResetContext] = useState<ResetContext | null>(null)
 
   /*
-   * The stored session is a convenience for the first paint — the tokens behind
-   * it are Amplify's and can expire or be revoked without this knowing, and the
-   * ELPREMAR record behind those can be deactivated in OCC. On boot, ask
-   * Cognito and the API who this is, and drop anything they no longer recognise.
+   * On `main` the stored session is only a convenience for the first paint: the
+   * tokens behind it are Amplify's and can expire or be revoked, and the
+   * ELPREMAR record behind those can be deactivated in OCC, so boot re-asks
+   * both and drops anything they no longer recognise.
+   *
+   * On this branch there is nothing to re-ask. `currentUser` therefore answers
+   * `unconfirmed` after a reload, which means "keep what was stored" — the
+   * stored session is the only record of who signed in. The effect stays so the
+   * shape matches `main` and so a session opened in this tab is still refreshed
+   * from the one place that knows it.
    */
   useEffect(() => {
     let cancelled = false
 
-    /*
-     * Amplify's token provider goes back to localStorage on every page load, so
-     * a session that asked for sessionStorage has to say so again before the
-     * first `fetchAuthSession` below. Skipping this hides those tokens from
-     * boot and, worse, points a later sign-out at the wrong store — which would
-     * leave a live session behind after the engineer had logged out.
-     */
-    const stored = readStoredSession()
-    if (stored) setTokenStorage(stored.remember)
-
     void currentUser().then((boot) => {
       if (cancelled) return
-      // The API could not be asked: leave the stored session exactly as it is
+      // Nothing could be confirmed: leave the stored session exactly as it is
       if (boot.status === "unconfirmed") return
 
       setSession((current) => {
@@ -74,7 +69,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           if (current) writeStoredSession(null)
           return null
         }
-        // Refresh the profile from Cognito and the API rather than trusting what was stored
         const next: AuthSession = { ...(current ?? { issuedAt: Date.now(), remember: true }), user: boot.user }
         writeStoredSession(next)
         return next
@@ -100,8 +94,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
      * password change — complete through this one call.
      */
     endSignOut()
-    // Decides whether Amplify's tokens outlive the tab, so it must be set first
-    setTokenStorage(remember)
     const next: AuthSession = { user, issuedAt: Date.now(), remember }
     writeStoredSession(next)
     setSession(next)
@@ -117,16 +109,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
      */
     clearLocalSession()
     await signOutCognito()
-  }, [clearLocalSession])
-
-  /*
-   * The API client reports a session Cognito can no longer refresh. Clear the
-   * local state only — Amplify has already decided the tokens are finished.
-   * The route guard sends them to sign-in as soon as the session goes null.
-   */
-  useEffect(() => {
-    setSessionExpiredHandler(clearLocalSession)
-    return () => setSessionExpiredHandler(null)
   }, [clearLocalSession])
 
   const value = useMemo<AuthContextValue>(

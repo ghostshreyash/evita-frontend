@@ -1,49 +1,34 @@
 /**
- * Auth for EVITA, over Cognito via `aws-amplify/auth`.
+ * Auth for EVITA on the demo branch: no Cognito, no API, no pool.
  *
  * ┌──────────────────────────────────────────────────────────────────────────┐
- * │ EVITA cannot create a login. An ELPREMAR's account is made by OCC's      │
- * │ onboarding, which writes the Cognito user and the register's record      │
- * │ together. There is no sign-up here and no `registerUser` — signing in,   │
- * │ and resetting a forgotten password, is everything this file does.        │
+ * │ Any password signs in, and any six-digit code is accepted. This branch   │
+ * │ exists to show the app without a backend standing behind it, so the      │
+ * │ sign-in is a walk-through of the real screens rather than a check of     │
+ * │ anything. Nothing here is a security control and none of it should ever  │
+ * │ be merged towards `main`.                                                │
  * └──────────────────────────────────────────────────────────────────────────┘
  *
- * The pool is configured with e-mail OTP as the MFA factor, so signing in is two
- * calls: `signIn` with the password returns a challenge, `confirmSignIn` with
- * the code completes it. Cognito owns the code, the attempt limit, the expiry
- * and the lockout — nothing here validates anything.
+ * The flow itself is the real one, and that is the point: two steps, a code
+ * screen with a live countdown, Resend on a cooldown, "try another way", the
+ * forgotten-password path and the helpdesk recovery form. Every screen is
+ * reachable and every error the screens know how to render can still be raised
+ * - what is missing is a Cognito pool deciding which.
  *
- * Cognito proving the password is only half of it. The other half is the EVITA
- * API confirming the control centre onboarded this person: see `app-user.ts`.
- * A Cognito account that is not an ELPREMAR is signed straight back out here
- * rather than being left holding live tokens.
- *
- * One thing to know about Amplify: the challenge is NOT a token you can pass
- * around. Amplify holds the in-flight auth state internally, so `verifyOtp`
- * ignores `challenge.id` and simply answers whatever challenge is open. A page
- * refresh mid-flow therefore drops it and the user starts again — which is what
- * `auth-context` already says it wants.
+ * EVITA still cannot create a login. An ELPREMAR's account is made by OCC's
+ * onboarding, and there is no sign-up here any more than there is on `main` -
+ * which on this branch means the roster in `data/elpremar-data.ts` is the
+ * directory. See `app-user.ts` for who an identifier resolves to.
  */
-import {
-  confirmResetPassword,
-  confirmSignIn,
-  fetchAuthSession,
-  resetPassword as cognitoResetPassword,
-  signIn as cognitoSignIn,
-  signOut as cognitoSignOut,
-  updateMFAPreference,
-} from "aws-amplify/auth"
-
 import { beginSignOut } from "@/lib/api/client"
 
-import { hasCognitoSession, openSession, resolveAppUser } from "./app-user"
-import { cognitoConfigured } from "./cognito"
+import { accountFor, lookupAccount } from "./app-user"
 import { type RecoveryRequestInput } from "./requests"
 import { AuthError, type AuthUser, type OtpChallenge, type OtpChannel, type OtpPurpose, type ResetContext } from "./types"
 
-/** Digits in a code — keep in step with the Cognito verification message. */
+/** Digits in a code. The screens size the input from this. */
 export const OTP_LENGTH = 6
-/** Client-side hint only; Cognito does not return the code's TTL. */
+/** How long a code stays valid - the countdown on the code screen */
 export const OTP_TTL_SECONDS = 5 * 60
 /** How long the Resend button stays disabled after a send. */
 export const RESEND_COOLDOWN_SECONDS = 30
@@ -55,8 +40,6 @@ export const CHANNEL_LABEL: Record<OtpChannel, string> = {
 }
 
 /* ------------------------------------------------------------- display ---- */
-/* Cognito returns destinations already masked, but it masks the domain as well.
-   These cover the values the screens have to mask themselves. */
 
 /** "+919876543210" → "+91 ••••• ••210" */
 export function maskPhone(mobile: string) {
@@ -71,33 +54,24 @@ export function maskEmail(email: string) {
   return `${local.slice(0, 2)}${"•".repeat(Math.max(local.length - 2, 2))}@${domain}`
 }
 
-/**
- * What the code screen shows as the address the code went to.
- *
- * Cognito masks `codeDeliveryDetails.destination` itself, but it masks the
- * domain too ("o***@y***"), which leaves someone with more than one address
- * unable to tell which was used. The address is already known here, so mask it
- * locally and keep the domain readable; Cognito's string is only the fallback
- * for the paths with no username to hand.
- */
-function emailSentTo(destination?: string, username?: string) {
-  if (username?.includes("@")) return maskEmail(username)
-  return destination ?? "your e-mail"
-}
+/** The masked destination a channel delivers to for this account */
+const destinationFor = (user: AuthUser, channel: OtpChannel) =>
+  channel === "email" ? maskEmail(user.email) : maskPhone(user.mobile)
 
 /* ----------------------------------------------------------- in flight --- */
 
 /**
- * What the current sign-in attempt needs that Amplify does not hand back.
+ * The account the open challenge belongs to.
  *
- * `password` is held only so Resend can re-issue a code: Amplify has no
- * "resend MFA code" call, and the only way to make Cognito send another is to
- * start the sign-in again. It lives in a module variable for the life of the
- * challenge, never in storage, and is cleared the moment the flow ends.
+ * Cognito carries this in its own session; here it is held between step 1 and
+ * step 2 so the code screen masks the right destinations and the session ends
+ * up as the right engineer. In memory only, so a refresh mid-flow sends them
+ * back to the password step - which is what `auth-context` already says it
+ * wants.
  */
-let flow: { username: string; password: string } | null = null
+let flow: AuthUser | null = null
 
-/** Forget the in-flight credentials — call on success, failure and sign-out */
+/** Forget the in-flight sign-in - call on success, failure and sign-out */
 export function clearAuthFlow() {
   flow = null
 }
@@ -105,488 +79,211 @@ export function clearAuthFlow() {
 /** True while a sign-in is waiting for a forced password change */
 export const hasPendingSignIn = () => flow !== null
 
-/** The username a password reset is running for, needed by confirmResetPassword */
-let resetFor: string | null = null
+/** Who this tab signed in as, for `currentUser` on a soft navigation */
+let signedIn: AuthUser | null = null
+
+/** The account a password reset is running for */
+let resetFor: AuthUser | null = null
 
 /**
  * Masked destinations for the account a challenge belongs to.
  *
- * Empty before a session exists, which is every sign-in: the tablet does not
- * know the engineer's number until the API has answered. The code screen's
- * "try another way" picker is gated on `challenge.availableChannels` anyway, and
- * the pool offers e-mail only.
+ * Called with no argument from the code screen, which does not know whose
+ * challenge it is holding - the in-flight account answers for it. Empty before
+ * a sign-in has started, which is the only time there is nobody to mask.
  */
 export function otpDestinations(user?: AuthUser): Partial<Record<OtpChannel, string>> {
-  if (!user) return {}
-  return { email: maskEmail(user.email), sms: maskPhone(user.mobile), voice: maskPhone(user.mobile) }
+  const who = user ?? flow
+  if (!who) return {}
+  return { email: maskEmail(who.email), sms: maskPhone(who.mobile), voice: maskPhone(who.mobile) }
 }
 
-const pause = (ms = 500) => new Promise((resolve) => setTimeout(resolve, ms))
+/** Long enough that the screens' pending states are visible, short enough not to annoy */
+const pause = (ms = 400) => new Promise((resolve) => setTimeout(resolve, ms))
+
+/**
+ * Challenge references, counted rather than random.
+ *
+ * Mock values in this codebase are deterministic so nothing moves between
+ * reloads - see the mock data rules in CLAUDE.md. A reference is not data a
+ * screen reads, but a counter costs nothing and keeps the rule unbroken.
+ */
+let references = 0
+const reference = (prefix: string) => `${prefix}-${String(++references).padStart(4, "0")}`
 
 /**
  * Build the challenge the screens render.
  *
- * `expiresAt` is a client-side countdown only — Cognito does not return the
- * code's TTL, so this is the pool's configured expiry mirrored in
- * `OTP_TTL_SECONDS`. Keep the two in step or the countdown lies.
+ * Both channels are offered under "try another way": the pool on `main` is
+ * e-mail-only, but the picker is a screen worth being able to walk through, and
+ * `switchOtpChannel` below honours the choice. Voice is not offered - nothing
+ * delivers it on `main` either.
  */
-function challengeFrom(
-  purpose: OtpPurpose,
-  sentTo: string,
-  next?: string,
-  channel: OtpChannel = "email"
-): OtpChallenge {
+function challengeFrom(purpose: OtpPurpose, sentTo: string, channel: OtpChannel, next?: string): OtpChallenge {
   const now = Date.now()
   return {
-    id: `cognito-${purpose}`,
+    id: reference(`chl-${purpose}`),
     purpose,
     channel,
     sentTo,
     expiresAt: now + OTP_TTL_SECONDS * 1000,
     resendAvailableAt: now + RESEND_COOLDOWN_SECONDS * 1000,
-    availableChannels: [channel],
+    availableChannels: ["email", "sms"],
     next,
   }
-}
-
-/** A missing pool is a deployment mistake, not a credentials problem — say so */
-function requireCognito() {
-  if (!cognitoConfigured)
-    throw new AuthError(
-      "Sign-in is not configured for this tablet. Set VITE_COGNITO_USER_POOL_ID and VITE_COGNITO_CLIENT_ID.",
-      "NotConfigured"
-    )
-}
-
-/** Turn whatever Amplify threw into the typed error the screens already expect */
-function asAuthError(e: unknown, fallback: string): AuthError {
-  const err = e as { name?: string; message?: string }
-  return new AuthError(err?.message || fallback, err?.name || "unknown")
-}
-
-/**
- * Answer Cognito's "which factor?" step.
- *
- * A pool with both e-mail and SMS MFA enabled asks the user to choose after a
- * correct password. EVITA is built around the e-mail code, so it answers on the
- * engineer's behalf rather than adding a screen nobody needs.
- */
-async function chooseEmailFactor(purpose: OtpPurpose, next?: string): Promise<OtpChallenge> {
-  const { nextStep } = await confirmSignIn({ challengeResponse: "EMAIL" })
-
-  if (nextStep?.signInStep !== "CONFIRM_SIGN_IN_WITH_EMAIL_CODE")
-    throw new AuthError(
-      `Expected an e-mail code after choosing the factor, got ${nextStep?.signInStep}.`,
-      nextStep?.signInStep ?? "unknown"
-    )
-
-  const sentTo = emailSentTo(nextStep.codeDeliveryDetails?.destination, flow?.username)
-  return challengeFrom(purpose, sentTo, next)
 }
 
 /* ------------------------------------------------------- login & the OTP -- */
 
 /**
- * Step 1 of login. A correct password does not create a session — Cognito
- * answers with the e-mail OTP challenge that step 2 confirms.
+ * Step 1 of login. A password does not create a session - it returns the
+ * one-time code challenge that step 2 confirms.
  *
- * The identifier is the engineer's work e-mail: that is the username OCC gave
- * the Cognito account when it onboarded them.
+ * The identifier is the engineer's work e-mail, which is the username OCC gives
+ * the account when it onboards them. Any password is accepted here; what the
+ * identifier decides is *whose* day the tablet then shows.
  */
 export async function signIn(email: string, password: string, next?: string): Promise<OtpChallenge> {
-  requireCognito()
-  const username = email.trim().toLowerCase()
-  try {
-    const { nextStep } = await cognitoSignIn({ username, password })
-
-    switch (nextStep.signInStep) {
-      case "CONFIRM_SIGN_IN_WITH_EMAIL_CODE": {
-        flow = { username, password }
-        return challengeFrom("login", emailSentTo(nextStep.codeDeliveryDetails?.destination, username), next)
-      }
-
-      /* Both e-mail and SMS MFA on the pool, so Cognito asks which to use */
-      case "CONTINUE_SIGN_IN_WITH_MFA_SELECTION":
-        flow = { username, password }
-        return chooseEmailFactor("login", next)
-
-      /*
-       * Cognito did not ask: this account already has SMS as its preferred
-       * factor, so the text has been sent. There is no way to move an open
-       * challenge to e-mail, so accept the code rather than dead-end the login —
-       * `preferEmailMfa` then makes e-mail preferred for next time.
-       */
-      case "CONFIRM_SIGN_IN_WITH_SMS_CODE": {
-        flow = { username, password }
-        const sentTo = nextStep.codeDeliveryDetails?.destination ?? maskPhone(username)
-        return challengeFrom("login", sentTo, next, "sms")
-      }
-
-      /*
-       * The normal first sign-in for an ELPREMAR. OCC creates the account with
-       * AdminCreateUser, which leaves it in FORCE_CHANGE_PASSWORD on the
-       * temporary password Cognito e-mailed, and no session is issued until it
-       * is replaced. The login screen turns this code into the new-password
-       * screen rather than showing it as an error.
-       */
-      case "CONFIRM_SIGN_IN_WITH_NEW_PASSWORD_REQUIRED":
-        flow = { username, password }
-        throw new AuthError(
-          "This account is still on its temporary password. Set your own to continue.",
-          "NewPasswordRequired"
-        )
-
-      case "RESET_PASSWORD":
-        throw new AuthError("This password must be reset before you can sign in.", "PasswordResetRequired")
-
-      /*
-       * Cognito accepted the password without asking for a code, so MFA is not
-       * being enforced for this account. EVITA's login is two-step by design, so
-       * rather than letting someone in through a half-flow, end the session and
-       * say why. Set MFA to required on the pool and this stops being reachable.
-       */
-      case "DONE":
-        await cognitoSignOut()
-        throw new AuthError(
-          "This account signed in without a verification code. Enable e-mail MFA for it before using EVITA.",
-          "MfaNotEnforced"
-        )
-
-      default:
-        throw new AuthError(
-          `Unsupported sign-in step: ${nextStep.signInStep}. Check the pool's MFA configuration.`,
-          nextStep.signInStep
-        )
-    }
-  } catch (e) {
-    if (e instanceof AuthError) throw e
-    clearAuthFlow()
-    throw asAuthError(e, "Could not sign in.")
-  }
+  await pause()
+  if (!password) throw new AuthError("Enter your password.", "NotAuthorizedException")
+  flow = accountFor(email)
+  return challengeFrom("login", destinationFor(flow, "email"), "email", next)
 }
 
-/**
- * Re-issue the code.
- *
- * Amplify has no resend for an MFA challenge, so this restarts the sign-in,
- * which makes Cognito send a fresh one. That is why the password is held for
- * the life of the challenge.
- */
+/** Re-issue the code. Same account, same channel, a fresh countdown. */
 export async function resendOtp(challenge: OtpChallenge): Promise<OtpChallenge> {
   if (!flow) throw new AuthError("That sign-in has expired. Please start again.", "FlowExpired")
-  try {
-    const { nextStep } = await cognitoSignIn({ username: flow.username, password: flow.password })
-    const sentTo =
-      nextStep.signInStep === "CONFIRM_SIGN_IN_WITH_EMAIL_CODE"
-        ? (nextStep.codeDeliveryDetails?.destination ?? challenge.sentTo)
-        : challenge.sentTo
-    return challengeFrom(challenge.purpose, sentTo, challenge.next, challenge.channel)
-  } catch (e) {
-    throw asAuthError(e, "Could not send another code.")
-  }
+  await pause()
+  return challengeFrom(challenge.purpose, destinationFor(flow, challenge.channel), challenge.channel, challenge.next)
 }
 
-/**
- * Deliver the code by the other factor.
- *
- * Cognito's factor choice happens once per sign-in, so there is no way to move
- * an open challenge across. Like Resend, this restarts the sign-in with the held
- * credentials and answers the selection with the other factor instead.
- */
+/** Deliver the code the other way. Voice is not configured, here or on `main`. */
 export async function switchOtpChannel(challenge: OtpChallenge, channel: OtpChannel): Promise<OtpChallenge> {
   if (!flow) throw new AuthError("That sign-in has expired. Please start again.", "FlowExpired")
   if (channel === "voice") throw new AuthError("Voice delivery is not configured.", "ChannelUnavailable")
-
-  try {
-    const { nextStep } = await cognitoSignIn({ username: flow.username, password: flow.password })
-
-    if (nextStep.signInStep !== "CONTINUE_SIGN_IN_WITH_MFA_SELECTION")
-      throw new AuthError("This account cannot change delivery method.", "ChannelUnavailable")
-
-    const confirmed = await confirmSignIn({ challengeResponse: channel === "sms" ? "SMS" : "EMAIL" })
-    const step = confirmed.nextStep
-
-    const expected = channel === "sms" ? "CONFIRM_SIGN_IN_WITH_SMS_CODE" : "CONFIRM_SIGN_IN_WITH_EMAIL_CODE"
-    if (step?.signInStep !== expected)
-      throw new AuthError(`Could not send the code by ${CHANNEL_LABEL[channel]}.`, step?.signInStep ?? "unknown")
-
-    return {
-      ...challengeFrom(challenge.purpose, step.codeDeliveryDetails?.destination ?? challenge.sentTo, challenge.next, channel),
-      availableChannels: challenge.availableChannels,
-    }
-  } catch (e) {
-    if (e instanceof AuthError) throw e
-    throw asAuthError(e, "Could not change the delivery method.")
-  }
+  await pause()
+  return challengeFrom(challenge.purpose, destinationFor(flow, channel), channel, challenge.next)
 }
 
 /**
- * The second half of the gate: the engineer has proved who they are, now the
- * API says whether they are an ELPREMAR the control centre onboarded.
+ * Verify the code.
  *
- * A refusal leaves Cognito holding a valid session for an account that may not
- * use EVITA, so the tokens are cleared before the error is re-thrown. Without
- * that, the next page load would rehydrate a session the API will refuse on
- * every call.
+ * There is no code to be wrong, so anything of the right length is accepted and
+ * the only refusal left is the expiry - which is real, and is worth keeping:
+ * the countdown running out is a state the screen has to handle, and letting a
+ * dead challenge through would hide it.
  */
-async function openElpremarSession(): Promise<AuthUser> {
-  try {
-    return await openSession()
-  } catch (e) {
-    await cognitoSignOut().catch(() => {})
-    clearAuthFlow()
-    throw e
-  }
-}
+export async function verifyOtp(challenge: OtpChallenge, code: string): Promise<AuthUser> {
+  if (!flow) throw new AuthError("That sign-in has expired. Please start again.", "FlowExpired")
+  await pause()
 
-/** Verify the code. Cognito decides correct, expired, or account locked. */
-export async function verifyOtp(_challenge: OtpChallenge, code: string): Promise<AuthUser> {
-  try {
-    // Amplify holds the open challenge; the id is not replayed back to it
-    const { isSignedIn } = await confirmSignIn({ challengeResponse: code })
-    if (!isSignedIn) throw new AuthError("That code was not accepted.", "NotSignedIn")
-  } catch (e) {
-    if (e instanceof AuthError) throw e
-    throw asAuthError(e, "That code is not valid.")
-  }
+  if (code.trim().length !== OTP_LENGTH)
+    throw new AuthError(`Enter the ${OTP_LENGTH}-digit code.`, "CodeMismatchException")
+  if (Date.now() > challenge.expiresAt)
+    throw new AuthError("That code has expired. Ask for a new one.", "ExpiredCodeException")
 
-  /*
-   * Outside the catch above on purpose: the API's refusal is not a bad code and
-   * must keep its own message rather than being reported as one.
-   */
-  const user = await openElpremarSession()
-  await preferEmailMfa()
+  signedIn = flow
   clearAuthFlow()
-  return user
+  return signedIn
 }
 
 /**
- * Answer a `NEW_PASSWORD_REQUIRED` challenge.
+ * Answer a forced password change.
  *
- * Cognito puts the accounts OCC creates in FORCE_CHANGE_PASSWORD and refuses a
- * session until the temporary password is replaced, so this is on the path of
- * every ELPREMAR's first sign-in. Answering it can land in two places, so both
- * are returned: either the account still owes an MFA code, or it is signed in
- * already (a pool with MFA optional).
+ * On `main` this is on the path of every ELPREMAR's first sign-in: OCC creates
+ * the account on a temporary password and Cognito issues no session until it is
+ * replaced. Nothing raises `NewPasswordRequired` on this branch, so the screen
+ * is reachable only by going to it directly - but it still works, and still
+ * lands on the code step the way the real one does.
  */
 export async function completeNewPassword(
   newPassword: string,
   next?: string
 ): Promise<{ challenge: OtpChallenge } | { user: AuthUser }> {
-  let challenge: OtpChallenge | null = null
-
-  try {
-    const { isSignedIn, nextStep } = await confirmSignIn({ challengeResponse: newPassword })
-    const step = nextStep?.signInStep
-
-    // The usual path: password accepted, now prove the e-mail
-    if (step === "CONFIRM_SIGN_IN_WITH_EMAIL_CODE") {
-      const sentTo = emailSentTo(nextStep.codeDeliveryDetails?.destination, flow?.username)
-      challenge = challengeFrom("login", sentTo, next)
-    } else if (step === "CONTINUE_SIGN_IN_WITH_MFA_SELECTION") {
-      /* The same selection step can follow a password change */
-      challenge = await chooseEmailFactor("login", next)
-    } else if (!isSignedIn) {
-      throw new AuthError(`Unexpected step after setting the password: ${step}.`, step ?? "unknown")
-    }
-  } catch (e) {
-    if (e instanceof AuthError) throw e
-    throw asAuthError(e, "Could not set that password.")
-  }
-
-  if (challenge) return { challenge }
-
-  // No MFA on this pool: the session is complete, so the API decides next
-  const user = await openElpremarSession()
-  clearAuthFlow()
-  return { user }
+  if (!flow) throw new AuthError("That sign-in has expired. Please start again.", "FlowExpired")
+  await pause()
+  if (!newPassword) throw new AuthError("Enter a new password.", "InvalidPasswordException")
+  return { challenge: challengeFrom("login", destinationFor(flow, "email"), "email", next) }
 }
 
 /**
- * Make e-mail this account's preferred MFA factor.
+ * End the session.
  *
- * EVITA is built around the e-mail code. Without a preference Cognito asks which
- * factor to use on every sign-in, and if SMS is preferred it sends a text
- * instead. Setting it once, after the first successful sign-in, means later
- * logins go straight to the e-mail code with no selection step.
- *
- * Needs an authenticated session, so it can only run here — and a failure is
- * not worth failing the sign-in over.
- */
-async function preferEmailMfa() {
-  try {
-    // DISABLED on SMS, not just NOT_PREFERRED: while EVITA is e-mail-only,
-    // Cognito should have no text option to fall back to for this account
-    await updateMFAPreference({ email: "PREFERRED", sms: "DISABLED" })
-  } catch (e) {
-    console.warn("[auth] could not set e-mail as the preferred MFA factor.", e)
-  }
-}
-
-/**
- * End the session: clear the Cognito tokens.
- *
- * Amplify revokes the refresh token with Cognito, so no new access token can be
- * minted. An access token already issued stays valid until it expires — there
- * is no server-side revocation yet, which is why `beginSignOut` cancels the
- * requests already in the air and blocks any new ones from attaching the
- * outgoing token.
+ * `beginSignOut` first and synchronously: from that point the mock server
+ * refuses to answer, so a write the engineer started before logging out cannot
+ * land afterwards. On `main` the same call cancels the requests already in the
+ * air, for the same reason.
  */
 export async function signOutCognito() {
-  /*
-   * Synchronous and first: from this point no other request may pick up the
-   * outgoing token, and anything already running is cancelled. Everything below
-   * is asynchronous, so leaving this any later reopens the window it closes.
-   */
   beginSignOut()
   clearAuthFlow()
-
-  try {
-    await cognitoSignOut()
-  } catch (e) {
-    /*
-     * The tokens may still be in storage, which would let the next page load
-     * rehydrate the session. Loud on purpose: a sign-out that did not take is
-     * the one failure here the engineer must not be left unaware of.
-     */
-    console.error("[auth] Cognito sign-out failed; tokens may remain in storage.", e)
-  }
+  signedIn = null
+  resetFor = null
 }
 
 /**
  * What boot made of the session this tablet had stored.
  *
- * Three answers, not two, and that is the difference from the OCC console.
- * Signing *in* has to be authoritative — nobody gets a session the API has not
- * confirmed. Re-opening a tablet is not the same thing: an engineer in a plant
- * basement with no signal still has valid Cognito tokens and a day's work to
- * get on with, and logging them out over a failed request would be a fault, not
- * a safeguard. A refusal is final; an unreachable API is not.
+ * Three answers on `main`, and all three are still meaningful here even though
+ * only two are reachable. `confirmed` is a soft navigation inside a session
+ * this tab opened. A reload is `unconfirmed`: there is no server to ask who the
+ * stored session belongs to, and the stored session is therefore the best
+ * answer there is - which is exactly what `unconfirmed` tells `auth-context` to
+ * keep. Nothing returns `refused`, because nothing on this branch can withdraw
+ * an account.
  */
 export type BootSession =
-  /** Cognito and the API both agree; this is the current profile */
+  /** This tab opened the session; here is the profile it holds */
   | { status: "confirmed"; user: AuthUser }
-  /** No usable session, or the API says this is not an ELPREMAR — sign out */
+  /** No usable session, or the account has been withdrawn - sign out */
   | { status: "refused" }
-  /** Cognito still has tokens but the API could not be asked — keep what was stored */
+  /** Nothing to confirm against - keep whatever the tablet stored */
   | { status: "unconfirmed" }
 
-/**
- * Re-check the stored session against Cognito and the API.
- *
- * A stored session cannot outlive the tokens behind it, nor the ELPREMAR record
- * behind those: an account deactivated in OCC since the tablet was last opened
- * is signed out here rather than being let back in. Every API call is enforced
- * server-side regardless, so an `unconfirmed` session is not a way around the
- * gate — only a way not to lose the screen over a dropped connection.
- */
 export async function currentUser(): Promise<BootSession> {
-  if (!(await hasCognitoSession())) return { status: "refused" }
-
-  try {
-    return { status: "confirmed", user: await resolveAppUser() }
-  } catch (e) {
-    // The API refused this account outright, so the tokens are no use
-    if (e instanceof AuthError && e.code === "NotElpremar") {
-      await cognitoSignOut().catch(() => {})
-      return { status: "refused" }
-    }
-    console.warn("[auth] could not confirm the session on boot; keeping the stored one.", e)
-    return { status: "unconfirmed" }
-  }
-}
-
-/** The access token for an API call, refreshed by Amplify when it needs to be */
-export async function accessToken(): Promise<string | null> {
-  try {
-    const session = await fetchAuthSession()
-    return session.tokens?.accessToken?.toString() ?? null
-  } catch {
-    return null
-  }
-}
-
-/**
- * Force Amplify to mint a new access token from the refresh token.
- *
- * Used by the API client when a call comes back 401 despite having sent a token
- * Amplify considered current — the clock skewed, or the token was revoked.
- * Returns null when the refresh token itself is finished, which is the client's
- * signal that the session is over rather than the request.
- *
- * Concurrent callers share one refresh: a page that fires several requests at
- * once would otherwise send several refresh calls for the same expiry, and
- * Cognito counts those against the pool's request limits.
- */
-let refreshing: Promise<string | null> | null = null
-
-export function refreshAccessToken(): Promise<string | null> {
-  refreshing ??= (async () => {
-    try {
-      const session = await fetchAuthSession({ forceRefresh: true })
-      return session.tokens?.accessToken?.toString() ?? null
-    } catch {
-      // Refresh token expired or revoked - the caller signs the engineer out
-      return null
-    } finally {
-      refreshing = null
-    }
-  })()
-  return refreshing
+  if (signedIn) return { status: "confirmed", user: signedIn }
+  return { status: "unconfirmed" }
 }
 
 /* -------------------------------------------------------- password reset -- */
 
 /**
- * Start recovery. Cognito sends the confirmation code and reports where it went.
+ * Start recovery.
  *
- * The username is held because `confirmResetPassword` needs it again on the
- * next screen and `ResetContext` does not carry it.
+ * Reveals nothing about whether the account exists, the way Cognito does not:
+ * an identifier nobody on the roster matches still reports a code sent, and it
+ * reports it to **the address that was typed**. Falling back to a roster
+ * engineer's address here would both read as a leak and tell the person they
+ * had guessed wrong - the one thing this screen must not do.
  */
 export async function requestPasswordReset(identifier: string): Promise<OtpChallenge> {
-  requireCognito()
-  const username = identifier.trim().toLowerCase()
-  try {
-    const { nextStep } = await cognitoResetPassword({ username })
-    resetFor = username
-    return challengeFrom("password-reset", emailSentTo(nextStep.codeDeliveryDetails?.destination, username))
-  } catch (e) {
-    /*
-     * Cognito deliberately reveals nothing about whether an account exists, and
-     * neither should the screen — report the same thing either way.
-     */
-    const err = e as { name?: string }
-    if (err?.name === "UserNotFoundException") {
-      resetFor = username
-      return challengeFrom("password-reset", maskEmail(username))
-    }
-    throw asAuthError(e, "Could not start the reset.")
-  }
+  await pause()
+  const known = lookupAccount(identifier)
+  resetFor = known ?? accountFor(identifier)
+  const sentTo = known ? destinationFor(known, "email") : maskEmail(identifier.trim().toLowerCase())
+  return challengeFrom("password-reset", sentTo, "email")
 }
 
 /**
- * Cognito verifies the code and sets the password in one call, which is why the
- * reset context carries the code the user entered on the previous screen.
+ * Set the new password. The code the engineer entered on the previous screen
+ * travels with it, because Cognito verifies and sets in one call and the
+ * screens are built around that.
  */
-export async function resetPassword(context: ResetContext, password: string): Promise<void> {
+export async function resetPassword(_context: ResetContext, password: string): Promise<void> {
   if (!resetFor) throw new AuthError("That reset has expired. Please start again.", "FlowExpired")
-  try {
-    await confirmResetPassword({ username: resetFor, confirmationCode: context.code, newPassword: password })
-    resetFor = null
-  } catch (e) {
-    throw asAuthError(e, "Could not set that password.")
-  }
+  await pause()
+  if (!password) throw new AuthError("Enter a new password.", "InvalidPasswordException")
+  resetFor = null
 }
 
 /* ------------------------------------------------------------- recovery -- */
 
 /**
  * Last resort when the registered mobile and e-mail are both unreachable: the
- * OLIVINE helpdesk verifies identity out of band.
- *
- * TODO(aws): POST to the support desk API and return the real ticket number.
+ * OLIVINE helpdesk verifies identity out of band. Nothing is queued on this
+ * branch - the reference is for the screen to show back.
  */
 export async function submitRecovery(_request: RecoveryRequestInput): Promise<{ reference: string }> {
   await pause()
-  return { reference: `TK-${Math.floor(1000 + Math.random() * 8999)}` }
+  return { reference: reference("TK") }
 }

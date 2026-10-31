@@ -1,26 +1,23 @@
 /**
- * The signed-in engineer, and the check that they are one.
+ * Who the engineer signing in is, on a branch with no Cognito and no API.
  *
- * Two sources, and the split matters:
+ * On `main` this file merges two sources: Cognito's attributes for the name and
+ * contact details, and the EVITA API's ELPREMAR record for the employee id and
+ * the postings. Here there is one source - the mock register - and that is
+ * actually the more useful arrangement for a demo: `useCurrentElpremar` matches
+ * the signed-in user back onto `elpremarRecords` by id, so signing in as an
+ * engineer on the roster gives you *their* day, their postings and their
+ * register rather than a generic one.
  *
- * - **Cognito** carries the name, e-mail and mobile — attributes OCC wrote when
- *   it created the account.
- * - **The EVITA API** carries the ELPREMAR record: the employee id the field
- *   and the register both use, the designation, the postings.
- *
- * The API call is **not** best-effort here, and that is the difference from the
- * OCC console. EVITA is for ELPREMARs the control centre onboarded, and the only
- * thing that proves someone was onboarded is a record in the OCC database — the
- * Cognito role attribute is set at creation and would be just as true of an
- * account that reached the pool some other way. So a sign-in that cannot reach
- * the API, or that the API refuses, is not a sign-in. The backend enforces the
- * same rule on every later call; this is what turns it into a message the
- * engineer can act on rather than a screen full of failed requests.
+ * What is deliberately **not** reproduced is the gate. On `main` a Cognito
+ * account with no ELPREMAR record is turned away, because the only proof
+ * someone was onboarded is a row in the OCC database. There is no database
+ * here, so there is nothing to check against and an unknown e-mail signs in as
+ * the first engineer on the roster instead of being refused - a demo nobody can
+ * open is not a demo.
  */
-import { fetchAuthSession, fetchUserAttributes, getCurrentUser } from "aws-amplify/auth"
-
-import { ApiError, apiFetch } from "@/lib/api/client"
-import { AuthError, type AuthUser } from "./types"
+import { elpremarProfileFor, elpremarRecords, type ElpremarRecord } from "@/data/elpremar-data"
+import type { AuthUser } from "./types"
 
 /** Up to two letters for the avatar fallback */
 function initialsFor(name: string): string {
@@ -33,122 +30,58 @@ function initialsFor(name: string): string {
     .toUpperCase()
 }
 
-/** What the Cognito attributes say about the person signing in */
-async function cognitoProfile() {
-  const [{ userId }, attrs] = await Promise.all([getCurrentUser(), fetchUserAttributes()])
-  const name = attrs.name ?? attrs.email ?? "ELPREMAR"
-
-  return {
-    subject: userId,
-    name,
-    initials: initialsFor(name),
-    email: attrs.email ?? "",
-    mobile: attrs.phone_number ?? "",
-  }
-}
-
 /**
- * The ELPREMAR record, as `GET /api/v1/auth/me` and `POST /api/v1/auth/session`
- * both answer it.
+ * The register entry as the session holds it.
  *
- * `postings` is every active enterprise/plant assignment. An ELPREMAR is not
- * posted to one customer, so the tablet shows one posting at a time and scopes
- * its whole book of work to it — see the scope section in CLAUDE.md. Nothing
- * reads it yet; the register and the work book are still local mock data.
+ * `id` is the ELP-xxxx employee id, which is what the rest of the app knows an
+ * engineer by - `lib/me.ts` looks the full record back up with it. The contact
+ * details come from the same generated profile the ELPREMAR screens show, so
+ * the address a one-time code is "sent" to is the one on their record.
  */
-type ElpremarRecord = {
-  /** The employee id, e.g. "ELP-2009" */
-  id: string
-  userId: string
-  email: string
-  phone: string | null
-  role: string
-  roles: string[]
-  designation: string | null
-  elpremarRoles: string[]
-  status: string
-  postings: {
-    enterpriseId: string
-    enterpriseName: string
-    plantId: string
-    plantName: string
-    departmentId: string | null
-    departmentName: string | null
-  }[]
-}
-
-/**
- * Ask the API who this is, and turn its refusals into something readable.
- *
- * A 403 is the authorisation answer — this Cognito account has no ELPREMAR
- * record, does not hold the role, or has been deactivated — and the backend's
- * own message says which, so it is passed straight through. Anything else is a
- * server or network problem, and must not read as "you are not an ELPREMAR".
- */
-async function fetchElpremar(path: string, method: "GET" | "POST"): Promise<ElpremarRecord> {
-  try {
-    return await apiFetch<ElpremarRecord>(path, { method, timeoutMs: 15000 })
-  } catch (e) {
-    if (e instanceof ApiError && e.status === 403) throw new AuthError(e.message, "NotElpremar")
-    if (e instanceof ApiError && e.status === 0)
-      throw new AuthError(
-        "Could not reach the EVITA server to confirm your account. Check the connection and try again.",
-        "ApiUnreachable"
-      )
-    throw new AuthError(
-      e instanceof ApiError ? e.message : "Could not confirm your account. Please try again.",
-      "ProfileUnavailable"
-    )
-  }
-}
-
-/** Cognito's attributes with the ELPREMAR record laid over them */
-function merge(cognito: Awaited<ReturnType<typeof cognitoProfile>>, record: ElpremarRecord): AuthUser {
+function toAuthUser(record: ElpremarRecord): AuthUser {
+  const profile = elpremarProfileFor(record)
   return {
     id: record.id,
-    name: cognito.name,
-    initials: cognito.initials,
-    role: record.role,
-    roles: record.roles,
-    // The register's number is the one to show; Cognito's is the fallback
-    email: record.email || cognito.email,
-    mobile: record.phone ?? cognito.mobile,
+    name: record.name,
+    initials: initialsFor(record.name),
+    role: "ELPREMAR",
+    roles: ["ELPREMAR"],
+    email: profile.account.email,
+    mobile: `${profile.basic.phoneCode}${profile.basic.phone}`,
   }
 }
 
 /**
- * Open the session. Called once, when the one-time code has been accepted.
+ * The engineer an identifier names, if it names one.
  *
- * `POST /auth/session` stamps the sign-in and answers with the record. It
- * creates nothing — OCC's `/auth/sync` provisions a user from the token, and
- * EVITA deliberately has no equivalent.
+ * Either the full work e-mail or the `firstname.lastname` in front of it, since
+ * that is how the roster's addresses are built and typing the whole thing on a
+ * tablet is a chore. Inactive engineers are passed over: an ELPREMAR is Active
+ * or Inactive and an inactive one has no business signing in, so the lookup
+ * behaves as the register says rather than letting a deactivated account
+ * through on a name match.
  */
-export async function openSession(): Promise<AuthUser> {
-  const [cognito, record] = await Promise.all([
-    cognitoProfile(),
-    fetchElpremar("/auth/session", "POST"),
-  ])
-  return merge(cognito, record)
+export function lookupAccount(identifier: string): AuthUser | undefined {
+  const id = identifier.trim().toLowerCase()
+  if (!id) return undefined
+
+  const match = elpremarRecords
+    .filter((e) => e.status === "active")
+    .find((record) => {
+      const email = elpremarProfileFor(record).account.email.toLowerCase()
+      return email === id || email.split("@")[0] === id
+    })
+
+  return match ? toAuthUser(match) : undefined
 }
 
 /**
- * The profile on boot, for a session Amplify still holds tokens for.
+ * Who to sign in as, for an identifier that may name nobody.
  *
- * Read from the API again rather than from the stored session, so an ELPREMAR
- * deactivated in OCC since they last opened the tablet is turned away at the
- * next launch instead of carrying on with a profile that was true yesterday.
+ * An address off the roster still gets in, as the first engineer on it. That is
+ * the one place this branch is deliberately more permissive than `main`, where
+ * an account with no ELPREMAR record behind it is refused - a demo whose front
+ * door needs a seeded e-mail address is not much of a demo.
  */
-export async function resolveAppUser(): Promise<AuthUser> {
-  const [cognito, record] = await Promise.all([cognitoProfile(), fetchElpremar("/auth/me", "GET")])
-  return merge(cognito, record)
-}
-
-/** The session this tablet holds, or null when there is no usable one */
-export async function hasCognitoSession(): Promise<boolean> {
-  try {
-    const session = await fetchAuthSession()
-    return Boolean(session.tokens?.idToken)
-  } catch {
-    return false
-  }
-}
+export const accountFor = (identifier: string): AuthUser =>
+  lookupAccount(identifier) ?? toAuthUser(elpremarRecords.find((e) => e.status === "active") ?? elpremarRecords[0])

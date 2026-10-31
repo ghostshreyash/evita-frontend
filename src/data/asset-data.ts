@@ -244,6 +244,36 @@ function seededParameters(a: AssetRecord, s: number) {
 
 /* ---------- Asset ID ---------- */
 
+/**
+ * The next Digital Asset ID in a group.
+ *
+ * Enterprise, city and asset category, then a running number inside that
+ * group - the same segments `buildRegister` below stamps on a seeded asset, so
+ * one registered now joins the same series rather than starting a parallel one.
+ *
+ * On a branch with a backend this does not exist: the id has to be unique
+ * across every tablet working the site, which only the server can promise. It
+ * is here because on this one the mock server is the only thing issuing them -
+ * see `lib/api/assets.ts`.
+ */
+export function buildAssetId(parts: {
+  enterprise: string
+  city: string
+  category: string
+  /** Assets already registered, so the running number continues from them */
+  existing?: readonly AssetRecord[]
+}) {
+  const enterprise = enterpriseRecords.find((e) => e.name === parts.enterprise)
+  const prefix = [
+    enterprise?.id.slice(0, 3) ?? parts.enterprise.slice(0, 3).toUpperCase(),
+    cityCode(parts.city),
+    assetCategoryCode(parts.category),
+  ].join("-")
+  const taken = (parts.existing ?? assetRegister).filter((a) => a.id.startsWith(prefix + "-"))
+  const highest = taken.reduce((n, a) => Math.max(n, Number(a.id.slice(prefix.length + 1)) || 0), 0)
+  return `${prefix}-${String(highest + 1).padStart(3, "0")}`
+}
+
 /* ---------- Register ---------- */
 
 /*
